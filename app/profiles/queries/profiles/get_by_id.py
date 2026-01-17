@@ -1,0 +1,22 @@
+from dataclasses import dataclass
+
+from app.core.queries import BaseQuery, BaseQueryHandler
+from app.profiles.dtos.profiles import ProfileDTO
+from app.profiles.repositories.profiles import ProfileRepository
+
+
+@dataclass(frozen=True)
+class GetProfileByIdQuery(BaseQuery):
+    profile_id: int
+
+
+@dataclass(frozen=True)
+class GetProfileByIdQueryHandler(BaseQueryHandler[GetProfileByIdQuery, ProfileDTO]):
+    profile_repository: ProfileRepository
+
+    async def handle(self, query: GetProfileByIdQuery) -> ProfileDTO:
+        profile = await self.profile_repository.get_by_id(query.profile_id)
+        if profile is None:
+            raise
+
+        return ProfileDTO.model_validate(profile.to_dict())
