@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from fastapi import FastAPI
 from fastapi_limiter import FastAPILimiter
@@ -16,10 +16,14 @@ from sqlalchemy.pool import NullPool
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import AsyncRedisContainer
 
+from app.core.configs.app import app_config
 from app.core.db.base_model import BaseModel
 from app.core.di.container import create_container
 from app.core.events.event import BaseEvent, EventRegisty
 from app.core.events.service import BaseEventBus
+from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.jwt_manager import JWTManager
+from app.core.services.auth.rbac import RBACManager
 from app.core.services.mail.service import BaseMailService, EmailData
 from app.core.services.mail.template import BaseTemplate
 from app.init_data import create_first_data
@@ -156,6 +160,50 @@ class MockEventBus(BaseEventBus):
 def mock_event_bus() -> BaseEventBus:
     return MockEventBus(event_registy=EventRegisty())
 
+@pytest.fixture
+def jwt_manager() -> JWTManager:
+    return JWTManager(
+        jwt_secret=app_config.JWT_SECRET_KEY,
+        jwt_algorithm=app_config.JWT_ALGORITHM,
+    )
+
+@pytest.fixture
+def rbac_manager() -> RBACManager:
+    return RBACManager()
+
+@pytest.fixture
+def make_user_jwt() -> Callable[..., UserJWTData]:
+    def _make_user_jwt(
+        *,
+        id: str = "1",
+        username: str = "test",
+        role: str = "user",
+        permissions: list[str] | None = None,
+        security_level: int = 1,
+        device_id: str = "device_1",
+    ) -> UserJWTData:
+        return UserJWTData(
+            id=id,
+            username=username,
+            roles=[role],
+            permissions=permissions or [],
+            security_level=security_level,
+            device_id=device_id,
+        )
+
+    return _make_user_jwt
+
+
+@pytest.fixture
+def user_jwt(make_user_jwt) -> UserJWTData:
+    return make_user_jwt()
+
+@pytest.fixture
+def admin_user_jwt(make_user_jwt) -> UserJWTData:
+    return make_user_jwt(role="super_admin", security_level=9)
+
+
+
 @pytest_asyncio.fixture
 async def di_container(
     db_session: AsyncSession,
@@ -218,4 +266,5 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "integration: Integration тесты")
     config.addinivalue_line("markers", "slow: Медленные тесты")
     config.addinivalue_line("markers", "auth: Тесты модуля аутентификации")
+    config.addinivalue_line("markers", "profiles: Тесты модуля профиля")
 

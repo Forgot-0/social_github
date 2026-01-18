@@ -17,12 +17,14 @@ class Token(BaseModel):
     did: str
     exp: float
     iat: float
+    username: str
     roles: list[str] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=list)
 
 
 class UserJWTData(BaseModel):
     id: str
+    username: str
     roles: list[str]
     permissions: list[str]
     security_level: int
@@ -32,6 +34,7 @@ class UserJWTData(BaseModel):
     def create_from_token(cls, token_dto: Token) -> Self:
         return cls(
             id=token_dto.sub,
+            username=token_dto.username,
             roles=token_dto.roles,
             permissions=token_dto.permissions,
             device_id=token_dto.did,

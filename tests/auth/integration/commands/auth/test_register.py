@@ -1,4 +1,5 @@
 import pytest
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.users.register import RegisterCommand, RegisterCommandHandler
@@ -7,7 +8,7 @@ from app.auth.models.user import User
 from app.auth.repositories.role import RoleRepository
 from app.auth.repositories.user import UserRepository
 from app.auth.services.hash import HashService
-from tests.auth.integration.factories import CommandFactory
+from tests.auth.integration.factories import AuthCommandFactory
 from tests.conftest import MockEventBus
 
 
@@ -31,7 +32,7 @@ class TestRegisterCommand:
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_register_command(
+        cmd_data = AuthCommandFactory.create_register_command(
             username="newuser",
             email="new@example.com",
         )
@@ -46,7 +47,7 @@ class TestRegisterCommand:
         assert user_dto.is_active is True
         assert user_dto.is_verified is False
 
-        created_user = await user_repository.get_by_username("newuser")
+        created_user = await user_repository.get_by_username(user_dto.username)
         assert created_user is not None
         assert created_user.password_hash is not None
 
@@ -72,7 +73,7 @@ class TestRegisterCommand:
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_register_command(
+        cmd_data = AuthCommandFactory.create_register_command(
             username=standard_user.username,
             email="different@example.com",
         )
@@ -104,7 +105,7 @@ class TestRegisterCommand:
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_register_command(
+        cmd_data = AuthCommandFactory.create_register_command(
             username="differentuser",
             email=standard_user.email,
         )
@@ -139,7 +140,7 @@ class TestRegisterCommand:
             username="testuser",
             email="test@example.com",
             password="TestPass123!",
-            password_repeat="DifferentPass123!",  # Разные пароли
+            password_repeat="DifferentPass123!",
         )
 
         with pytest.raises(PasswordMismatchException):
@@ -163,7 +164,7 @@ class TestRegisterCommand:
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_register_command()
+        cmd_data = AuthCommandFactory.create_register_command()
         command = RegisterCommand(**cmd_data)
 
         user_dto = await handler.handle(command)
@@ -193,7 +194,7 @@ class TestRegisterCommand:
         )
 
         plain_password = "TestPass123!"
-        cmd_data = CommandFactory.create_register_command(password=plain_password)
+        cmd_data = AuthCommandFactory.create_register_command(password=plain_password)
         command = RegisterCommand(**cmd_data)
 
         user_dto = await handler.handle(command)

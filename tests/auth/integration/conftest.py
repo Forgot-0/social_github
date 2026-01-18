@@ -80,11 +80,11 @@ async def unverified_user(
     return user
 
 @pytest.fixture
-def create_access_token(jwt_manager: AuthJWTManager):
+def create_access_token(auth_jwt_manager: AuthJWTManager):
 
     def _create(user: User, device_id: str | None = None) -> str:
         user_jwt_data = AuthUserJWTData.create_from_user(user, device_id=device_id or "Chrome/100.0")
-        token_group = jwt_manager.create_token_pair(user_jwt_data)
+        token_group = auth_jwt_manager.create_token_pair(user_jwt_data)
         return token_group.access_token
 
     return _create
@@ -96,3 +96,4 @@ def auth_headers(create_access_token):
         return {"Authorization": f"Bearer {token}"}
 
     return _headers
+

@@ -66,7 +66,7 @@ def hash_service() -> HashService:
 
 
 @pytest.fixture
-def jwt_manager(token_blacklist_repository: TokenBlacklistRepository) -> AuthJWTManager:
+def auth_jwt_manager(token_blacklist_repository: TokenBlacklistRepository) -> AuthJWTManager:
     return AuthJWTManager(
         jwt_secret=app_config.JWT_SECRET_KEY,
         jwt_algorithm=app_config.JWT_ALGORITHM,

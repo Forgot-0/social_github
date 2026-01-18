@@ -20,3 +20,7 @@ class ProfileRepository(IRepository[Profile]):
     def apply_relationship_filters(self, stmt: Select, filters: ProfileFilter) -> Select:
         return stmt
 
+    async def get_by_user_id(self, user_id: int) -> Profile | None:
+        query = select(Profile).where(Profile.user_id==user_id)
+        result = await self.session.execute(query)
+        return result.scalar()

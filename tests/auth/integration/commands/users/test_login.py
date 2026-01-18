@@ -10,7 +10,7 @@ from app.auth.services.device import generate_device_info
 from app.auth.services.hash import HashService
 from app.auth.services.jwt import AuthJWTManager
 from app.auth.services.session import SessionManager
-from tests.auth.integration.factories import CommandFactory, UserFactory
+from tests.auth.integration.factories import AuthCommandFactory, UserFactory
 
 
 @pytest.mark.integration
@@ -23,7 +23,7 @@ class TestLoginCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -31,11 +31,11 @@ class TestLoginCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!"
         )
@@ -52,7 +52,7 @@ class TestLoginCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -60,11 +60,11 @@ class TestLoginCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.email,
             password="TestPass123!"
         )
@@ -81,7 +81,7 @@ class TestLoginCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -89,7 +89,7 @@ class TestLoginCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
@@ -110,14 +110,14 @@ class TestLoginCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
     ) -> None:
         handler = LoginCommandHandler(
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
@@ -137,7 +137,7 @@ class TestLoginCommand:
         user_repository: UserRepository,
         session_repository: SessionRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -145,11 +145,11 @@ class TestLoginCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!",
             user_agent="Chrome/100.0"
@@ -172,7 +172,7 @@ class TestLoginCommand:
         user_repository: UserRepository,
         session_repository: SessionRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -180,11 +180,11 @@ class TestLoginCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!",
             user_agent="Chrome/100.0"
@@ -211,7 +211,7 @@ class TestLoginCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         role_repository,
     ) -> None:
@@ -230,7 +230,7 @@ class TestLoginCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
@@ -249,7 +249,7 @@ class TestLoginCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -257,18 +257,18 @@ class TestLoginCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!"
         )
         command = LoginCommand(**cmd_data)
 
         token_group = await handler.handle(command)
-        token_data = await jwt_manager.validate_token(token_group.access_token)
+        token_data = await auth_jwt_manager.validate_token(token_group.access_token)
         assert token_data.sub == str(standard_user.id)
         assert "user" in token_data.roles
         assert token_data.did is not None

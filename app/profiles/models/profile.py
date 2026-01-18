@@ -1,61 +1,82 @@
-from enum import Enum
-from sqlalchemy import Integer, String, Text
+from sqlalchemy import Integer, String, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.ext.mutable import MutableSet
-
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
+from app.profiles.exceptions import TooLongBioException, TooLongDisplayNameException, TooLongSkillNameException
 
 
 
-class SkillLevel(str, Enum):
-    NONE = "none"
+class SetArray(TypeDecorator):
+    impl = ARRAY(String(30))
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, set):
+            return list(value)
+        return list(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return set(value)
 
 
 class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    username: Mapped[str] = mapped_column(String, unique=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True, unique=True)
+
+    avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     bio: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
-    skills: Mapped[set[str]] = mapped_column(MutableSet.as_mutable(ARRAY(String(30))))
+    skills: Mapped[set[str]] = mapped_column(SetArray())
 
     @classmethod
     def create(
-        cls, user_id: int,
+        cls, user_id: int, username: str,
         display_name: str | None,
         bio: str | None,
         skills: set[str] | None = None,
     ) -> "Profile":
         instance = cls(
+            username=username,
             user_id=user_id,
-            display_name=display_name,
-            bio=bio,
-            skills=skills or set()
         )
+        instance.change_display_name(display_name)
+        instance.change_bio(bio)
+        instance.update_skills(skills or set())
+
         return instance
 
-    def change_display_name(self, name: str) -> None:
-        if len(name) >= 100:
-            raise
+    def change_display_name(self, name: str | None) -> None:
+        if name and len(name) >= 100:
+            raise TooLongDisplayNameException(name=name)
 
         self.display_name = name
 
+    def change_bio(self, bio: str | None) -> None:
+        if bio and len(bio) >= 1024:
+            raise TooLongBioException(bio=bio)
+
+        self.bio = bio
+
     def add_skill(self, skill: str) -> None:
         if len(skill) > 30:
-            raise
+            raise TooLongSkillNameException(name=skill)
 
-        self.skills.add(skill)
+        self.skills.add(skill.lower())
 
-    def remove_skill(self, skill: str) -> None:
-        if skill not in self.skills:
-            raise
+    def update_skills(self, skills: set[str]) -> None:
+        if any(len(skill) > 30 for skill in skills):
+            raise TooLongSkillNameException(name=max(skills, key=lambda x: len(x)))
 
-        self.skills.remove(skill)
+        self.skills = {skill.lower() for skill in skills}
 
     def set_new_avatar(self, avatar_url: str) -> None:
         self.avatar_url = avatar_url

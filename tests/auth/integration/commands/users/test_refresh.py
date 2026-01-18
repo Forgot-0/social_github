@@ -13,7 +13,7 @@ from app.auth.services.jwt import AuthJWTManager
 from app.auth.services.session import SessionManager
 from app.core.services.auth.dto import JwtTokenType
 from app.core.services.auth.exceptions import InvalidTokenException
-from tests.auth.integration.factories import CommandFactory
+from tests.auth.integration.factories import AuthCommandFactory
 
 
 @pytest.mark.integration
@@ -27,7 +27,7 @@ class TestRefreshTokenCommand:
         user_repository: UserRepository,
         session_repository: SessionRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -35,11 +35,11 @@ class TestRefreshTokenCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!"
         )
@@ -49,7 +49,7 @@ class TestRefreshTokenCommand:
 
         refresh_handler = RefreshTokenCommandHandler(
             session=db_session,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             session_repository=session_repository,
             user_repository=user_repository
         )
@@ -62,7 +62,7 @@ class TestRefreshTokenCommand:
         assert new_tokens.access_token != old_tokens.access_token
         assert new_tokens.refresh_token != old_tokens.refresh_token
 
-        new_token_data = await jwt_manager.validate_token(new_tokens.access_token)
+        new_token_data = await auth_jwt_manager.validate_token(new_tokens.access_token)
         assert new_token_data.sub == str(standard_user.id)
     
     @pytest.mark.asyncio
@@ -70,13 +70,13 @@ class TestRefreshTokenCommand:
         self,
         db_session: AsyncSession,
         user_repository: UserRepository,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         session_repository: SessionRepository,
         standard_user: User,
     ) -> None:
         refresh_handler = RefreshTokenCommandHandler(
             session=db_session,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             session_repository=session_repository,
             user_repository=user_repository
         )
@@ -94,7 +94,7 @@ class TestRefreshTokenCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         session_repository: SessionRepository,
         standard_user: User,
@@ -104,11 +104,11 @@ class TestRefreshTokenCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!"
         )
@@ -116,7 +116,7 @@ class TestRefreshTokenCommand:
         tokens = await login_handler.handle(login_command)
         await db_session.commit()
 
-        token_data = await jwt_manager.validate_token(tokens.refresh_token, token_type=JwtTokenType.REFRESH)
+        token_data = await auth_jwt_manager.validate_token(tokens.refresh_token, token_type=JwtTokenType.REFRESH)
         await session_repository.deactivate_user_session(
             user_id=int(token_data.sub),
             device_id=token_data.did
@@ -125,7 +125,7 @@ class TestRefreshTokenCommand:
 
         refresh_handler = RefreshTokenCommandHandler(
             session=db_session,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             session_repository=session_repository,
             user_repository=user_repository
         )
@@ -143,7 +143,7 @@ class TestRefreshTokenCommand:
         db_session: AsyncSession,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ) -> None:
@@ -151,11 +151,11 @@ class TestRefreshTokenCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!"
         )
@@ -164,7 +164,7 @@ class TestRefreshTokenCommand:
         await db_session.commit()
 
         session_repo = SessionRepository(session=db_session)
-        token_data = await jwt_manager.validate_token(tokens.refresh_token, token_type=JwtTokenType.REFRESH)
+        token_data = await auth_jwt_manager.validate_token(tokens.refresh_token, token_type=JwtTokenType.REFRESH)
         old_session = await session_repo.get_active_by_device(
             user_id=int(token_data.sub),
             device_id=token_data.did
@@ -178,7 +178,7 @@ class TestRefreshTokenCommand:
 
         refresh_handler = RefreshTokenCommandHandler(
             session=db_session,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             session_repository=session_repo,
             user_repository=user_repository
         )

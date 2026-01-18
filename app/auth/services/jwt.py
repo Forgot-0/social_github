@@ -38,6 +38,7 @@ class AuthJWTManager(JWTManager):
         payload = {
             "type": token_type,
             "sub": user_data.id,
+            "username": user_data.username,
             "lvl": user_data.security_level,
             "did": user_data.device_id,
             "jti": str(uuid4()),
@@ -72,20 +73,19 @@ class AuthJWTManager(JWTManager):
 
     async def refresh_tokens(self, refresh_token: str, security_user: AuthUserJWTData) -> TokenGroup:
         token = await self.validate_token(refresh_token, token_type=JwtTokenType.REFRESH)
-        token_date = fromtimestamp(token.iat)
+        token_iat_dt = fromtimestamp(token.iat)
 
-        date = await self.token_blacklist.get_token_backlist(token.jti)
-        if date > token_date:
+        blacklisted_token_date = await self.token_blacklist.get_token_backlist(token.jti)
+        if blacklisted_token_date and blacklisted_token_date > token_iat_dt:
             raise ExpiredTokenException(token=refresh_token)
 
-        date = await self.token_blacklist.get_user_backlist(int(token.sub))
-        if date > token_date:
+        blacklisted_user_date = await self.token_blacklist.get_user_backlist(int(token.sub))
+        if blacklisted_user_date and blacklisted_user_date > token_iat_dt:
             raise ExpiredTokenException(token=refresh_token)
 
         await self.revoke_token(refresh_token)
-        token_pair = self.create_token_pair(security_user=security_user)
 
-        return token_pair
+        return self.create_token_pair(security_user=security_user)
 
     async def revoke_token(self, token: str) -> None:
         token_data = await self.validate_token(token, JwtTokenType.REFRESH)

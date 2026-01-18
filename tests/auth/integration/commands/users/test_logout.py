@@ -11,7 +11,7 @@ from app.auth.services.jwt import AuthJWTManager
 from app.auth.services.session import SessionManager
 from app.core.services.auth.dto import JwtTokenType
 from app.core.services.auth.exceptions import InvalidTokenException
-from tests.auth.integration.factories import CommandFactory
+from tests.auth.integration.factories import AuthCommandFactory
 
 
 @pytest.mark.integration
@@ -25,7 +25,7 @@ class TestLogoutCommand:
         redis_client,
         user_repository: UserRepository,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
         hash_service: HashService,
         standard_user: User,
     ):
@@ -33,11 +33,11 @@ class TestLogoutCommand:
             session=db_session,
             user_repository=user_repository,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             hash_service=hash_service,
         )
 
-        cmd_data = CommandFactory.create_login_command(
+        cmd_data = AuthCommandFactory.create_login_command(
             username=standard_user.username,
             password="TestPass123!"
         )
@@ -51,7 +51,7 @@ class TestLogoutCommand:
         logout_handler = LogoutCommandHandler(
             session=db_session,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             session_repository=session_repo,
             token_blacklist=token_blacklist,
         )
@@ -60,7 +60,7 @@ class TestLogoutCommand:
         await logout_handler.handle(logout_command)
         await db_session.commit()
 
-        token_data = await jwt_manager.validate_token(token_group.refresh_token, token_type=JwtTokenType.REFRESH)
+        token_data = await auth_jwt_manager.validate_token(token_group.refresh_token, token_type=JwtTokenType.REFRESH)
         sessions = await session_repo.get_active_by_user(standard_user.id)
         active_sessions = [s for s in sessions if s.is_active]
 
@@ -72,7 +72,7 @@ class TestLogoutCommand:
         db_session: AsyncSession,
         redis_client,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
     ) -> None:
         session_repo = SessionRepository(session=db_session)
         token_blacklist = TokenBlacklistRepository(client=redis_client)
@@ -80,7 +80,7 @@ class TestLogoutCommand:
         logout_handler = LogoutCommandHandler(
             session=db_session,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             session_repository=session_repo,
             token_blacklist=token_blacklist,
         )
@@ -96,7 +96,7 @@ class TestLogoutCommand:
         db_session: AsyncSession,
         redis_client,
         session_manager: SessionManager,
-        jwt_manager: AuthJWTManager,
+        auth_jwt_manager: AuthJWTManager,
     ) -> None:
         session_repo = SessionRepository(session=db_session)
         token_blacklist = TokenBlacklistRepository(client=redis_client)
@@ -104,7 +104,7 @@ class TestLogoutCommand:
         logout_handler = LogoutCommandHandler(
             session=db_session,
             session_manager=session_manager,
-            jwt_manager=jwt_manager,
+            jwt_manager=auth_jwt_manager,
             session_repository=session_repo,
             token_blacklist=token_blacklist,
         )

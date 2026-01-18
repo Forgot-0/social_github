@@ -28,6 +28,7 @@ from app.core.routers import router as core_router
 from app.core.utils import now_utc
 from app.init_data import init_data
 from app.pre_start import pre_start
+from app.profiles.routers import router_v1 as profile_router_v1
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,9 @@ def setup_middleware(app: FastAPI) -> None:
 
 def setup_router(app: FastAPI) -> None:
     app.include_router(core_router)
+
     app.include_router(auth_router_v1, prefix=app_config.API_V1_STR)
+    app.include_router(profile_router_v1, prefix=app_config.API_V1_STR)
 
 
 def handle_application_exeption(request: Request, exc: ApplicationException) -> ORJSONResponse:

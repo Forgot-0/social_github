@@ -7,6 +7,7 @@ from app.auth.exceptions import AccessDeniedException
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.rbac import RBACManager
+from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.repositories.profiles import ProfileRepository
 
 
@@ -33,7 +34,7 @@ class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]
     async def handle(self, command: UpdateProfileCommand) -> None:
         profile = await self.profile_repository.get_by_id(command.profile_id)
         if profile is None:
-            raise
+            raise NotFoundProfileException(profile_id=command.profile_id)
 
         if (
             profile.user_id != int(command.user_jwt_data.id) and
@@ -43,9 +44,9 @@ class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]
                 need_permissions={"profile:update", "user:update" } - set(command.user_jwt_data.permissions)
             )
 
-        profile.display_name = command.display_name
-        profile.bio = command.bio
-        profile.skills = command.skills or set()
+        profile.change_display_name(command.display_name)
+        profile.change_bio(command.bio)
+        profile.update_skills(command.skills or set())
 
         await self.session.commit()
         logger.info(
