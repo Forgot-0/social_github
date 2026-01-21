@@ -1,14 +1,19 @@
 from sqlalchemy import Integer, String, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
-from app.profiles.exceptions import TooLongBioException, TooLongDisplayNameException, TooLongSkillNameException
+from app.profiles.config import profile_config
+from app.profiles.exceptions import (
+    TooLongBioException,
+    TooLongDisplayNameException,
+    TooLongSkillNameException
+)
 
 
 
 class SetArray(TypeDecorator):
-    impl = ARRAY(String(30))
+    impl = ARRAY(String(profile_config.MAX_LEN_SKILL_NAME))
     cache_ok = True
 
     def process_bind_param(self, value, dialect):
@@ -31,9 +36,9 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     username: Mapped[str] = mapped_column(String, unique=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True, unique=True)
 
-    avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
-    display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    bio: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    avatars: Mapped[dict] = mapped_column(JSONB, default_factory=dict)
+    display_name: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_DISPLAY_NAME), nullable=True)
+    bio: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_BIO), nullable=True)
 
     skills: Mapped[set[str]] = mapped_column(SetArray())
 
@@ -55,28 +60,25 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
         return instance
 
     def change_display_name(self, name: str | None) -> None:
-        if name and len(name) >= 100:
+        if name and len(name) >= profile_config.MAX_LEN_DISPLAY_NAME:
             raise TooLongDisplayNameException(name=name)
 
         self.display_name = name
 
     def change_bio(self, bio: str | None) -> None:
-        if bio and len(bio) >= 1024:
+        if bio and len(bio) >= profile_config.MAX_LEN_BIO:
             raise TooLongBioException(bio=bio)
 
         self.bio = bio
 
     def add_skill(self, skill: str) -> None:
-        if len(skill) > 30:
+        if len(skill) > profile_config.MAX_LEN_SKILL_NAME:
             raise TooLongSkillNameException(name=skill)
 
         self.skills.add(skill.lower())
 
     def update_skills(self, skills: set[str]) -> None:
-        if any(len(skill) > 30 for skill in skills):
+        if any(len(skill) > profile_config.MAX_LEN_SKILL_NAME for skill in skills):
             raise TooLongSkillNameException(name=max(skills, key=lambda x: len(x)))
 
         self.skills = {skill.lower() for skill in skills}
-
-    def set_new_avatar(self, avatar_url: str) -> None:
-        self.avatar_url = avatar_url

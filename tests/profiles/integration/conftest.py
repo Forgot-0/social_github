@@ -1,3 +1,4 @@
+from typing import Callable
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,16 +21,3 @@ async def persisted_profile(db_session: AsyncSession, user_jwt) -> Profile:
     await db_session.commit()
     return profile
 
-@pytest.fixture
-def handler_factory(
-    db_session: AsyncSession,
-    profile_repository: ProfileRepository,
-    rbac_manager: RBACManager,
-):
-    def _make():
-        return UpdateProfileCommandHandler(
-            session=db_session,
-            profile_repository=profile_repository,
-            rbac_manager=rbac_manager,
-        )
-    return _make

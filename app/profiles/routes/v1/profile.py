@@ -2,16 +2,20 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Query, status
 
 from app.core.api.builder import create_response
+from app.core.api.schemas import ORJSONResponse
 from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 from app.profiles.commands.profiles.create import CreateProfileCommand
 from app.profiles.commands.profiles.update import UpdateProfileCommand
-from app.profiles.dtos.profiles import ProfileDTO
+from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatrCommand
+from app.profiles.dtos.profiles import AvatarPresignResponse, ProfileDTO
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery
 from app.profiles.queries.profiles.get_list import GetProfilesQuery
+from app.profiles.queries.profiles.get_url import GetAvatrProfileUrlQuery
 from app.profiles.schemas.profiles.requests import (
+    AvatarUploadComplete,
     GetProfilesRequest,
     ProfileCreateRequest,
     ProfileUpdateRequest
@@ -86,4 +90,37 @@ async def get_profile(
     mediator: FromDishka[BaseMediator],
 ) -> ProfileDTO:
     return await mediator.handle_query(GetProfileByIdQuery(profile_id))
+
+# Avatar
+@router.get(
+    "/avatar/presign",
+    status_code=status.HTTP_200_OK
+)
+async def get_avatar_presign_url(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData
+) -> AvatarPresignResponse:
+    return await mediator.handle_query(
+        GetAvatrProfileUrlQuery(
+            user_id=int(user_jwt_data.id),
+            user_jwt_data=user_jwt_data
+        )
+    )
+
+@router.post(
+    "/avatar/upload_complete",
+    status_code=status.HTTP_200_OK
+)
+async def upload_avatar_complete(
+    profile_request: AvatarUploadComplete,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData
+) -> ORJSONResponse:
+    await mediator.handle_command(
+        UpdateProfileAvatrCommand(
+            key_base=profile_request.key_base,
+            user_jwt_data=user_jwt_data
+        )
+    )
+    return ORJSONResponse("OK")
 

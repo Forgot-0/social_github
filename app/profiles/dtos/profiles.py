@@ -10,3 +10,9 @@ class ProfileDTO(BaseModel):
     bio: str | None
     skills: set[str]
 
+
+class AvatarPresignResponse(BaseModel):
+    url: str
+    fields: dict[str, str]
+    key_base: str
+

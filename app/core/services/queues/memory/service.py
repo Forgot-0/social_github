@@ -2,12 +2,12 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
-from app.core.services.queues.service import QueueResult, QueueResultStatus, QueueServiceInterface
+from app.core.services.queues.service import QueueResult, QueueResultStatus, QueueService
 from app.core.services.queues.task import BaseTask
 
 
 @dataclass
-class MemoryQueueServiceInterface(QueueServiceInterface):
+class MemoryQueueServiceInterface(QueueService):
     queue: dict[str, QueueResult] = field(default_factory=dict)
 
     async def push(self, task: type[BaseTask], data: dict[str, Any]) -> str:

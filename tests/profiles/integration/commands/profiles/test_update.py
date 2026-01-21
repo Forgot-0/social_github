@@ -1,3 +1,4 @@
+from typing import Callable
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +16,22 @@ from tests.profiles.integration.factories import ProfileCommandFactory
 @pytest.mark.integration
 @pytest.mark.profiles
 class TestUpdateProfileHandler:
+
+    @pytest.fixture
+    def handler_factory(
+        self,
+        db_session: AsyncSession,
+        profile_repository: ProfileRepository,
+        rbac_manager: RBACManager,
+    ) -> Callable[[], UpdateProfileCommandHandler]:
+        def _make() -> UpdateProfileCommandHandler:
+            return UpdateProfileCommandHandler(
+                session=db_session,
+                profile_repository=profile_repository,
+                rbac_manager=rbac_manager,
+            )
+        return _make
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "payload, expected",
@@ -55,7 +72,6 @@ class TestUpdateProfileHandler:
 
         updated = await profile_repository.get_by_id(persisted_profile.id)
         assert updated is not None
-        print(updated.to_dict(), expected)
         assert updated.display_name == expected["display_name"]
         assert updated.bio == expected["bio"]
         assert updated.skills == expected["skills"]

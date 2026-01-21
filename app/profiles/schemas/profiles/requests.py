@@ -42,3 +42,7 @@ class GetProfilesRequest(BaseModel):
             profile_filter.add_sort(sort_field.field, sort_field.direction)
 
         return profile_filter
+
+
+class AvatarUploadComplete(BaseModel):
+    key_base: str

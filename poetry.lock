@@ -587,14 +587,14 @@ markers = {main = "platform_system == \"Windows\"", dev = "sys_platform == \"win
 
 [[package]]
 name = "dill"
-version = "0.4.0"
+version = "0.4.1"
 description = "serialize all of Python"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["lint"]
 files = [
-    {file = "dill-0.4.0-py3-none-any.whl", hash = "sha256:44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049"},
-    {file = "dill-0.4.0.tar.gz", hash = "sha256:0633f1d2df477324f53a895b02c901fb961bdbf65a17122586ea7019292cbcf0"},
+    {file = "dill-0.4.1-py3-none-any.whl", hash = "sha256:1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d"},
+    {file = "dill-0.4.1.tar.gz", hash = "sha256:423092df4182177d4d8ba8290c8a5b640c66ab35ec7da59ccfa00f6fa3eea5fa"},
 ]
 
 [package.extras]
@@ -1810,6 +1810,18 @@ pycryptodome = ["pycryptodome (>=3.3.1,<4.0.0)"]
 test = ["pytest", "pytest-cov"]
 
 [[package]]
+name = "python-magic"
+version = "0.4.27"
+description = "File type identification using libmagic"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+groups = ["main"]
+files = [
+    {file = "python-magic-0.4.27.tar.gz", hash = "sha256:c1ba14b08e4a5f5c31a302b7721239695b2f0f058d125bd5ce1ee36b9d9d3c3b"},
+    {file = "python_magic-0.4.27-py2.py3-none-any.whl", hash = "sha256:c212960ad306f700aa0d01e5d7a325d20548ff97eb9920dcd29513174f0294d3"},
+]
+
+[[package]]
 name = "python-multipart"
 version = "0.0.20"
 description = "A streaming multipart parser for Python"
@@ -1832,6 +1844,52 @@ files = [
     {file = "pytz-2025.2-py2.py3-none-any.whl", hash = "sha256:5ddf76296dd8c44c26eb8f4b6f35488f3ccbf6fbbd7adee0b7262d43f0ec2f00"},
     {file = "pytz-2025.2.tar.gz", hash = "sha256:360b9e3dbb49a209c21ad61809c7fb453643e048b38924c765813546746e81c3"},
 ]
+
+[[package]]
+name = "pyvips"
+version = "3.1.1"
+description = "binding for the libvips image processing library"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "pyvips-3.1.1.tar.gz", hash = "sha256:84fe744d023b1084ac2516bb17064cacd41c7f8aabf8e524dd383534941b9301"},
+]
+
+[package.dependencies]
+cffi = ">=1.0.0"
+pyvips-binary = {version = "*", optional = true, markers = "extra == \"binary\""}
+
+[package.extras]
+binary = ["pyvips-binary"]
+doc = ["sphinx", "sphinx_rtd_theme"]
+sdist = ["build"]
+test = ["pyperf", "pytest"]
+tox = ["tox"]
+
+[[package]]
+name = "pyvips-binary"
+version = "8.18.0"
+description = "Binary distribution of libvips and dependencies for use with pyvips"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "pyvips_binary-8.18.0-cp37-abi3-macosx_10_15_x86_64.whl", hash = "sha256:6ff72bd6c60bb6cf75b7827083b64e275a15a7d862628b5716998350c17426c8"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:a570dbf76bb620efc9745d82d6493da504d56b21b035ccd876e358a0c182e018"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:dad3012233b7b12f48180f2a407a50854e44654f37168fa8d42583d9e4f15882"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-manylinux_2_26_armv7l.manylinux_2_31_armv7l.whl", hash = "sha256:0906be336b8f775e2d33dfe61ffc480ff83c91c08d5eeff904c27c2c5164ff3a"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d4ddd4d344f758483d1630a9a08f201ab95162599acc6a8e6c62bb1563e94fe0"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:076fb0affa2901af0fee90c728ded6eed2c72f00356af9895fa7a1fb6c9a2288"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:659ef1e4af04b3472e7762a95caa1038fdeea530807c84a23a0f4c706af0338f"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-win32.whl", hash = "sha256:fd331bcd75bff8651d73d09687d55ac8fb9014baa5682b770a4ea0fbcedf5f97"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-win_amd64.whl", hash = "sha256:a67d73683f70c21bf2c336b6d5ddc2bd54ec36db72cc54ab63cb48bc2373feac"},
+    {file = "pyvips_binary-8.18.0-cp37-abi3-win_arm64.whl", hash = "sha256:0c1f9af910866bc8c2d55182e7a6e8684a828ee4d6084dd814e88e2ee9ec4be3"},
+    {file = "pyvips_binary-8.18.0.tar.gz", hash = "sha256:2f9e509de6d0cf04ea9b429ff0649130a9cf04de8a4f0887d2bcb72e3973225a"},
+]
+
+[package.dependencies]
+cffi = ">=1.0.0"
 
 [[package]]
 name = "pywin32"
@@ -2598,4 +2656,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "b7833f4a9652b7a35e6b5406771c674d1d630f8c3e08be6d5614335e7f4f993e"
+content-hash = "a9c26398c1bfecff908e3ef5c57da02dcb7e3c301cb51449e8e6e3af05efabfc"
