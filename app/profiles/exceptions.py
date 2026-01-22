@@ -78,3 +78,21 @@ class TooLongBioException(ApplicationException):
         return {
             "name": self.bio
         }
+
+
+@dataclass(kw_only=True)
+class AvatarNotImageType(ApplicationException):
+    type_avatar: str
+
+    code: str = "AVATAR_NOT_TYPE_IMAGE"
+    status: int = 400
+
+    @property
+    def message(self):
+        return f"Avatar must be image type(jpg, png, ...)"
+
+    @property
+    def detail(self):
+        return {
+            "type": self.type_avatar
+        }

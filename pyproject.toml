@@ -82,7 +82,6 @@ lint = [
     "pylint==3.3.*"
 ]
 dev = [
-    { include-group = "test" },
     "pre-commit==4.5.0",
 ]
 

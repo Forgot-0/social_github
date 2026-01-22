@@ -4,6 +4,7 @@ import mimetypes
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import timedelta
+from typing import Iterator
 
 from minio import Minio, S3Error
 from minio.datatypes import PostPolicy
@@ -75,7 +76,7 @@ class MinioStorageService(StorageService):
 
         post_policy.add_starts_with_condition("key", upload_file_post.file_key)
         post_policy.add_content_length_range_condition(
-            upload_file_post.size_lower_limit, upload_file_post.size_upper_limit
+            0, upload_file_post.size_upper_limit
         )
 
         loop = asyncio.get_running_loop()
@@ -165,15 +166,20 @@ class MinioStorageService(StorageService):
         return result
 
     def _download_file_sync(self, bucket_name: str, file_key: str) -> bytes:
+        response=None
         try:
             response = self.client.get_object(bucket_name=bucket_name, object_name=file_key)
             return response.read()
+        except Exception as e:
+            raise e
         finally:
-            response.close()
-            response.release_conn()
+            if response:
+                response.close()
+                response.release_conn()
 
     def get_public_url_object(self, bucket: str, file_key: str) -> str:
         return f"{app_config.STORAGE_PUBLIC_URL}/{bucket}/{file_key}"
 
     def get_puclic_url(self, bucket: str) -> str:
         return f"{app_config.STORAGE_PUBLIC_URL}/{bucket}"
+

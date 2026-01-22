@@ -1,7 +1,8 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.core.api.builder import create_response
+from app.core.api.rate_limiter import ConfigurableRateLimiter
 from app.core.api.schemas import ORJSONResponse
 from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
@@ -15,7 +16,8 @@ from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery
 from app.profiles.queries.profiles.get_list import GetProfilesQuery
 from app.profiles.queries.profiles.get_url import GetAvatrProfileUrlQuery
 from app.profiles.schemas.profiles.requests import (
-    AvatarUploadComplete,
+    AvatarPreSignUrlRequest,
+    AvatarUploadCompleteRequest,
     GetProfilesRequest,
     ProfileCreateRequest,
     ProfileUpdateRequest
@@ -92,27 +94,33 @@ async def get_profile(
     return await mediator.handle_query(GetProfileByIdQuery(profile_id))
 
 # Avatar
-@router.get(
+@router.post(
     "/avatar/presign",
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
+    # dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def get_avatar_presign_url(
+    profile_request: AvatarPreSignUrlRequest,
     mediator: FromDishka[BaseMediator],
-    user_jwt_data: CurrentUserJWTData
+    user_jwt_data: CurrentUserJWTData,
 ) -> AvatarPresignResponse:
     return await mediator.handle_query(
         GetAvatrProfileUrlQuery(
             user_id=int(user_jwt_data.id),
+            file_name=profile_request.filename,
+            content_type=profile_request.content_type,
+            size=profile_request.size,
             user_jwt_data=user_jwt_data
         )
     )
 
 @router.post(
     "/avatar/upload_complete",
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
+    # dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def upload_avatar_complete(
-    profile_request: AvatarUploadComplete,
+    profile_request: AvatarUploadCompleteRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData
 ) -> ORJSONResponse:

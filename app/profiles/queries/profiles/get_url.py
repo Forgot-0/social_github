@@ -11,6 +11,9 @@ from app.profiles.dtos.profiles import AvatarPresignResponse
 
 @dataclass(frozen=True)
 class GetAvatrProfileUrlQuery(BaseQuery):
+    file_name: str
+    size: int
+    content_type: str
     user_id: int
     user_jwt_data: UserJWTData
 

@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.api.filter_mapper import FilterMapper
 from app.core.filters.pagination import Pagination
+from app.profiles.exceptions import AvatarNotImageType
 from app.profiles.filters.profiles import ProfileFilter
 
 
@@ -44,5 +45,21 @@ class GetProfilesRequest(BaseModel):
         return profile_filter
 
 
-class AvatarUploadComplete(BaseModel):
+class AvatarUploadCompleteRequest(BaseModel):
     key_base: str
+    size: int
+    content_type: str
+
+
+class AvatarPreSignUrlRequest(BaseModel):
+    filename: str
+    size: int
+    content_type: str
+
+    @field_validator('content_type')
+    @classmethod
+    def validate_content_type(cls, v):
+        if v.split("/")[0] != "image":
+            raise AvatarNotImageType(type_avatar="")
+        return v
+

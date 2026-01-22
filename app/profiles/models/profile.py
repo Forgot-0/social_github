@@ -1,3 +1,5 @@
+from enum import Enum
+from typing import TypedDict
 from sqlalchemy import Integer, String, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -29,6 +31,18 @@ class SetArray(TypeDecorator):
         return set(value)
 
 
+class SizeAvatar(int, Enum):
+    SMALL = 32
+    UPPER_SMALL = 64
+    MEDIUM = 256
+    LARGE = 512
+
+class TypeImageAvatar(str, Enum):
+    JPG = "jpg"
+    WEBP = "webp"
+    AVIF = "avif"
+
+
 class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "profiles"
 
@@ -36,7 +50,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     username: Mapped[str] = mapped_column(String, unique=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True, unique=True)
 
-    avatars: Mapped[dict] = mapped_column(JSONB, default_factory=dict)
+    avatars: Mapped[dict[SizeAvatar, dict[TypeImageAvatar, str]]] = mapped_column(JSONB, default=dict())
     display_name: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_DISPLAY_NAME), nullable=True)
     bio: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_BIO), nullable=True)
 

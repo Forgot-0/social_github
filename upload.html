@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Avatar upload demo</title>
+</head>
+<body>
+<h1>Avatar upload demo</h1>
+<input id="file" type="file" accept="image/*" />
+<button id="btn">Upload</button>
+<script>
+async function upload(){
+  const file = document.getElementById('file').files[0];
+  if(!file) return alert('Select file');
+
+  try {
+    // 1) get presign
+    const res = await fetch('http://localhost:8000/api/v1/profiles/avatar/presign', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzIiwic3ViIjoiMSIsInVzZXJuYW1lIjoiRm9yZ290IiwibHZsIjoxLCJkaWQiOiJkZjBkOGU3OWM2ZWY3ZDA1MWY1Y2MzZDA0ZDI1NDMyODU3YjJlZjM4ZmE4ZWU0NjNkZTk4YzUzMGNhZWY4NWQxIiwianRpIjoiOGQ0NzRhMzQtOWM5ZC00Yjk2LTg2ZjQtOTMwZjZjMGVmNWJjIiwiZXhwIjoxNzY5MDQ0ODk5LjIzMjEwNCwiaWF0IjoxNzY5MDQzOTk5LjIzMjEwNCwicm9sZXMiOlsidXNlciJdLCJwZXJtaXNzaW9ucyI6W119.h4nzY6om38rOri5OQa_gSFOi5sWyc8lvH46aoNQhPvM',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size })
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error('Presign failed: ' + res.status + ' ' + text);
+    }
+
+    const presign = await res.json();
+
+    // 2) upload directly to S3/MinIO using the form fields
+    const form = new FormData();
+    for (const k in presign.fields) form.append(k, presign.fields[k]);
+    key = `${presign.key_base}/original`
+    form.append('key', key);
+    form.append('Content-Type', file.type);
+    // добавляем сам файл (обычно имя поля — 'file')
+    form.append('file', file);
+    const uploadRes = await fetch(presign.url, { method: 'POST', body: form });
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text();
+      throw new Error('S3 upload failed: ' + uploadRes.status + ' ' + text);
+    }
+
+    // 3) notify backend (use correct header name)
+    const notifyRes = await fetch('http://localhost:8000/api/v1/profiles/avatar/upload_complete', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzIiwic3ViIjoiMSIsInVzZXJuYW1lIjoiRm9yZ290IiwibHZsIjoxLCJkaWQiOiJkZjBkOGU3OWM2ZWY3ZDA1MWY1Y2MzZDA0ZDI1NDMyODU3YjJlZjM4ZmE4ZWU0NjNkZTk4YzUzMGNhZWY4NWQxIiwianRpIjoiOGQ0NzRhMzQtOWM5ZC00Yjk2LTg2ZjQtOTMwZjZjMGVmNWJjIiwiZXhwIjoxNzY5MDQ0ODk5LjIzMjEwNCwiaWF0IjoxNzY5MDQzOTk5LjIzMjEwNCwicm9sZXMiOlsidXNlciJdLCJwZXJtaXNzaW9ucyI6W119.h4nzY6om38rOri5OQa_gSFOi5sWyc8lvH46aoNQhPvM',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        key_base: presign.key_base,
+        content_type: file.type,
+        size: file.size
+      })
+    });
+
+    if (!notifyRes.ok) {
+      const text = await notifyRes.text();
+      throw new Error('Notify failed: ' + notifyRes.status + ' ' + text);
+    }
+
+    alert('Uploaded & enqueued');
+  } catch (err) {
+    alert('Error: ' + err.message);
+    console.error(err);
+  }
+}
+
+document.getElementById('btn').onclick = upload;
+</script>
+</body>
+</html>
