@@ -23,6 +23,7 @@ class UpdateProfileCommand(BaseCommand):
     bio: str | None
     skills: set[str] | None
     date_birthday: date | None
+    specialization: str | None
 
     user_jwt_data: UserJWTData
 
@@ -39,7 +40,7 @@ class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]
             raise NotFoundProfileException(profile_id=command.profile_id)
 
         if (
-            profile.user_id != int(command.user_jwt_data.id) and
+            profile.id != int(command.user_jwt_data.id) and
             not self.rbac_manager.check_permission(command.user_jwt_data, {"profile:update", "user:update" })
         ):
             raise AccessDeniedException(
@@ -48,6 +49,7 @@ class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]
 
         profile.change_display_name(command.display_name)
         profile.change_bio(command.bio)
+        profile.change_specialization(command.specialization)
         profile.update_skills(command.skills or set())
         profile.change_birthday(command.date_birthday)
 

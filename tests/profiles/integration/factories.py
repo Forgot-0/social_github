@@ -9,14 +9,16 @@ class ProfileCommandFactory:
     def create_command(
         user_id: int,
         username: str,
-        display_name: str | None = None,
+        specialization: str | None=None,
+        display_name: str | None=None,
         bio: str | None = None,
-        skills: set[str] | None = None,
+        skills: set[str] | None=None,
         date_birthday: date | None=None,
     ) -> dict[str, Any]:
         return {
             "user_id": user_id,
             "username": username,
+            "specialization": specialization,
             "display_name": display_name,
             "bio": bio,
             "skills": skills,
@@ -25,12 +27,14 @@ class ProfileCommandFactory:
 
     @staticmethod
     def update_command(
-        display_name: str | None = None,
+        specialization: str | None=None,
+        display_name: str | None=None,
         bio: str | None = None,
-        skills: set[str] | None = None,
+        skills: set[str] | None=None,
         date_birthday: date | None=None,
     ) -> dict[str, Any]:
         return {
+            "specialization": specialization,
             "display_name": display_name,
             "bio": bio,
             "skills": skills,

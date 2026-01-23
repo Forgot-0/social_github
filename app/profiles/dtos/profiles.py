@@ -6,8 +6,8 @@ from app.profiles.dtos.contacts import ContactDTO
 
 class ProfileDTO(BaseModel):
     id: int
-    user_id: int
     avatars: dict[int, dict[str, str]]
+    specialization: str | None
     display_name: str | None
     bio: str | None
     date_birthday: date | None

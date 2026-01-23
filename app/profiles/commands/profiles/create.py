@@ -20,6 +20,7 @@ class CreateProfileCommand(BaseCommand):
     display_name: str | None = None
     bio: str | None = None
     date_birthday: date | None = None
+    specialization: str | None = None
     skills: set[str] | None = None
 
 
@@ -29,13 +30,14 @@ class CreateProfileCommandHanler(BaseCommandHandler[CreateProfileCommand, None])
     profile_repository: ProfileRepository
 
     async def handle(self, command: CreateProfileCommand) -> None:
-        profile = await self.profile_repository.get_by_user_id(command.user_id)
+        profile = await self.profile_repository.get_by_id(command.user_id)
         if profile:
             raise AlreadeExistProfileException()
 
         profile = Profile.create(
             username=command.username,
             user_id=command.user_id,
+            specialization=command.specialization,
             display_name=command.display_name,
             bio=command.bio,
             date_birthday=command.date_birthday,

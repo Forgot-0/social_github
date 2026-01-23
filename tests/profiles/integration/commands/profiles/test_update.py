@@ -82,6 +82,7 @@ class TestUpdateProfileHandler:
         command = UpdateProfileCommand(
             profile_id=999999,
             user_jwt_data=user_jwt,
+            specialization="",
             display_name="x",
             bio=None,
             skills=None,

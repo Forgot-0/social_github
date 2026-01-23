@@ -31,7 +31,7 @@ class RemoveContactToProfileCommandHandler(BaseCommandHandler[RemoveContactToPro
             raise NotFoundProfileException(profile_id=command.profile_id)
 
         if (
-            profile.user_id != int(command.user_jwt_data.id) and
+            profile.id != int(command.user_jwt_data.id) and
             not self.rbac_manager.check_permission(command.user_jwt_data, {"profile:update", "user:update" })
         ):
             raise AccessDeniedException(

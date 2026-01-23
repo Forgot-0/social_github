@@ -80,7 +80,7 @@ class AvatarUploadTask(BaseTask):
 
         await event_bus.publish([
             UploadedAvatarsEvent(
-                user_id=user_id,
+                profile_id=user_id,
                 versions=versions
             )
         ])

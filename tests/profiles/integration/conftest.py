@@ -12,6 +12,7 @@ async def persisted_profile_contact(db_session: AsyncSession, user_jwt) :
         profile = Profile.create(
             user_id=int(user_jwt.id),
             username=user_jwt.username,
+            specialization="backend",
             display_name="test_name",
             bio="Python Developer",
             skills={"python", "sql", "fastapi"},
@@ -32,6 +33,7 @@ async def persisted_profile(db_session: AsyncSession, user_jwt) -> Profile:
     profile = Profile.create(
         user_id=int(user_jwt.id),
         username=user_jwt.username,
+        specialization="backend",
         display_name="test_name",
         bio="Python Developer",
         skills={"python", "sql", "fastapi"},

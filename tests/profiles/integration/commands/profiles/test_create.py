@@ -31,7 +31,7 @@ class TestCreateCommand:
         command = CreateProfileCommand(**cmd_data)
         await handler.handle(command)
 
-        created_profile = await profile_repository.get_by_user_id(user_id=1)
+        created_profile = await profile_repository.get_by_id(profile_id=1)
         assert created_profile is not None
         assert created_profile.username == "test"
         assert created_profile.bio is None

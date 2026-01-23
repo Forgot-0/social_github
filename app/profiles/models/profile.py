@@ -48,14 +48,13 @@ AvatarMap = dict[SizeAvatar, dict[TypeImageAvatar, str]]
 class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "profiles"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String, unique=True)
-    user_id: Mapped[int] = mapped_column(Integer, index=True, unique=True)
 
     avatars: Mapped[AvatarMap] = mapped_column(JSONB, default=dict())
     display_name: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_DISPLAY_NAME), nullable=True)
     bio: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_BIO), nullable=True)
-
+    specialization: Mapped[str | None] = mapped_column(String(50), nullable=True)
     date_birthday: Mapped[date | None] = mapped_column(Date, default=None, nullable=True)
 
     skills: Mapped[set[str]] = mapped_column(SetArray())
@@ -69,15 +68,17 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     def create(
         cls, user_id: int, username: str,
         display_name: str | None,
+        specialization: str | None,
         bio: str | None,
         skills: set[str] | None = None,
         date_birthday: date | None=None,
         contacts: list[Contact] | None=None,
     ) -> "Profile":
         instance = cls(
+            id=user_id,
             username=username,
-            user_id=user_id,
-            date_birthday=date_birthday
+            date_birthday=date_birthday,
+            specialization=specialization
         )
         instance.change_display_name(display_name)
         instance.change_bio(bio)
@@ -99,6 +100,12 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
             raise TooLongBioException(bio=bio)
 
         self.bio = bio
+
+    def change_specialization(self, specialization: str | None) -> None:
+        if specialization:
+            ...
+
+        self.specialization = specialization
 
     def change_birthday(self, birthday: date | None) -> None:
         if birthday:
@@ -123,7 +130,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
             if provider == cont.provider:
                 cont.contact = contact
                 return 
-        
+
         self.contacts.append(
             Contact(
                 provider=provider,
