@@ -18,7 +18,7 @@ async function upload(){
     const res = await fetch('http://localhost:8000/api/v1/profiles/avatar/presign', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzIiwic3ViIjoiMSIsInVzZXJuYW1lIjoiRm9yZ290IiwibHZsIjoxLCJkaWQiOiJkZjBkOGU3OWM2ZWY3ZDA1MWY1Y2MzZDA0ZDI1NDMyODU3YjJlZjM4ZmE4ZWU0NjNkZTk4YzUzMGNhZWY4NWQxIiwianRpIjoiOGQ0NzRhMzQtOWM5ZC00Yjk2LTg2ZjQtOTMwZjZjMGVmNWJjIiwiZXhwIjoxNzY5MDQ0ODk5LjIzMjEwNCwiaWF0IjoxNzY5MDQzOTk5LjIzMjEwNCwicm9sZXMiOlsidXNlciJdLCJwZXJtaXNzaW9ucyI6W119.h4nzY6om38rOri5OQa_gSFOi5sWyc8lvH46aoNQhPvM',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzIiwic3ViIjoiMSIsInVzZXJuYW1lIjoiRm9yZ290IiwibHZsIjoxLCJkaWQiOiJkZjBkOGU3OWM2ZWY3ZDA1MWY1Y2MzZDA0ZDI1NDMyODU3YjJlZjM4ZmE4ZWU0NjNkZTk4YzUzMGNhZWY4NWQxIiwianRpIjoiYjM4OWNlZjktOTQ0ZC00MGNlLTgxMTItOTA5MjY0Nzg4NzRiIiwiZXhwIjoxNzY5MDQ2MDM3LjU4MDYxMiwiaWF0IjoxNzY5MDQ1MTM3LjU4MDYxMiwicm9sZXMiOlsidXNlciJdLCJwZXJtaXNzaW9ucyI6W119.Q2N7fkLoON-LM0kh1zrb1Rwy5MteuDSE-gizv8TmAwE',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size })
@@ -49,7 +49,7 @@ async function upload(){
     const notifyRes = await fetch('http://localhost:8000/api/v1/profiles/avatar/upload_complete', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzIiwic3ViIjoiMSIsInVzZXJuYW1lIjoiRm9yZ290IiwibHZsIjoxLCJkaWQiOiJkZjBkOGU3OWM2ZWY3ZDA1MWY1Y2MzZDA0ZDI1NDMyODU3YjJlZjM4ZmE4ZWU0NjNkZTk4YzUzMGNhZWY4NWQxIiwianRpIjoiOGQ0NzRhMzQtOWM5ZC00Yjk2LTg2ZjQtOTMwZjZjMGVmNWJjIiwiZXhwIjoxNzY5MDQ0ODk5LjIzMjEwNCwiaWF0IjoxNzY5MDQzOTk5LjIzMjEwNCwicm9sZXMiOlsidXNlciJdLCJwZXJtaXNzaW9ucyI6W119.h4nzY6om38rOri5OQa_gSFOi5sWyc8lvH46aoNQhPvM',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzIiwic3ViIjoiMSIsInVzZXJuYW1lIjoiRm9yZ290IiwibHZsIjoxLCJkaWQiOiJkZjBkOGU3OWM2ZWY3ZDA1MWY1Y2MzZDA0ZDI1NDMyODU3YjJlZjM4ZmE4ZWU0NjNkZTk4YzUzMGNhZWY4NWQxIiwianRpIjoiYjM4OWNlZjktOTQ0ZC00MGNlLTgxMTItOTA5MjY0Nzg4NzRiIiwiZXhwIjoxNzY5MDQ2MDM3LjU4MDYxMiwiaWF0IjoxNzY5MDQ1MTM3LjU4MDYxMiwicm9sZXMiOlsidXNlciJdLCJwZXJtaXNzaW9ucyI6W119.Q2N7fkLoON-LM0kh1zrb1Rwy5MteuDSE-gizv8TmAwE',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

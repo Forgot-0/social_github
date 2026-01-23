@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from sqlalchemy import Select, select
+from sqlalchemy.orm import selectinload
 
 from app.core.db.repository import IRepository
 from app.profiles.filters.profiles import ProfileFilter
@@ -13,7 +14,7 @@ class ProfileRepository(IRepository[Profile]):
         self.session.add(profile)
 
     async def get_by_id(self, profile_id: int) -> Profile | None:
-        query = select(Profile).where(Profile.id==profile_id)
+        query = select(Profile).where(Profile.id==profile_id).options(selectinload(Profile.contacts))
         result = await self.session.execute(query)
         return result.scalar()
 
@@ -21,6 +22,6 @@ class ProfileRepository(IRepository[Profile]):
         return stmt
 
     async def get_by_user_id(self, user_id: int) -> Profile | None:
-        query = select(Profile).where(Profile.user_id==user_id)
+        query = select(Profile).where(Profile.user_id==user_id).options(selectinload(Profile.contacts))
         result = await self.session.execute(query)
         return result.scalar()

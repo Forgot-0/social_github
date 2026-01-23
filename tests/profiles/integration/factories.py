@@ -1,4 +1,5 @@
 
+from datetime import date
 from typing import Any
 from uuid import uuid4
 
@@ -10,7 +11,8 @@ class ProfileCommandFactory:
         username: str,
         display_name: str | None = None,
         bio: str | None = None,
-        skills: set[str] | None = None
+        skills: set[str] | None = None,
+        date_birthday: date | None=None,
     ) -> dict[str, Any]:
         return {
             "user_id": user_id,
@@ -18,17 +20,20 @@ class ProfileCommandFactory:
             "display_name": display_name,
             "bio": bio,
             "skills": skills,
+            "date_birthday": date_birthday,
         }
 
     @staticmethod
     def update_command(
         display_name: str | None = None,
         bio: str | None = None,
-        skills: set[str] | None = None
+        skills: set[str] | None = None,
+        date_birthday: date | None=None,
     ) -> dict[str, Any]:
         return {
             "display_name": display_name,
             "bio": bio,
             "skills": skills,
+            "date_birthday": date_birthday,
         }
 

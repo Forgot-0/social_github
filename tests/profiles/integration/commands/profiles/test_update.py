@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Callable
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,7 +84,8 @@ class TestUpdateProfileHandler:
             user_jwt_data=user_jwt,
             display_name="x",
             bio=None,
-            skills=None
+            skills=None,
+            date_birthday=None
         )
         handler = handler_factory()
 
@@ -121,7 +123,8 @@ class TestUpdateProfileHandler:
         command = UpdateProfileCommand(
             profile_id=persisted_profile.id,
             user_jwt_data=admin_user_jwt,
-            **ProfileCommandFactory.update_command(display_name="admin_updated", bio="ok", skills={"x"}),
+            **ProfileCommandFactory.update_command(
+                display_name="admin_updated", bio="ok", skills={"x"}, date_birthday=date(2005,2,25)),
         )
 
         handler = handler_factory()
@@ -132,3 +135,4 @@ class TestUpdateProfileHandler:
         assert updated.display_name == "admin_updated"
         assert updated.bio == "ok"
         assert updated.skills == {"x"}
+        assert updated.date_birthday == date(2005,2,25)

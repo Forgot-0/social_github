@@ -23,7 +23,7 @@ class GetAvatrProfileUrlQueryHandler(BaseQueryHandler[GetAvatrProfileUrlQuery, A
     storage_service: StorageService
 
     async def handle(self, query: GetAvatrProfileUrlQuery) -> AvatarPresignResponse:
-        key_base = f"avatars/{query.user_id}/{uuid4()}"
+        key_base = f"avatars/{query.user_id}"
 
         result = await self.storage_service.upload_post_file(
             UploadFilePost(

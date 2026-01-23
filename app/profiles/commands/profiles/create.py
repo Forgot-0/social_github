@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,7 @@ class CreateProfileCommand(BaseCommand):
 
     display_name: str | None = None
     bio: str | None = None
+    date_birthday: date | None = None
     skills: set[str] | None = None
 
 
@@ -36,7 +38,8 @@ class CreateProfileCommandHanler(BaseCommandHandler[CreateProfileCommand, None])
             user_id=command.user_id,
             display_name=command.display_name,
             bio=command.bio,
-            skills=command.skills
+            date_birthday=command.date_birthday,
+            skills=command.skills,
         )
         await self.profile_repository.create(profile)
         await self.session.commit()

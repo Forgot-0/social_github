@@ -7,7 +7,9 @@ from app.core.api.schemas import ORJSONResponse
 from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
+from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand
 from app.profiles.commands.profiles.create import CreateProfileCommand
+from app.profiles.commands.profiles.remove_contact import RemoveContactToProfileCommand
 from app.profiles.commands.profiles.update import UpdateProfileCommand
 from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatrCommand
 from app.profiles.dtos.profiles import AvatarPresignResponse, ProfileDTO
@@ -16,6 +18,7 @@ from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery
 from app.profiles.queries.profiles.get_list import GetProfilesQuery
 from app.profiles.queries.profiles.get_url import GetAvatrProfileUrlQuery
 from app.profiles.schemas.profiles.requests import (
+    AddContactProfileRequest,
     AvatarPreSignUrlRequest,
     AvatarUploadCompleteRequest,
     GetProfilesRequest,
@@ -42,6 +45,7 @@ async def create_profile(
             display_name=profile_request.display_name,
             bio=profile_request.bio,
             skills=profile_request.skills,
+            date_birthday=profile_request.date_birthday,
         )
     )
 
@@ -76,6 +80,7 @@ async def update_profile(
             display_name=profile_request.display_name,
             bio=profile_request.bio,
             skills=profile_request.skills,
+            date_birthday=profile_request.date_birthday,
             user_jwt_data=user_jwt_data
         )
     )
@@ -131,4 +136,42 @@ async def upload_avatar_complete(
         )
     )
     return ORJSONResponse("OK")
+
+# Contacts
+@router.post(
+    "/{profile_id}/contacts",
+    status_code=status.HTTP_200_OK,
+)
+async def add_contact_profile(
+    profile_id: int,
+    profile_request: AddContactProfileRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData
+) -> None:
+    await mediator.handle_command(
+        AddContactToProfileCommand(
+            profile_id=profile_id,
+            provider=profile_request.provider,
+            contact=profile_request.contact,
+            user_jwt_data=user_jwt_data
+        )
+    )
+
+@router.delete(
+    "/{profile_id}/{provide_contact}/delete",
+    status_code=status.HTTP_200_OK,
+)
+async def remove_contact_profile(
+    profile_id: int,
+    provide_contact: str,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData
+) -> None:
+    await mediator.handle_command(
+        RemoveContactToProfileCommand(
+            profile_id=profile_id,
+            provider=provide_contact,
+            user_jwt_data=user_jwt_data
+        )
+    )
 

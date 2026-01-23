@@ -25,7 +25,7 @@ def register_profiles_tasks(broker: AsyncBroker) -> None:
 
 @dataclass
 class AvatarUploadTask(BaseTask):
-    __task_name__ = "avatar.uploaded"
+    __task_name__ = "avatar.resize"
 
     @staticmethod
     @inject
@@ -74,7 +74,7 @@ class AvatarUploadTask(BaseTask):
                     bucket_name=profile_config.AVATAR_BUCKET,
                     file_key=key_jpg, file_content=io.BytesIO(jpg), size=len(jpg)
                 )
-            ) 
+            )
 
             versions[s.value] = {"webp": webp_url, "avif": avif_url, "jpg": jpg_url}
 

@@ -1,11 +1,30 @@
-from typing import Callable
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.services.auth.rbac import RBACManager
-from app.profiles.commands.profiles.update import UpdateProfileCommandHandler
 from app.profiles.models.profile import Profile
-from app.profiles.repositories.profiles import ProfileRepository
+
+
+
+
+@pytest.fixture
+async def persisted_profile_contact(db_session: AsyncSession, user_jwt) :
+    async def _make(contacts: list[tuple[str, str]]):
+        profile = Profile.create(
+            user_id=int(user_jwt.id),
+            username=user_jwt.username,
+            display_name="test_name",
+            bio="Python Developer",
+            skills={"python", "sql", "fastapi"},
+        )
+
+        for contact in contacts:
+            profile.add_contact(contact[0], contact[1])
+
+        db_session.add(profile)
+        await db_session.commit()
+        await db_session.refresh(profile)
+        return profile
+    return _make
 
 
 @pytest.fixture
@@ -19,5 +38,6 @@ async def persisted_profile(db_session: AsyncSession, user_jwt) -> Profile:
     )
     db_session.add(profile)
     await db_session.commit()
+    await db_session.refresh(profile)
     return profile
 

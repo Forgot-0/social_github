@@ -17,4 +17,6 @@ class ProfileFilter(BaseFilter):
         self.add_condition("user_id", FilterOperator.EQ, self.user_id)
         self.add_condition("display_name", FilterOperator.CONTAINS, self.display_name)
 
-        self.add_condition("skills", FilterOperator.IN, self.skills)
+        self.add_condition("skills", FilterOperator.ALL, self.skills)
+
+        self.add_relation("contacts")

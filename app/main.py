@@ -59,18 +59,19 @@ def setup_middleware(app: FastAPI) -> None:
     # if app_config.BACKEND_CORS_ORIGINS:
     #     app.add_middleware(
     #         CORSMiddleware,
-    #         allow_origins=["*"],#[str(origin).strip("/") for origin in app_config.BACKEND_CORS_ORIGINS],
+    #         allow_origins=[str(origin).strip("/") for origin in app_config.BACKEND_CORS_ORIGINS],
     #         allow_credentials=True,
     #         allow_methods=["*"],
     #         allow_headers=["*"],
     #     )
     app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],#[str(origin).strip("/") for origin in app_config.BACKEND_CORS_ORIGINS],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.add_middleware(ContextMiddleware)
 
 

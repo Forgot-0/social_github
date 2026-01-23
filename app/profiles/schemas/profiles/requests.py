@@ -1,3 +1,4 @@
+from datetime import date
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.api.filter_mapper import FilterMapper
@@ -10,17 +11,19 @@ class ProfileCreateRequest(BaseModel):
     display_name: str | None = Field(None)
     bio: str | None = Field(None)
     skills: set[str] | None = Field(None)
+    date_birthday: date | None = Field(None)
 
 
 class ProfileUpdateRequest(BaseModel):
     display_name: str | None = Field(None)
     bio: str | None = Field(None)
     skills: set[str] | None = Field(None)
+    date_birthday: date | None = Field(None)
 
 
 class GetProfilesRequest(BaseModel):
-    user_id: int | None
-    display_name: str | None
+    user_id: int | None = None
+    display_name: str | None = None
     skills: list[str] | None = None
 
     page: int = Field(1, ge=1)
@@ -62,4 +65,9 @@ class AvatarPreSignUrlRequest(BaseModel):
         if v.split("/")[0] != "image":
             raise AvatarNotImageType(type_avatar="")
         return v
+
+
+class AddContactProfileRequest(BaseModel):
+    provider: str
+    contact: str
 
