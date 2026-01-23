@@ -1,6 +1,7 @@
 from datetime import date
 from enum import Enum
 from sqlalchemy import Date, Integer, String, TypeDecorator
+from sqlalchemy.ext.mutable import MutableSet
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
@@ -57,7 +58,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     specialization: Mapped[str | None] = mapped_column(String(50), nullable=True)
     date_birthday: Mapped[date | None] = mapped_column(Date, default=None, nullable=True)
 
-    skills: Mapped[set[str]] = mapped_column(SetArray())
+    skills: Mapped[set[str]] = mapped_column(MutableSet.as_mutable(ARRAY(String(profile_config.MAX_LEN_SKILL_NAME))))
 
     contacts: Mapped[list[Contact]] = relationship(
         back_populates="profile",
