@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, LargeBinary, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel
@@ -14,10 +14,10 @@ if TYPE_CHECKING:
 class Session(BaseModel):
     __tablename__ = "sessions"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
     user_id: Mapped[int] = mapped_column(
-        Integer,
+        BigInteger,
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 

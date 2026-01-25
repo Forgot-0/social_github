@@ -1,6 +1,6 @@
 from datetime import date
 from enum import Enum
-from sqlalchemy import Date, Integer, String, TypeDecorator
+from sqlalchemy import BigInteger, Date, String, TypeDecorator
 from sqlalchemy.ext.mutable import MutableSet
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -49,7 +49,7 @@ AvatarMap = dict[SizeAvatar, dict[TypeImageAvatar, str]]
 class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "profiles"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str] = mapped_column(String, unique=True)
 
     avatars: Mapped[AvatarMap] = mapped_column(JSONB, default=dict())
@@ -58,7 +58,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     specialization: Mapped[str | None] = mapped_column(String(50), nullable=True)
     date_birthday: Mapped[date | None] = mapped_column(Date, default=None, nullable=True)
 
-    skills: Mapped[set[str]] = mapped_column(MutableSet.as_mutable(ARRAY(String(profile_config.MAX_LEN_SKILL_NAME))))
+    skills: Mapped[set[str]] = mapped_column(SetArray)
 
     contacts: Mapped[list[Contact]] = relationship(
         back_populates="profile",

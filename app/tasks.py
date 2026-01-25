@@ -35,7 +35,6 @@ else:
     )
     sources = [redis_schedule_source, LabelScheduleSource(broker=broker)]
 
-\
 
 scheduler = TaskiqScheduler(
     broker=broker,
