@@ -24,14 +24,13 @@ class MembershipStatus(PyEnum):
 class ProjectMembership(BaseModel, DateMixin):
     __tablename__ = "project_memberships"
 
-
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     project_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+
     role_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("roles.id", ondelete="CASCADE"), index=True
     )

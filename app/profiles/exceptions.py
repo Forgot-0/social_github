@@ -42,7 +42,7 @@ class TooLongSkillNameException(ApplicationException):
     @property
     def detail(self):
         return {
-            "name": self.name
+            "skill_name": self.name
         }
 
 
@@ -59,7 +59,7 @@ class TooLongDisplayNameException(ApplicationException):
     @property
     def detail(self):
         return {
-            "name": self.name
+            "display_name": self.name
         }
 
 
@@ -76,7 +76,7 @@ class TooLongBioException(ApplicationException):
     @property
     def detail(self):
         return {
-            "name": self.bio
+            "bio": self.bio
         }
 
 

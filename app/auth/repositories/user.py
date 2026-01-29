@@ -63,7 +63,7 @@ class UserRepository(IRepository[User]):
     def apply_relationship_filters(self, stmt: Select, filters: UserFilter) -> Select:
 
         if filters.role_names:
-            stmt = stmt.join(User.roles).where(Role.name.in_(filters.role_names))
+            stmt = stmt.join(User.roles).where(User.roles.contains(filters.role_names))
 
         if filters.permission_names:
             stmt = stmt.join(User.permissions).where(Permission.name.in_(filters.permission_names))

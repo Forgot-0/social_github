@@ -1,18 +1,20 @@
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self
 
 from sqlalchemy import ARRAY, Enum as SAEnum, Integer, String, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
+from app.projects.config import project_config
+from app.projects.exceptions import TooLongTagNameException
 
 if TYPE_CHECKING:
     from app.projects.models.member import ProjectMembership
 
 
 class SetArrayString(TypeDecorator):
-    impl = ARRAY(String(50))
+    impl = ARRAY(String(project_config.MAX_LEN_TAG))
     cache_ok = True
 
     def process_bind_param(self, value, dialect):
@@ -40,8 +42,8 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     owner_id: Mapped[int] = mapped_column(Integer, index=True)
 
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
-    slug: Mapped[str] = mapped_column(String(210), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(project_config.MAX_LEN_NAME), nullable=False)
+    slug: Mapped[str] = mapped_column(String(project_config.MAX_LEN_SLUG), nullable=False, index=True)
     description: Mapped[str] = mapped_column(String, nullable=True)
 
     visibility: Mapped[ProjectVisibility] = mapped_column(
@@ -53,3 +55,39 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
     memberships: Mapped[list[ProjectMembership]] = relationship("ProjectMembership", back_populates="project")
 
+    @classmethod
+    def create(
+        cls,  owner_id: int, name: str, slug: str,
+        description: str, visibility=ProjectVisibility.public,
+        metadata: dict[str, Any] | None=None,
+        tags: set[str] | None=None
+    ) -> Self:
+        instance = cls(
+            owner_id=owner_id,
+            name=name,
+            slug=slug,
+            description=description,
+            visibility=visibility,
+            meta_data=metadata or {},
+            tags=tags or set()
+        )
+
+        instance._validate_name(name)
+        instance._validate_slug(slug)
+        instance._validate_tags(instance.tags)
+
+        return instance
+
+
+    def _validate_tags(self, tags: set[str]) -> None:
+        for tag in tags:
+            if len(tag) > project_config.MAX_LEN_TAG:
+                raise TooLongTagNameException(name=tag)
+
+    def _validate_name(self, name: str) -> None:
+        if len(name) > project_config.MAX_LEN_NAME:
+            raise
+
+    def _validate_slug(self, slug: str) -> None:
+        if len(slug) > project_config.MAX_LEN_SLUG:
+            raise
