@@ -4,6 +4,7 @@ from sqlalchemy import Select, select
 
 from app.core.db.repository import IRepository
 from app.core.filters.base import BaseFilter
+from app.projects.models.member import ProjectMembership
 from app.projects.models.project import Project
 
 
@@ -21,8 +22,24 @@ class ProjectRepository(IRepository[Project]):
         )
         return result.scalar()
 
-    async def create(self, project_role: Project) -> None:
-        self.session.add(project_role)
+    async def create(self, project: Project) -> None:
+        self.session.add(project)
+
+    async def get_membership(self, project_id: int, user_id: int) -> ProjectMembership | None:
+        result = await self.session.execute(
+            select(ProjectMembership).where(
+                ProjectMembership.project_id == project_id,
+                ProjectMembership.user_id == user_id,
+            )
+        )
+        return result.scalar()
+
+    async def list_members(self, project_id: int) -> list[ProjectMembership]:
+
+        result = await self.session.execute(
+            select(ProjectMembership).where(ProjectMembership.project_id == project_id)
+        )
+        return list(result.scalars().all())
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

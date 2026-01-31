@@ -35,3 +35,19 @@ class TooLongTagNameException(ApplicationException):
             "tag_name": self.name
         }
 
+
+@dataclass(kw_only=True)
+class NotFoundRoleException(ApplicationException):
+    role_id: int
+
+    code: str = "NOT_FOUND_ROLE"
+    status: int = 404
+
+    @property
+    def message(self) -> str:
+        return "Role not found"
+
+    @property
+    def detail(self):
+        return {"role_id": self.role_id}
+

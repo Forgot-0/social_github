@@ -16,6 +16,7 @@ class SessionManager:
         if existing_session := await self.get_user_session(
             user_id=user_id, device_id=device_data.device_id
         ):
+            existing_session.online()
             return existing_session
 
         session = Session(

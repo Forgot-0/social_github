@@ -8,6 +8,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.projects.config import project_config
 from app.projects.exceptions import TooLongTagNameException
+from app.core.exceptions import ValidationException
+from app.projects.models.member import MembershipStatus
 
 if TYPE_CHECKING:
     from app.projects.models.member import ProjectMembership
@@ -35,6 +37,12 @@ class ProjectVisibility(Enum):
     internal = "internal"
     public = "public"
 
+# [
+#     "member:read", "member:invite", "member:kick", "member:update",
+#     "project:read", "project:write", "project:visibility", "project:delete"
+#     "permission:update", "permission:delete"
+#     ""
+# ]
 
 class Project(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "projects"
@@ -78,6 +86,45 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
         return instance
 
+    def invite_memeber(
+            self, user_id: int, role_id: int, invited_by: int,
+            permissions_overrides: dict | None=None
+        ) -> None:
+        if user_id == invited_by:
+            raise
+
+        invited_by_member = self.get_memeber_by_user_id(invited_by)
+        if invited_by_member is None:
+            raise
+
+        permissions = invited_by_member.effective_permissions()
+        if not permissions.get("member:invite"):
+            raise
+
+        self.memberships.append(
+            ProjectMembership(
+                project_id=self.id,
+                user_id=user_id,
+                role_id=role_id,
+                invited_by=invited_by,
+                joined_at=None,
+                status=MembershipStatus.invited,
+                permissions_overrides=permissions_overrides or {}
+            )
+        )
+
+    def update_name(self, name: str) -> None:
+        self._validate_name(name)
+        self.name = name
+
+    def update_tags(self, tags: set[str]) -> None:
+        self._validate_tags(tags)
+        self.tags = tags
+
+    def get_memeber_by_user_id(self, user_id: int) -> ProjectMembership | None:
+        for member in self.memberships:
+            if member.user_id == user_id:
+                return member
 
     def _validate_tags(self, tags: set[str]) -> None:
         for tag in tags:
@@ -86,8 +133,8 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
     def _validate_name(self, name: str) -> None:
         if len(name) > project_config.MAX_LEN_NAME:
-            raise
+            raise 
 
     def _validate_slug(self, slug: str) -> None:
         if len(slug) > project_config.MAX_LEN_SLUG:
-            raise
+            raise 

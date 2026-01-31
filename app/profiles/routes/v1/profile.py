@@ -77,6 +77,7 @@ async def update_profile(
     await mediator.handle_command(
         UpdateProfileCommand(
             profile_id=profile_id,
+            specialization=profile_request.specialization,
             display_name=profile_request.display_name,
             bio=profile_request.bio,
             skills=profile_request.skills,
