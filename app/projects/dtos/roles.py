@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class RoleDTO(BaseModel):
+class ProjectRoleDTO(BaseModel):
     id: int
     name: str
     permissions: dict

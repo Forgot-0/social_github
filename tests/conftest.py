@@ -203,7 +203,6 @@ def admin_user_jwt(make_user_jwt) -> UserJWTData:
     return make_user_jwt(role="super_admin", security_level=9)
 
 
-
 @pytest_asyncio.fixture
 async def di_container(
     db_session: AsyncSession,

@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.projects.repositories.projects import ProjectRepository
-from app.projects.models.member import MembershipStatus
 from app.projects.exceptions import NotFoundProjectException
+from app.projects.services.permission_service import ProjectPermissionService
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +24,18 @@ class UpdateMemberPermissionsCommand(BaseCommand):
 class UpdateMemberPermissionsCommandHandler(BaseCommandHandler[UpdateMemberPermissionsCommand, None]):
     session: AsyncSession
     project_repository: ProjectRepository
+    project_permission_servise: ProjectPermissionService
 
     async def handle(self, command: UpdateMemberPermissionsCommand) -> None:
+        project = await self.project_repository.get_by_id(command.project_id)
+        if not project:
+            raise NotFoundProjectException(project_id=command.project_id)
+
+        if not self.project_permission_servise.can_update(
+            user_jwt_data=command.user_jwt_data,
+            project=project,
+            must_permissions={"member:update", "permission:update"}
+        ): raise 
 
         logger.info("Member permissions updated", extra={
             "project_id": command.project_id,

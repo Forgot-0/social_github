@@ -37,15 +37,15 @@ class TooLongTagNameException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotFoundRoleException(ApplicationException):
+class NotFoundProjectRoleException(ApplicationException):
     role_id: int
 
-    code: str = "NOT_FOUND_ROLE"
+    code: str = "NOT_FOUND_PROJECT_ROLE"
     status: int = 404
 
     @property
     def message(self) -> str:
-        return "Role not found"
+        return "Project role not found"
 
     @property
     def detail(self):

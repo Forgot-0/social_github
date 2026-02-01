@@ -1,14 +1,12 @@
 from dataclasses import dataclass
-from datetime import datetime
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.core.utils import now_utc
 from app.projects.repositories.projects import ProjectRepository
-from app.projects.models.member import MembershipStatus
 from app.projects.exceptions import NotFoundProjectException
 
 logger = logging.getLogger(__name__)
@@ -24,6 +22,7 @@ class AcceptInviteCommand(BaseCommand):
 class AcceptInviteCommandHandler(BaseCommandHandler[AcceptInviteCommand, None]):
     session: AsyncSession
     project_repository: ProjectRepository
+    event_bus: BaseEventBus
 
     async def handle(self, command: AcceptInviteCommand) -> None:
         user_id = int(command.user_jwt_data.id)
@@ -31,11 +30,9 @@ class AcceptInviteCommandHandler(BaseCommandHandler[AcceptInviteCommand, None]):
         if not membership:
             raise NotFoundProjectException(project_id=command.project_id)
 
-        if membership.status not in (MembershipStatus.invited, MembershipStatus.pending):
-            raise 
+        membership.accept_invite()
 
-        membership.status = MembershipStatus.active
-        membership.joined_at = now_utc()
         await self.session.commit()
+        await self.event_bus.publish(membership.pull_events())
 
         logger.info("Invite accepted", extra={"project_id": command.project_id, "user_id": user_id})

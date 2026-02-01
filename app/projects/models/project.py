@@ -117,6 +117,12 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         self._validate_name(name)
         self.name = name
 
+    def update_description(self, description: str) -> None:
+        self.description = description
+
+    def update_visibility(self, visibility: str) -> None:
+        self.visibility = ProjectVisibility(visibility)
+
     def update_tags(self, tags: set[str]) -> None:
         self._validate_tags(tags)
         self.tags = tags

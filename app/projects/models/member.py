@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin
+from app.core.utils import now_utc
 
 if TYPE_CHECKING:
     from app.projects.models.project import Project
@@ -47,8 +48,16 @@ class ProjectMembership(BaseModel, DateMixin):
 
     __table_args__ = (UniqueConstraint("project_id", "user_id", name="uq_project_user"),)
 
+
+    def accept_invite(self) -> None:
+        if self.status not in (MembershipStatus.invited, MembershipStatus.pending):
+            raise 
+
+        self.status = MembershipStatus.active
+        self.joined_at = now_utc()
+
     def effective_permissions(self) -> dict[str, bool]:
-        perms = self.role.permissions
+        perms = self.role.permissions.copy()
         if self.permissions_overrides:
             perms.update(self.permissions_overrides)
         return perms

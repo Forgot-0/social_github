@@ -20,27 +20,7 @@ class GetProjectsQueryHandler(BaseQueryHandler[GetProjectsQuery, PageResult[Proj
     async def handle(self, query: GetProjectsQuery) -> PageResult[ProjectDTO]:
         page = await self.project_repository.find_by_filter(Project, query.filter)
         return PageResult(
-            items=[
-                ProjectDTO.model_validate(
-                    {
-                        **p.to_dict(),
-                        "memberships": [
-                            {
-                                "id": m.id,
-                                "project_id": m.project_id,
-                                "user_id": m.user_id,
-                                "role_id": m.role_id,
-                                "status": getattr(m.status, "name", str(m.status)),
-                                "invited_by": m.invited_by,
-                                "joined_at": m.joined_at,
-                                "permissions": m.effective_permissions(),
-                            }
-                            for m in p.memberships
-                        ],
-                    }
-                )
-                for p in page.items
-            ],
+            items=[ProjectDTO.model_validate(project.to_dict()) for project in page.items],
             total=page.total,
             page=page.page,
             page_size=page.page_size

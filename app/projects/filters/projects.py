@@ -18,5 +18,6 @@ class ProjectFilter(BaseFilter):
         self.add_condition("name", FilterOperator.CONTAINS, self.name)
 
         self.add_condition("tags", FilterOperator.ALL, self.tags)
-
+        self.add_condition("visibility", FilterOperator.EQ, "public")
         self.add_relation("memberships", LoadingStrategyType.SELECTIN, "role")
+

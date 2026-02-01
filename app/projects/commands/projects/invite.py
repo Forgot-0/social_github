@@ -1,15 +1,15 @@
 from dataclasses import dataclass
 import logging
-from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
-from app.projects.models.member import ProjectMembership, MembershipStatus
 from app.projects.exceptions import NotFoundProjectException
+from app.projects.services.permission_service import ProjectPermissionService
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,8 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
     session: AsyncSession
     project_repository: ProjectRepository
     project_role_repository: ProjectRoleRepository
+    project_permission_service: ProjectPermissionService
+    event_bus: BaseEventBus
 
     async def handle(self, command: InviteMemberCommand) -> None:
         project = await self.project_repository.get_by_id(command.project_id)
@@ -40,6 +42,12 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
         if not role:
             raise
 
+        if not self.project_permission_service.can_invite(
+            user_jwt_data=command.user_jwt_data,
+            project=project,
+            role=role
+        ): raise 
+
         project.invite_memeber(
             user_id=command.user_id,
             role_id=role.id,
@@ -48,6 +56,7 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
         )
 
         await self.session.commit()
+        await self.event_bus.publish(project.pull_events())
 
         logger.info("Member invited", extra={
             "project_id": command.project_id,

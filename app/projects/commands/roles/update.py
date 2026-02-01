@@ -7,7 +7,7 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.rbac import RBACManager
 from app.projects.repositories.roles import ProjectRoleRepository
-from app.projects.exceptions import NotFoundRoleException
+from app.projects.exceptions import NotFoundProjectRoleException
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class UpdateProjectRoleCommandHandler(BaseCommandHandler[UpdateProjectRoleComman
 
         role = await self.project_role_repository.get_by_id(command.role_id)
         if not role:
-            raise NotFoundRoleException(role_id=command.role_id)
+            raise NotFoundProjectRoleException(role_id=command.role_id)
 
         role.permissions = command.permissions
         await self.session.commit()

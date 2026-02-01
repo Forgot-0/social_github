@@ -10,10 +10,12 @@ from app.projects.models.project import Project
 
 @dataclass
 class ProjectRepository(IRepository[Project]):
-    async def get_by_id(self, id: int) -> Project | None:
-        result = await self.session.execute(
-            select(Project).where(Project.id==id)
-        )
+    async def get_by_id(self, id: int, with_member: bool=False) -> Project | None:
+        stmt = select(Project).where(Project.id==id)
+        if with_member:
+            stmt = stmt
+
+        result = await self.session.execute(stmt)
         return result.scalar()
 
     async def get_by_name(self, name: str) -> Project | None:

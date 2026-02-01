@@ -17,6 +17,7 @@ from app.projects.commands.members.update_permissions import (
 from app.projects.commands.roles.create import CreateProjectRoleCommand, CreateProjectRoleCommandHandler
 from app.projects.commands.roles.update import UpdateProjectRoleCommand, UpdateProjectRoleCommandHandler
 from app.projects.queries.roles.get_list import GetProjectRolesQuery, GetProjectRolesQueryHandler
+from app.projects.services.permission_service import ProjectPermissionService
 
 
 class ProjectModuleProvider(Provider):
@@ -24,6 +25,8 @@ class ProjectModuleProvider(Provider):
 
     project_repository = provide(ProjectRepository)
     project_role_repository = provide(ProjectRoleRepository)
+
+    project_permission_servise = provide(ProjectPermissionService, scope=Scope.APP)
 
     create_project_handler = provide(CreateProjectCommandHandler)
     update_project_handler = provide(UpdateProjectCommandHandler)
