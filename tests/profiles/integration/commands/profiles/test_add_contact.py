@@ -123,7 +123,7 @@ class TestAddContactToProfileCommand:
     async def test_allowed_if_not_owner_but_has_permission(
         self,
         persisted_profile: Profile,
-        admin_user_jwt: UserJWTData,
+        super_admin_user_jwt: UserJWTData,
         handler,
         profile_repository: ProfileRepository,
     ) -> None:
@@ -131,7 +131,7 @@ class TestAddContactToProfileCommand:
             profile_id=persisted_profile.id,
             provider="twitter",
             contact="https://twitter.com/testuser",
-            user_jwt_data=admin_user_jwt,
+            user_jwt_data=super_admin_user_jwt,
         )
 
         await handler.handle(command)

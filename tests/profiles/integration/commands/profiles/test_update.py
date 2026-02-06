@@ -116,14 +116,14 @@ class TestUpdateProfileHandler:
     async def test_allowed_if_not_owner_but_has_permission(
         self,
         persisted_profile: Profile,
-        admin_user_jwt: UserJWTData,
+        super_admin_user_jwt: UserJWTData,
         handler_factory,
         profile_repository: ProfileRepository,
     ) -> None:
 
         command = UpdateProfileCommand(
             profile_id=persisted_profile.id,
-            user_jwt_data=admin_user_jwt,
+            user_jwt_data=super_admin_user_jwt,
             **ProfileCommandFactory.update_command(
                 display_name="admin_updated", bio="ok", skills={"x"}, date_birthday=date(2005,2,25)),
         )

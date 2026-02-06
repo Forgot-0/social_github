@@ -9,3 +9,7 @@ from app.auth.models.role import Role, UserRoles
 
 from app.profiles.models.contact import Contact
 from app.profiles.models.profile import Profile
+
+from app.projects.models.member import ProjectMembership
+from app.projects.models.project import Project
+from app.projects.models.role import ProjectRole

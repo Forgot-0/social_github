@@ -199,7 +199,7 @@ def user_jwt(make_user_jwt) -> UserJWTData:
     return make_user_jwt()
 
 @pytest.fixture
-def admin_user_jwt(make_user_jwt) -> UserJWTData:
+def super_admin_user_jwt(make_user_jwt) -> UserJWTData:
     return make_user_jwt(role="super_admin", security_level=9)
 
 

@@ -13,7 +13,10 @@ class ProjectRole(BaseModel):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
 
-    name: Mapped[str] = mapped_column(String(project_config.MAX_LEN_ROLE_NAME), nullable=False)
+    name: Mapped[str] = mapped_column(
+        String(project_config.MAX_LEN_ROLE_NAME),
+        nullable=False, index=True
+    )
     level: Mapped[int] = mapped_column(Integer, default=1)
     permissions: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}")
 

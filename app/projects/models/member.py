@@ -8,9 +8,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
+from app.projects.models.project import Project
 
 if TYPE_CHECKING:
-    from app.projects.models.project import Project
     from app.projects.models.role import ProjectRole
 
 
@@ -43,11 +43,14 @@ class ProjectMembership(BaseModel, DateMixin):
     joined_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     permissions_overrides: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}")
 
-    project: Mapped["Project"] = relationship("Project", back_populates="memberships")
+    project: Mapped["Project"] = relationship(
+        "Project",
+        back_populates="memberships",
+    )
+
     role: Mapped["ProjectRole"] = relationship("ProjectRole")
 
     __table_args__ = (UniqueConstraint("project_id", "user_id", name="uq_project_user"),)
-
 
     def accept_invite(self) -> None:
         if self.status not in (MembershipStatus.invited, MembershipStatus.pending):
@@ -55,6 +58,12 @@ class ProjectMembership(BaseModel, DateMixin):
 
         self.status = MembershipStatus.active
         self.joined_at = now_utc()
+
+    def reject_invite(self) -> None:
+        if self.status not in (MembershipStatus.invited, MembershipStatus.pending):
+            raise 
+
+        self.status = MembershipStatus.suspended
 
     def effective_permissions(self) -> dict[str, bool]:
         perms = self.role.permissions.copy()

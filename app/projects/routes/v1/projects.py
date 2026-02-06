@@ -48,8 +48,11 @@ async def create_project(
 async def get_project(
     project_id: int,
     mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
 ) -> ProjectDTO:
-    return await mediator.handle_query(GetProjectByIdQuery(project_id))
+    return await mediator.handle_query(
+        GetProjectByIdQuery(project_id=project_id, user_jwt_data=user_jwt_data)
+    )
 
 
 @router.put("/{project_id}", status_code=status.HTTP_200_OK)

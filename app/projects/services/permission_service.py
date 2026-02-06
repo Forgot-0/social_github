@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.rbac import RBACManager
+from app.projects.models.member import MembershipStatus
 from app.projects.models.project import Project, ProjectVisibility
 from app.projects.models.role import ProjectRole
 
@@ -24,7 +25,7 @@ class ProjectPermissionService:
             return True
 
         memeber = project.get_memeber_by_user_id(int(user_jwt_data.id))
-        if memeber is None:
+        if memeber is None or memeber.status != MembershipStatus.active:
             return False
 
         memeber_permissions = memeber.effective_permissions()
@@ -48,13 +49,12 @@ class ProjectPermissionService:
             return True
 
         memeber = project.get_memeber_by_user_id(int(user_jwt_data.id))
-        if memeber is None:
+        if memeber is None or memeber.status != MembershipStatus.active:
             return False
 
         memeber_permissions = memeber.effective_permissions()
-        for perm in {"memebr:invite", }:
-            if not memeber_permissions.get(perm, False):
-                return False
+        if not memeber_permissions.get("memebr:invite", False):
+            return False
 
         if memeber.role.level < role.level:
             return False
@@ -77,7 +77,7 @@ class ProjectPermissionService:
             return True
 
         memeber = project.get_memeber_by_user_id(int(user_jwt_data.id))
-        if memeber is not None:
+        if memeber is not None and memeber.status != MembershipStatus.active:
             return True
 
         return False

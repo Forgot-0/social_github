@@ -133,7 +133,7 @@ class TestRemoveContactFromProfileCommand:
     async def test_allowed_if_not_owner_but_has_permission(
         self,
         persisted_profile_contact,
-        admin_user_jwt: UserJWTData,
+        super_admin_user_jwt: UserJWTData,
         handler,
         profile_repository: ProfileRepository,
     ) -> None:
@@ -144,7 +144,7 @@ class TestRemoveContactFromProfileCommand:
         command = RemoveContactToProfileCommand(
             profile_id=profile.id,
             provider="twitter",
-            user_jwt_data=admin_user_jwt,
+            user_jwt_data=super_admin_user_jwt,
         )
 
         await handler.handle(command)

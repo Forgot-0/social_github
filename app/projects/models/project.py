@@ -1,18 +1,18 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Optional, Self
 
 from sqlalchemy import ARRAY, Enum as SAEnum, Integer, String, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
+from app.core.utils import now_utc
 from app.projects.config import project_config
 from app.projects.exceptions import TooLongTagNameException
-from app.core.exceptions import ValidationException
-from app.projects.models.member import MembershipStatus
+from app.projects.models.role_permissions import ProjectRolesEnum
 
 if TYPE_CHECKING:
-    from app.projects.models.member import ProjectMembership
+    from app.projects.models.member import ProjectMembership, MembershipStatus
 
 
 class SetArrayString(TypeDecorator):
@@ -61,7 +61,11 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
     tags: Mapped[set[str]] = mapped_column(SetArrayString())
 
-    memberships: Mapped[list[ProjectMembership]] = relationship("ProjectMembership", back_populates="project")
+    memberships: Mapped[list["ProjectMembership"]] = relationship(
+        "ProjectMembership",
+        back_populates="project",
+        cascade="all, delete-orphan"
+    )
 
     @classmethod
     def create(
@@ -79,6 +83,15 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             meta_data=metadata or {},
             tags=tags or set()
         )
+        instance.memberships.append(
+            ProjectMembership(
+                user_id=owner_id,
+                invited_by=owner_id,
+                role_id=ProjectRolesEnum.OWNER.value.id,
+                status=MembershipStatus.active,
+                joined_at=now_utc(),
+            )
+        )
 
         instance._validate_name(name)
         instance._validate_slug(slug)
@@ -93,12 +106,8 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         if user_id == invited_by:
             raise
 
-        invited_by_member = self.get_memeber_by_user_id(invited_by)
-        if invited_by_member is None:
-            raise
-
-        permissions = invited_by_member.effective_permissions()
-        if not permissions.get("member:invite"):
+        already_member = self.get_memeber_by_user_id(user_id=user_id)
+        if already_member is not None:
             raise
 
         self.memberships.append(
@@ -127,7 +136,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         self._validate_tags(tags)
         self.tags = tags
 
-    def get_memeber_by_user_id(self, user_id: int) -> ProjectMembership | None:
+    def get_memeber_by_user_id(self, user_id: int) -> Optional["ProjectMembership"]:
         for member in self.memberships:
             if member.user_id == user_id:
                 return member
