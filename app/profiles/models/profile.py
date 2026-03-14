@@ -1,7 +1,6 @@
 from datetime import date
 from enum import Enum
 from sqlalchemy import BigInteger, Date, String, TypeDecorator
-from sqlalchemy.ext.mutable import MutableSet
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 

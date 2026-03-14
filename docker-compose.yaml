@@ -114,7 +114,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
     volumes:
-      - kafka-data:/var/lib/kafka/data
+      - kafka_data:/var/lib/kafka/data
+      - kafka_secrets:/etc/kafka/secrets
     networks:
       - app-network
     healthcheck:
@@ -148,7 +149,8 @@ services:
 volumes:
   postgres_data:
   redis-data:
-  kafka-data:
+  kafka_data:
+  kafka_secrets:
   miniodata:
 
 

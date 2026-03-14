@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Self
 
-from sqlalchemy import ARRAY, Enum as SAEnum, Integer, String, TypeDecorator
+from sqlalchemy import  Enum as SAEnum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -9,27 +9,11 @@ from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.utils import now_utc
 from app.projects.config import project_config
 from app.projects.exceptions import TooLongTagNameException
+from app.projects.models.base import SetArrayString
 from app.projects.models.role_permissions import ProjectRolesEnum
 
 if TYPE_CHECKING:
     from app.projects.models.member import ProjectMembership, MembershipStatus
-
-
-class SetArrayString(TypeDecorator):
-    impl = ARRAY(String(project_config.MAX_LEN_TAG))
-    cache_ok = True
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return None
-        if isinstance(value, set):
-            return list(v.lower() for v in value)
-        return list(v.lower() for v in value)
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return None
-        return set(value)
 
 
 class ProjectVisibility(Enum):
