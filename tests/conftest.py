@@ -50,7 +50,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 
 @pytest.fixture(scope="session")
 def postgres_container() -> Generator[PostgresContainer, None, None]:
-    with PostgresContainer("postgres:16.3-alpine") as postgres:
+    with PostgresContainer("postgres:18.3") as postgres:
         yield postgres
 
 
