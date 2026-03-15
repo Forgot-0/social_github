@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.projects.commands.projects.create import CreateProjectCommand, CreateProjectCommandHandler
 from app.projects.config import project_config
-from app.projects.exceptions import MaxProjectsLimitExceededException
+from app.projects.exceptions import AlreadySlugProjectExistsException, MaxProjectsLimitExceededException
 from app.projects.repositories.projects import ProjectRepository
 from tests.projects.integration.factories import ProjectCommandFactory
 
@@ -41,7 +41,7 @@ class TestCreateProjectCommand:
 
         await handler.handle(command)
 
-        created = await project_repository.get_by_name("Test project")
+        created = await project_repository.get_by_slug("test-project")
         assert created is not None
         assert created.owner_id == 1
 
@@ -70,3 +70,16 @@ class TestCreateProjectCommand:
         with pytest.raises(MaxProjectsLimitExceededException):
             await handler.handle(command)
 
+
+    @pytest.mark.asyncio
+    async def test_already_slug_exists(self, handler) -> None:
+        cmd_data = ProjectCommandFactory.create_command(
+            owner_id=1,
+            name="Overflow project",
+            slug="overflow-project",
+        )
+        command = CreateProjectCommand(**cmd_data)
+        await handler.handle(command)
+
+        with pytest.raises(AlreadySlugProjectExistsException):
+            await handler.handle(command)

@@ -91,3 +91,18 @@ class MaxPositionsPerProjectLimitExceededException(ApplicationException):
             "limit": self.limit,
         }
 
+@dataclass(kw_only=True)
+class AlreadySlugProjectExistsException(ApplicationException):
+    slug: str
+    code: str = "ALREADY_EXISTS"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return "This slug already exists"
+
+    @property
+    def detail(self):
+        return {
+            "slug": self.slug,
+        }

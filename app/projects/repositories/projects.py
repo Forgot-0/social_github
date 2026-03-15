@@ -22,9 +22,9 @@ class ProjectRepository(IRepository[Project]):
         result = await self.session.execute(stmt)
         return result.scalar()
 
-    async def get_by_name(self, name: str) -> Project | None:
+    async def get_by_slug(self, slug: str) -> Project | None:
         result = await self.session.execute(
-            select(Project).where(Project.name==name)
+            select(Project).where(Project.slug==slug)
         )
         return result.scalar()
 
