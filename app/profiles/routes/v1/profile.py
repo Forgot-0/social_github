@@ -91,7 +91,8 @@ async def update_profile(
     status_code=status.HTTP_200_OK,
     responses={
         404: create_response(NotFoundProfileException(profile_id=123))
-    }
+    },
+    dependencies=[Depends(ConfigurableRateLimiter(times=20, seconds=7*24*60*60))],
 )
 async def get_profile(
     profile_id: int,

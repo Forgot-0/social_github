@@ -40,3 +40,13 @@ class UserJWTData(BaseModel):
             device_id=token_dto.did,
             security_level=token_dto.lvl,
         )
+
+    def to_dict(self) -> dict:
+        return {
+            "sub": self.id,
+            "username": self.username,
+            "roles": self.roles,
+            "permissions": self.permissions,
+            "lvl": self.security_level,
+            "did": self.device_id,
+        }

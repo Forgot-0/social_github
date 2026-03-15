@@ -2,7 +2,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Self
 from uuid import UUID as PyUUID, uuid4
 
-from sqlalchemy import ARRAY, UUID, BigInteger, Boolean, Enum as SAEnum, String, Text
+from sqlalchemy import ARRAY, UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, validates, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -29,7 +29,11 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "positions"
 
     id: Mapped[PyUUID] = mapped_column(UUID, primary_key=True)
-    project_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    project_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("projects.id"),
+        nullable=False, index=True
+    )
 
     title: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)

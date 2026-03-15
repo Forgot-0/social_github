@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.db.repository import IRepository
@@ -27,6 +27,12 @@ class ProjectRepository(IRepository[Project]):
             select(Project).where(Project.name==name)
         )
         return result.scalar()
+
+    async def count_by_owner(self, owner_id: int) -> int:
+        result = await self.session.execute(
+            select(func.count()).select_from(Project).where(Project.owner_id == owner_id)
+        )
+        return result.scalar_one()
 
     async def create(self, project: Project) -> None:
         self.session.add(project)

@@ -4,6 +4,8 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.projects.config import project_config
+from app.projects.exceptions import MaxProjectsLimitExceededException
 from app.projects.models.project import Project, ProjectVisibility
 from app.projects.repositories.projects import ProjectRepository
 
@@ -31,7 +33,14 @@ class CreateProjectCommandHandler(BaseCommandHandler[CreateProjectCommand, None]
     async def handle(self, command: CreateProjectCommand) -> None:
         existing = await self.project_repository.get_by_name(command.name)
         if existing:
-            raise 
+            raise
+
+        projects_count = await self.project_repository.count_by_owner(command.owner_id)
+        if projects_count >= project_config.MAX_PROJECTS_PER_USER:
+            raise MaxProjectsLimitExceededException(
+                owner_id=command.owner_id,
+                limit=project_config.MAX_PROJECTS_PER_USER,
+            )
 
         project = Project.create(
             owner_id=command.owner_id,

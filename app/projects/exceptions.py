@@ -51,3 +51,43 @@ class NotFoundProjectRoleException(ApplicationException):
     def detail(self):
         return {"role_id": self.role_id}
 
+
+@dataclass(kw_only=True)
+class MaxProjectsLimitExceededException(ApplicationException):
+    owner_id: int
+    limit: int
+
+    code: str = "MAX_PROJECTS_LIMIT_EXCEEDED"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Maximum number of projects reached"
+
+    @property
+    def detail(self):
+        return {
+            "owner_id": self.owner_id,
+            "limit": self.limit,
+        }
+
+
+@dataclass(kw_only=True)
+class MaxPositionsPerProjectLimitExceededException(ApplicationException):
+    project_id: int
+    limit: int
+
+    code: str = "MAX_POSITIONS_PER_PROJECT_LIMIT_EXCEEDED"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Maximum number of positions for project reached"
+
+    @property
+    def detail(self):
+        return {
+            "project_id": self.project_id,
+            "limit": self.limit,
+        }
+

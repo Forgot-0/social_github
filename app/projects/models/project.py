@@ -10,12 +10,12 @@ from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 from app.core.utils import now_utc
 from app.projects.config import project_config
-from app.projects.exceptions import TooLongTagNameException
-from app.projects.models.role_permissions import ProjectRolesEnum
-
-if TYPE_CHECKING:
-    from app.projects.models.member import ProjectMembership, MembershipStatus
-    from app.projects.models.position import Position, PositionLoad, PositionLocationType
+from app.projects.exceptions import (
+    MaxPositionsPerProjectLimitExceededException,
+    TooLongTagNameException,
+)
+from app.projects.models.position import Position, PositionLoad, PositionLocationType
+from app.projects.models.member import MembershipStatus, ProjectMembership
 
 
 @dataclass(frozen=True)
@@ -53,9 +53,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(project_config.MAX_LEN_NAME), nullable=False)
     slug: Mapped[str] = mapped_column(String(project_config.MAX_LEN_SLUG), nullable=False, index=True)
 
-    # Краткое описание проекта (описание из ТЗ)
     small_description: Mapped[str] = mapped_column(Text, nullable=True)
-    # Подробное описание, включая «что реализовано» и «цели»
     full_description: Mapped[str] = mapped_column(Text, nullable=False)
 
     visibility: Mapped[ProjectVisibility] = mapped_column(
@@ -103,7 +101,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             ProjectMembership(
                 user_id=owner_id,
                 invited_by=owner_id,
-                role_id=ProjectRolesEnum.OWNER.value.id,
+                role_id=1,#ProjectRolesEnum.OWNER.value.id, Из за этого ошибка импорта 
                 status=MembershipStatus.active,
                 joined_at=now_utc(),
             )
@@ -146,8 +144,11 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         location_type: str | None,
         expected_load: str | None,
     ) -> None:
-        if len(self.positions) >= 10:
-            raise
+        if len(self.positions) >= project_config.MAX_POSITIONS_PER_PROJECT:
+            raise MaxPositionsPerProjectLimitExceededException(
+                project_id=self.id,
+                limit=project_config.MAX_POSITIONS_PER_PROJECT,
+            )
 
         position = Position.create(
             project_id=self.id,

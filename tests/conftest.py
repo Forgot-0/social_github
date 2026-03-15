@@ -1,7 +1,9 @@
 import asyncio
 from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any, Callable, Iterable
+from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi_limiter import FastAPILimiter
@@ -21,11 +23,12 @@ from app.core.db.base_model import BaseModel
 from app.core.di.container import create_container
 from app.core.events.event import BaseEvent, EventRegisty
 from app.core.events.service import BaseEventBus
-from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.dto import JwtTokenType, UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager
 from app.core.services.auth.rbac import RBACManager
 from app.core.services.mail.service import BaseMailService, EmailData
 from app.core.services.mail.template import BaseTemplate
+from app.core.utils import now_utc
 from app.init_data import create_first_data
 from app.main import init_app
 
@@ -176,7 +179,7 @@ def make_user_jwt() -> Callable[..., UserJWTData]:
     def _make_user_jwt(
         *,
         id: str = "1",
-        username: str = "test",
+        username: str = "user",
         role: str = "user",
         permissions: list[str] | None = None,
         security_level: int = 1,
@@ -193,7 +196,6 @@ def make_user_jwt() -> Callable[..., UserJWTData]:
 
     return _make_user_jwt
 
-
 @pytest.fixture
 def user_jwt(make_user_jwt) -> UserJWTData:
     return make_user_jwt()
@@ -202,6 +204,26 @@ def user_jwt(make_user_jwt) -> UserJWTData:
 def super_admin_user_jwt(make_user_jwt) -> UserJWTData:
     return make_user_jwt(role="super_admin", security_level=9)
 
+
+@pytest.fixture
+def create_access_token(jwt_manager: JWTManager):
+
+    def _create(user_jwt: UserJWTData) -> str:
+        data = user_jwt.to_dict()
+        data["type"] = JwtTokenType.ACCESS
+        data["jti"] = str(uuid4())
+        data['exp'] = (now_utc() + timedelta(minutes=5)).timestamp()
+        data['iat'] = now_utc().timestamp()
+        return jwt_manager.encode(data)
+
+    return _create
+
+@pytest.fixture
+def create_auth_headers(create_access_token):
+    def _headers(user_jwt: UserJWTData) -> dict[str, str]:
+        token = create_access_token(user_jwt)
+        return {"Authorization": f"Bearer {token}"}
+    return _headers
 
 @pytest_asyncio.fixture
 async def di_container(

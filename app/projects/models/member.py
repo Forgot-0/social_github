@@ -8,10 +8,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
-from app.projects.models.project import Project
+from app.projects.models.role import ProjectRole
+
 
 if TYPE_CHECKING:
-    from app.projects.models.role import ProjectRole
+    from app.projects.models.project import Project
+
 
 
 class MembershipStatus(PyEnum):
@@ -40,7 +42,7 @@ class ProjectMembership(BaseModel, DateMixin):
     )
     invited_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
-    joined_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     permissions_overrides: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}")
 
     project: Mapped["Project"] = relationship(
