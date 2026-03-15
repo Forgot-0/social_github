@@ -1,0 +1,28 @@
+from dataclasses import dataclass
+
+from app.core.filters.base import BaseFilter
+from app.core.filters.condition import FilterOperator
+from app.projects.models.position import PositionLoad, PositionLocationType
+
+
+@dataclass
+class PositionFilter(BaseFilter):
+    project_id: int | None = None
+    title: str | None = None
+
+    required_skills: set[str] | None = None
+    is_open: bool = True
+    location_type: PositionLocationType = PositionLocationType.remote
+    expected_load: PositionLoad = PositionLoad.low
+
+    def __post_init__(self):
+        self._build_conditions()
+
+    def _build_conditions(self) -> None:
+        self.add_condition("title", FilterOperator.CONTAINS, self.title)
+
+        self.add_condition("required_skills", FilterOperator.ALL, self.required_skills)
+        self.add_condition("is_open", FilterOperator.EQ, self.is_open)
+        self.add_condition("location_type", FilterOperator.EQ, self.location_type.value)
+        self.add_condition("expected_load", FilterOperator.EQ, self.expected_load.value)
+

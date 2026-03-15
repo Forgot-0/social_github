@@ -4,15 +4,14 @@ from uuid import UUID
 from app.core.db.repository import PageResult
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.projects.dtos.positions import PositionDTO
-from app.projects.filters.projects import ProjectFilter
+from app.projects.filters.positions import PositionFilter
 from app.projects.models.position import Position
 from app.projects.repositories.positions import PositionRepository
 
 
 @dataclass(frozen=True)
 class GetProjectPositionsQuery(BaseQuery):
-    project_id: int
-    filter: ProjectFilter
+    filter: PositionFilter
 
 
 @dataclass(frozen=True)

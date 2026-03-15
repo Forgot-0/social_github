@@ -2,12 +2,13 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, status
 
 from app.core.api.builder import create_response
-from app.core.api.schemas import ORJSONResponse
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
+from app.projects.commands.positions.create import CreatePositionCommand
 from app.projects.dtos.projects import ProjectDTO
 from app.projects.exceptions import NotFoundProjectException
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
+from app.projects.schemas.positions.requests import PositionCreateRequest
 from app.projects.schemas.projects.requests import ProjectCreateRequest, ProjectUpdateRequest, InviteMemberRequest
 from app.projects.schemas.members.requests import MemberUpdatePermissionsRequest
 from app.projects.commands.projects.create import CreateProjectCommand
@@ -81,7 +82,7 @@ async def invite_member(
     request: InviteMemberRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-) -> ORJSONResponse:
+) -> None:
     await mediator.handle_command(
         InviteMemberCommand(
             user_jwt_data=user_jwt_data,
@@ -91,7 +92,6 @@ async def invite_member(
             permissions_overrides=request.permissions_overrides,
         )
     )
-    return ORJSONResponse("OK")
 
 
 @router.post("/{project_id}/members/accept", status_code=status.HTTP_200_OK)
@@ -99,14 +99,13 @@ async def accept_invite(
     project_id: int,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-) -> ORJSONResponse:
+) -> None:
     await mediator.handle_command(
         AcceptInviteCommand(
             user_jwt_data=user_jwt_data,
             project_id=project_id,
         )
     )
-    return ORJSONResponse("OK")
 
 
 @router.put("/{project_id}/members/{user_id}/permissions", status_code=status.HTTP_200_OK)
@@ -116,7 +115,7 @@ async def update_member_permissions(
     request: MemberUpdatePermissionsRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-) -> ORJSONResponse:
+) -> None:
     await mediator.handle_command(
         UpdateMemberPermissionsCommand(
             user_jwt_data=user_jwt_data,
@@ -125,5 +124,29 @@ async def update_member_permissions(
             permissions_overrides=request.permissions_overrides,
         )
     )
-    return ORJSONResponse("OK")
 
+
+@router.post(
+    "/{project_id}/positions",
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_position(
+    project_id: int,
+    request: PositionCreateRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+)  -> None:
+    required_skills = request.required_skills or set()
+
+    await mediator.handle_command(
+        CreatePositionCommand(
+            project_id=project_id,
+            title=request.title,
+            description=request.description,
+            required_skills=required_skills,
+            responsibilities=request.responsibilities,
+            location_type=request.location_type,
+            expected_load=request.expected_load,
+            user_jwt_data=user_jwt_data,
+        )
+    )
