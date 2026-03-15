@@ -12,6 +12,7 @@ class ProjectRolesEnum(Enum):
         permissions={
             "member:read": True, "member:invite": True, "member:kick": True, "member:udpate": True,
             "project:read": True, "project:update": True, "project:visibility": True, "project:delete": True,
+            "position:create": True, "position:update": True, "position:delete": True,
             "permission:update": True,
         }
     )
@@ -23,6 +24,7 @@ class ProjectRolesEnum(Enum):
         permissions={
             "member:read": True, "member:invite": True, "member:kick": True, "member:udpate": True,
             "project:read": True, "project:update": True, "project:visibility": True, "project:delete": False,
+            "position:create": True, "position:update": True, "position:delete": True,
             "permission:update": True,
         }
     )
@@ -34,6 +36,7 @@ class ProjectRolesEnum(Enum):
         permissions={
             "member:read": True, "member:invite": False, "member:kick": False, "member:udpate": False,
             "project:read": True, "project:update": True, "project:visibility": False, "project:delete": False,
+            "position:create": True, "position:update": True, "position:delete": False,
             "permission:update": False,
         }
     )
@@ -45,6 +48,7 @@ class ProjectRolesEnum(Enum):
         permissions={
             "member:read": True, "member:invite": False, "member:kick": False, "member:udpate": False,
             "project:read": True, "project:update": False, "project:visibility": False, "project:delete": False,
+            "position:create": False, "position:update": False, "position:delete": False,
             "permission:update": False,
         }
     )

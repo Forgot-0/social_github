@@ -1,19 +1,30 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Self
 
-from sqlalchemy import  Enum as SAEnum, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import  BigInteger, Boolean, Enum as SAEnum, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
+from app.core.events.event import BaseEvent
 from app.core.utils import now_utc
 from app.projects.config import project_config
 from app.projects.exceptions import TooLongTagNameException
-from app.projects.models.base import SetArrayString
 from app.projects.models.role_permissions import ProjectRolesEnum
 
 if TYPE_CHECKING:
     from app.projects.models.member import ProjectMembership, MembershipStatus
+    from app.projects.models.position import Position
+
+
+@dataclass(frozen=True)
+class CreatedPositionEvent(BaseEvent):
+    position_id: str
+    project_id: int
+    required_skills: list[str]
+
+    __event_name__: str = "positions.created"
 
 
 class ProjectVisibility(Enum):
@@ -31,19 +42,21 @@ class ProjectVisibility(Enum):
 class Project(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "projects"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    owner_id: Mapped[int] = mapped_column(Integer, index=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    owner_id: Mapped[int] = mapped_column(BigInteger, index=True)
 
     name: Mapped[str] = mapped_column(String(project_config.MAX_LEN_NAME), nullable=False)
     slug: Mapped[str] = mapped_column(String(project_config.MAX_LEN_SLUG), nullable=False, index=True)
-    description: Mapped[str] = mapped_column(String, nullable=True)
+    small_description: Mapped[str] = mapped_column(Text, nullable=True)
+    full_description: Mapped[str] = mapped_column(Text, nullable=False)
 
     visibility: Mapped[ProjectVisibility] = mapped_column(
         SAEnum(ProjectVisibility), nullable=False, server_default=ProjectVisibility.public.name
     )
     meta_data: Mapped[dict] = mapped_column(JSONB, server_default="{}")
 
-    tags: Mapped[set[str]] = mapped_column(SetArrayString())
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String(project_config.MAX_LEN_TAG)))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
 
     memberships: Mapped[list["ProjectMembership"]] = relationship(
         "ProjectMembership",
@@ -51,10 +64,16 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         cascade="all, delete-orphan"
     )
 
+    positions: Mapped[list["Position"]] = relationship(
+        "Position",
+        back_populates="project",
+        cascade="all, delete"
+    )
+
     @classmethod
     def create(
         cls,  owner_id: int, name: str, slug: str,
-        description: str, visibility=ProjectVisibility.public,
+        small_description: str, full_description: str, visibility=ProjectVisibility.public,
         metadata: dict[str, Any] | None=None,
         tags: set[str] | None=None
     ) -> Self:
@@ -62,7 +81,8 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             owner_id=owner_id,
             name=name,
             slug=slug,
-            description=description,
+            small_description=small_description,
+            full_description=full_description,
             visibility=visibility,
             meta_data=metadata or {},
             tags=tags or set()
@@ -79,7 +99,6 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
         instance._validate_name(name)
         instance._validate_slug(slug)
-        instance._validate_tags(instance.tags)
 
         return instance
 
@@ -106,29 +125,58 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             )
         )
 
+    def new_position(
+        self, title: str, description: str,
+        required_skills: set[str],
+    ) -> None:
+        if len(self.positions) >= 10:
+            raise
+
+        position = Position.create(
+            self.id,
+            title=title,
+            description=description,
+            required_skills=required_skills
+        )
+        self.positions.append(position)
+
+        self.register_event(
+            CreatedPositionEvent(
+                position_id=str(position.id),
+                project_id=self.id,
+                required_skills=list(required_skills)
+            )
+        )
+
     def update_name(self, name: str) -> None:
         self._validate_name(name)
         self.name = name
 
     def update_description(self, description: str) -> None:
-        self.description = description
+        self.small_description = description
 
     def update_visibility(self, visibility: str) -> None:
         self.visibility = ProjectVisibility(visibility)
 
     def update_tags(self, tags: set[str]) -> None:
-        self._validate_tags(tags)
-        self.tags = tags
+        self.tags = list(tags)
 
     def get_memeber_by_user_id(self, user_id: int) -> Optional["ProjectMembership"]:
         for member in self.memberships:
             if member.user_id == user_id:
                 return member
 
-    def _validate_tags(self, tags: set[str]) -> None:
-        for tag in tags:
+    @validates("tags")
+    def validate_tags(self, key, value):
+
+        if len(value) != len(set(value)):
+            raise ValueError("Duplicate skills are not allowed")
+
+        for tag in value:
             if len(tag) > project_config.MAX_LEN_TAG:
                 raise TooLongTagNameException(name=tag)
+
+        return value
 
     def _validate_name(self, name: str) -> None:
         if len(name) > project_config.MAX_LEN_NAME:

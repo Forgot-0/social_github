@@ -16,6 +16,7 @@ class CreateProjectCommand(BaseCommand):
     owner_id: int
     name: str
     slug: str
+    small_description: str | None = None
     description: str | None = None
     visibility: str | None = None
     meta_data: dict | None = None
@@ -36,7 +37,8 @@ class CreateProjectCommandHandler(BaseCommandHandler[CreateProjectCommand, None]
             owner_id=command.owner_id,
             name=command.name,
             slug=command.slug,
-            description=command.description or "",
+            small_description=command.small_description or "",
+            full_description=command.description or "",
             visibility=ProjectVisibility(command.visibility) if command.visibility else ProjectVisibility.public,
             metadata=command.meta_data or {},
             tags=command.tags or set(),

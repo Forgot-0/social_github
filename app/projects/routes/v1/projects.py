@@ -34,7 +34,7 @@ async def create_project(
             owner_id=int(user_jwt_data.id),
             name=request.name,
             slug=request.slug,
-            description=request.description,
+            small_description=request.description,
             visibility=request.visibility,
             meta_data=request.meta_data,
             tags=request.tags or set(),

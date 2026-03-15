@@ -78,11 +78,6 @@ class ProjectModuleProvider(Provider):
         return command_registry
 
     @decorate
-    def register_project_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
-
-        return event_registry
-
-    @decorate
     def register_project_query_handlers(self, query_registry: QueryRegistry) -> QueryRegistry:
 
         query_registry.register_query(
@@ -100,3 +95,7 @@ class ProjectModuleProvider(Provider):
 
         return query_registry
 
+    @decorate
+    def register_project_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
+
+        return event_registry
