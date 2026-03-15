@@ -162,7 +162,6 @@ class TestLoginCommand:
         sessions = await session_repository.get_active_by_user(standard_user.id)
 
         assert len(sessions) > 0
-        print(sessions[0].user_agent)
         assert any(s.user_agent == generate_device_info("Chrome/100.0").user_agent for s in sessions)
 
     @pytest.mark.asyncio

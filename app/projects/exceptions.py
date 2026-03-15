@@ -35,6 +35,39 @@ class TooLongTagNameException(ApplicationException):
             "tag_name": self.name
         }
 
+@dataclass(kw_only=True)
+class TooLongNameException(ApplicationException):
+    name: str
+    code: str = "TOO_LONG_NAME"
+    status: int = 400
+
+    @property
+    def message(self):
+        return f"Too long name {self.name}"
+
+    @property
+    def detail(self):
+        return {
+            "name": self.name
+        }
+
+
+@dataclass(kw_only=True)
+class NotValidMemberStatusException(ApplicationException):
+    member_status: str
+    action: str
+
+    code: str = "NOT_VALID_MEMBER_STATUS"
+    status: int = 404
+
+    @property
+    def message(self) -> str:
+        return "Not valid member status"
+
+    @property
+    def detail(self):
+        return {"status": self.member_status, "action": self.action}
+
 
 @dataclass(kw_only=True)
 class NotFoundProjectRoleException(ApplicationException):
@@ -50,6 +83,22 @@ class NotFoundProjectRoleException(ApplicationException):
     @property
     def detail(self):
         return {"role_id": self.role_id}
+
+
+@dataclass(kw_only=True)
+class RoleAlreadyExsistsException(ApplicationException):
+    role_name: str
+
+    code: str = "ROLE_ALREADY_EXISTS"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return "Role alredy exisist"
+
+    @property
+    def detail(self):
+        return {"name": self.role_name}
 
 
 @dataclass(kw_only=True)

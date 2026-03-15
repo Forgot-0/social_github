@@ -84,5 +84,5 @@ class ProfileModuleProvider(Provider):
 
     @decorate
     def bucket_policy(self, policy: dict[str, Policy]) -> dict[str, Policy]:
-        policy[profile_config.AVATAR_BUCKET] = Policy.READ
+        policy[profile_config.AVATAR_BUCKET] = Policy.GET
         return policy

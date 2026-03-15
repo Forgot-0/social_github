@@ -90,6 +90,6 @@ class AuthJWTManager(JWTManager):
         current_time = now_utc()
         token_exp_dt = fromtimestamp(token_data.exp)
 
-        seconds_until_expiry = token_exp_dt - (current_time + timedelta(days=1))
+        seconds_until_expiry = token_exp_dt - current_time
         await self.token_blacklist.add_jwt_token(token_data.jti, seconds_until_expiry)
 

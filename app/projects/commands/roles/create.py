@@ -7,6 +7,7 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
 from app.core.services.auth.rbac import RBACManager
+from app.projects.exceptions import RoleAlreadyExsistsException
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.models.role import ProjectRole
 
@@ -34,7 +35,7 @@ class CreateProjectRoleCommandHandler(BaseCommandHandler[CreateProjectRoleComman
 
         existing = await self.project_role_repository.get_by_name(command.name)
         if existing:
-            raise 
+            raise RoleAlreadyExsistsException(role_name=command.name)
 
         role = ProjectRole.create(
             name=command.name,

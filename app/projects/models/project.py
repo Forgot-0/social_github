@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Self
 
-from sqlalchemy import  BigInteger, Boolean, Enum as SAEnum, String, Text
+from sqlalchemy import  BigInteger, Boolean, Enum as SAEnum, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
@@ -12,6 +12,7 @@ from app.core.utils import now_utc
 from app.projects.config import project_config
 from app.projects.exceptions import (
     MaxPositionsPerProjectLimitExceededException,
+    TooLongNameException,
     TooLongTagNameException,
 )
 from app.projects.models.position import Position, PositionLoad, PositionLocationType
@@ -46,6 +47,10 @@ class ProjectStatus(Enum):
 
 class Project(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "projects"
+    __table_args__ = (
+        Index("idx_projects_tags", "tags", postgresql_using="gin"),
+    )
+
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     owner_id: Mapped[int] = mapped_column(BigInteger, index=True)
@@ -201,8 +206,8 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
     def _validate_name(self, name: str) -> None:
         if len(name) > project_config.MAX_LEN_NAME:
-            raise 
+            raise TooLongNameException(name=name)
 
     def _validate_slug(self, slug: str) -> None:
         if len(slug) > project_config.MAX_LEN_SLUG:
-            raise 
+            raise TooLongNameException(name=slug)

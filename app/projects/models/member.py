@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
+from app.projects.exceptions import NotValidMemberStatusException
 from app.projects.models.role import ProjectRole
 
 
@@ -56,14 +57,20 @@ class ProjectMembership(BaseModel, DateMixin):
 
     def accept_invite(self) -> None:
         if self.status not in (MembershipStatus.invited, MembershipStatus.pending):
-            raise 
+            raise NotValidMemberStatusException(
+                member_status=self.status.value,
+                action="accept"
+            ) 
 
         self.status = MembershipStatus.active
         self.joined_at = now_utc()
 
     def reject_invite(self) -> None:
         if self.status not in (MembershipStatus.invited, MembershipStatus.pending):
-            raise 
+            raise NotValidMemberStatusException(
+                member_status=self.status.value,
+                action="reject"
+            )
 
         self.status = MembershipStatus.suspended
 

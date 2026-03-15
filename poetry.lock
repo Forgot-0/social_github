@@ -18,6 +18,21 @@ msgpack = ["msgpack (>=0.5.5)"]
 redis = ["redis (>=4.2.0)"]
 
 [[package]]
+name = "aiojobs"
+version = "1.4.0"
+description = "Job scheduler for managing background tasks (asyncio)"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "aiojobs-1.4.0-py3-none-any.whl", hash = "sha256:e95eb0d10d1f6095aefb04d228d2b4b3747514503f26540de722c2228a8500ca"},
+    {file = "aiojobs-1.4.0.tar.gz", hash = "sha256:463665c75d1fcc46c78d44375c1034abf5e3f087894b0fc5ec4dd16ef90fdc98"},
+]
+
+[package.extras]
+aiohttp = ["aiohttp (>=3.9.0)"]
+
+[[package]]
 name = "aiokafka"
 version = "0.12.0"
 description = "Kafka integration with asyncio"
@@ -2674,4 +2689,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "525d8ecfe5e26dd806e78e4698d8bd9f2eb3c34a392c47a6fd3fe24c9ede6e8e"
+content-hash = "ad8a761365f026d8565f878879e566c037b69102af7df8b51e671d920b734f17"

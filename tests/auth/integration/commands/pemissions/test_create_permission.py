@@ -5,7 +5,7 @@ from app.auth.commands.permissions.create import CreatePermissionCommand, Create
 from app.auth.commands.permissions.delete import DeletePermissionCommand, DeletePermissionCommandHandler
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import (
-    NotFoundPermissionsException,
+    DuplicatePermissionException,
     ProtectedPermissionException,
 )
 from app.auth.models.permission import Permission
@@ -71,7 +71,7 @@ class TestCreatePermissionCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(NotFoundPermissionsException):
+        with pytest.raises(DuplicatePermissionException):
             await handler.handle(command)
 
     @pytest.mark.asyncio

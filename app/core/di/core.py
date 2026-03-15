@@ -1,6 +1,7 @@
 
 from dishka import Provider, Scope, provide
 from minio import Minio
+from redis.asyncio import Redis
 
 from app.core.configs.app import app_config
 from app.core.services.storage.aminio.policy import Policy
@@ -14,8 +15,7 @@ class CoreProvider(Provider):
 
     @provide(scope=Scope.APP)
     async def websocket_manager(self) -> BaseConnectionManager:
-        return ConnectionManager()
-
+        return ConnectionManager(redis=Redis.from_url(app_config.redis_url))
 
     @provide(scope=Scope.APP)
     def client_storage(self) -> Minio:

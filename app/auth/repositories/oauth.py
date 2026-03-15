@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 from sqlalchemy import Select, select
 
 from app.auth.models.oauth import OAuthAccount, OAuthProviderEnum
+from app.auth.exceptions import OAuthStateNotFoundException
 from app.core.db.repository import IRepository
 from app.core.filters.base import BaseFilter
 
@@ -48,7 +49,11 @@ class OAuthCodeRepository:
         )
 
     async def get_state(self, state: str) -> int | None:
-        return int(await self.client.get(f"state:{state}"))
+        state = await self.client.get(f"state:{state}")
+        if state is None:
+            raise OAuthStateNotFoundException()
+
+        return int(state)
 
     async def delete(self, state: str) -> None:
         await self.client.delete(f"state:{state}")

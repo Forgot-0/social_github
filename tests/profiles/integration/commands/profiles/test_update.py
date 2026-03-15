@@ -41,15 +41,15 @@ class TestUpdateProfileHandler:
                 ProfileCommandFactory.update_command(
                     display_name="new_name", bio="new bio", skills={"A", "b"}
                 ),
-                {"display_name": "new_name", "bio": "new bio", "skills": {"a", "b"}},
+                {"display_name": "new_name", "bio": "new bio", "skills": ["a", "b"]},
             ),
             (
                 ProfileCommandFactory.update_command(display_name="only_name"),
-                {"display_name": "only_name", "bio": None, "skills": set()},
+                {"display_name": "only_name", "bio": None, "skills": list()},
             ),
             (
                 ProfileCommandFactory.update_command(skills=set()),
-                {"display_name": None, "bio": None, "skills": set()},
+                {"display_name": None, "bio": None, "skills": list()},
             ),
         ],
     )
@@ -75,7 +75,7 @@ class TestUpdateProfileHandler:
         assert updated is not None
         assert updated.display_name == expected["display_name"]
         assert updated.bio == expected["bio"]
-        assert updated.skills == expected["skills"]
+        assert updated.skills == list(set(expected["skills"]))
 
     @pytest.mark.asyncio
     async def test_not_found_raises(self, db_session: AsyncSession, handler_factory, user_jwt):
@@ -135,5 +135,5 @@ class TestUpdateProfileHandler:
         assert updated
         assert updated.display_name == "admin_updated"
         assert updated.bio == "ok"
-        assert updated.skills == {"x"}
+        assert updated.skills == ["x"]
         assert updated.date_birthday == date(2005,2,25)

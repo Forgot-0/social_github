@@ -1,7 +1,7 @@
 from datetime import date
 from enum import Enum
-from sqlalchemy import BigInteger, Date, String, TypeDecorator
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import BigInteger, Date, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -15,38 +15,26 @@ from app.profiles.models.contact import Contact
 
 
 
-class SetArray(TypeDecorator):
-    impl = ARRAY(String(profile_config.MAX_LEN_SKILL_NAME))
-    cache_ok = True
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return None
-        if isinstance(value, set):
-            return list(value)
-        return list(value)
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return None
-        return set(value)
-
-
 class SizeAvatar(int, Enum):
     SMALL = 32
     UPPER_SMALL = 64
     MEDIUM = 256
     LARGE = 512
 
+
 class TypeImageAvatar(str, Enum):
     JPG = "jpg"
     WEBP = "webp"
     AVIF = "avif"
 
+
 AvatarMap = dict[SizeAvatar, dict[TypeImageAvatar, str]]
 
 class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "profiles"
+    __table_args__ = (
+        Index("idx_profiles_tags", "skills", postgresql_using="gin"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str] = mapped_column(String, unique=True)
@@ -57,7 +45,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     specialization: Mapped[str | None] = mapped_column(String(50), nullable=True)
     date_birthday: Mapped[date | None] = mapped_column(Date, default=None, nullable=True)
 
-    skills: Mapped[set[str]] = mapped_column(SetArray())
+    skills: Mapped[list[str]] = mapped_column(ARRAY(String(profile_config.MAX_LEN_SKILL_NAME)))
 
     contacts: Mapped[list[Contact]] = relationship(
         back_populates="profile",
@@ -117,13 +105,13 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
         if len(skill) > profile_config.MAX_LEN_SKILL_NAME:
             raise TooLongSkillNameException(name=skill)
 
-        self.skills.add(skill.lower())
+        self.skills.append(skill.lower())
 
     def update_skills(self, skills: set[str]) -> None:
         if any(len(skill) > profile_config.MAX_LEN_SKILL_NAME for skill in skills):
             raise TooLongSkillNameException(name=max(skills, key=lambda x: len(x)))
 
-        self.skills = {skill.lower() for skill in skills}
+        self.skills = [skill.lower() for skill in skills]
 
     def add_contact(self, provider: str, contact: str) -> None:
         for cont in self.contacts:
@@ -140,3 +128,15 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
 
     def remove_contact(self, provider: str):
         self.contacts = [c for c in self.contacts if c.provider != provider]
+
+    @validates("skills")
+    def validate_skills(self, key, value):
+
+        if len(value) != len(set(value)):
+            raise ValueError("Duplicate skills are not allowed")
+
+        for tag in value:
+            if len(tag) > profile_config.MAX_LEN_SKILL_NAME:
+                raise TooLongSkillNameException(name=tag)
+
+        return value
