@@ -1,7 +1,8 @@
+from enum import Enum
 from typing import TYPE_CHECKING, Self
 from uuid import UUID as PyUUID, uuid4
 
-from sqlalchemy import ARRAY, UUID, BigInteger, Boolean, String, Text
+from sqlalchemy import ARRAY, UUID, BigInteger, Boolean, Enum as SAEnum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, validates, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -12,14 +13,28 @@ if TYPE_CHECKING:
     from app.projects.models.project import Project
 
 
+class PositionLocationType(Enum):
+    remote = "remote"
+    onsite = "onsite"
+    hybrid = "hybrid"
+
+
+class PositionLoad(Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
 class Position(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "positions"
 
     id: Mapped[PyUUID] = mapped_column(UUID, primary_key=True)
-    project_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    project_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
 
-    title: Mapped[str] = mapped_column(String(50))
-    description: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+
+    responsibilities: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     required_skills: Mapped[list[str]] = mapped_column(
         ARRAY(String(project_config.MAX_LEN_TAG)),
@@ -27,13 +42,25 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
     )
     is_open: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    location_type: Mapped[PositionLocationType] = mapped_column(
+        SAEnum(PositionLocationType), nullable=False, server_default=PositionLocationType.remote.name
+    )
+    expected_load: Mapped[PositionLoad] = mapped_column(
+        SAEnum(PositionLoad), nullable=False, server_default=PositionLoad.medium.name
+    )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="postions")
+    project: Mapped["Project"] = relationship("Project", back_populates="positions")
 
     @classmethod
     def create(
-        cls, project_id: int, title: str, description: str,
-        required_skills: set[str], 
+        cls,
+        project_id: int,
+        title: str,
+        description: str,
+        required_skills: set[str],
+        responsibilities: str | None = None,
+        location_type: PositionLocationType = PositionLocationType.remote,
+        expected_load: PositionLoad = PositionLoad.low,
     ) -> Self:
         instance = cls(
             id=uuid4(),
@@ -41,6 +68,9 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
             title=title,
             description=description,
             required_skills=list(required_skills),
+            responsibilities=responsibilities,
+            location_type=location_type,
+            expected_load=expected_load,
         )
         return instance
 

@@ -10,18 +10,25 @@ from app.projects.exceptions import NotFoundProjectException
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.services.permission_service import ProjectPermissionService
+from app.projects.models.position import PositionLocationType, PositionLoad
 
 
 logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class CreatePositionCommand(BaseCommand):
+    user_jwt_data: UserJWTData
+
     project_id: int
     title: str
     description: str
     required_skills: set[str]
 
-    user_jwt_data: UserJWTData
+    responsibilities: str | None = None
+    location_type: str | None = None
+    expected_load: str | None = None
+
+
 
 
 @dataclass(frozen=True)
@@ -47,7 +54,10 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
         project.new_position(
             title=command.title,
             description=command.description,
-            required_skills=command.required_skills
+            required_skills=command.required_skills,
+            responsibilities=command.responsibilities,
+            location_type=command.location_type,
+            expected_load=command.expected_load,
         )
         await self.session.commit()
 

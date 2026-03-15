@@ -15,7 +15,7 @@ from app.projects.models.role_permissions import ProjectRolesEnum
 
 if TYPE_CHECKING:
     from app.projects.models.member import ProjectMembership, MembershipStatus
-    from app.projects.models.position import Position
+    from app.projects.models.position import Position, PositionLoad, PositionLocationType
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,11 @@ class ProjectVisibility(Enum):
     internal = "internal"
     public = "public"
 
+
+class ProjectStatus(Enum):
+    active = "active"
+    archived = "archived"
+
 # [
 #     "member:read", "member:invite", "member:kick", "member:update",
 #     "project:read", "project:write", "project:visibility", "project:delete"
@@ -47,16 +52,23 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
     name: Mapped[str] = mapped_column(String(project_config.MAX_LEN_NAME), nullable=False)
     slug: Mapped[str] = mapped_column(String(project_config.MAX_LEN_SLUG), nullable=False, index=True)
+
+    # Краткое описание проекта (описание из ТЗ)
     small_description: Mapped[str] = mapped_column(Text, nullable=True)
+    # Подробное описание, включая «что реализовано» и «цели»
     full_description: Mapped[str] = mapped_column(Text, nullable=False)
 
     visibility: Mapped[ProjectVisibility] = mapped_column(
         SAEnum(ProjectVisibility), nullable=False, server_default=ProjectVisibility.public.name
     )
+
+    status: Mapped[ProjectStatus] = mapped_column(
+        SAEnum(ProjectStatus), nullable=False, server_default=ProjectStatus.active.name
+    )
     meta_data: Mapped[dict] = mapped_column(JSONB, server_default="{}")
 
     tags: Mapped[list[str]] = mapped_column(ARRAY(String(project_config.MAX_LEN_TAG)))
-    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     memberships: Mapped[list["ProjectMembership"]] = relationship(
         "ProjectMembership",
@@ -126,17 +138,25 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         )
 
     def new_position(
-        self, title: str, description: str,
+        self,
+        title: str,
+        description: str,
         required_skills: set[str],
+        responsibilities: str | None,
+        location_type: str | None,
+        expected_load: str | None,
     ) -> None:
         if len(self.positions) >= 10:
             raise
 
         position = Position.create(
-            self.id,
+            project_id=self.id,
             title=title,
             description=description,
-            required_skills=required_skills
+            required_skills=required_skills,
+            responsibilities=responsibilities,
+            location_type=PositionLocationType(location_type) if location_type else PositionLocationType.remote,
+            expected_load=PositionLoad(expected_load) if location_type else PositionLoad.low
         )
         self.positions.append(position)
 
