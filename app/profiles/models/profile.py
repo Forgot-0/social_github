@@ -57,7 +57,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     specialization: Mapped[str | None] = mapped_column(String(50), nullable=True)
     date_birthday: Mapped[date | None] = mapped_column(Date, default=None, nullable=True)
 
-    skills: Mapped[set[str]] = mapped_column(SetArray)
+    skills: Mapped[set[str]] = mapped_column(SetArray())
 
     contacts: Mapped[list[Contact]] = relationship(
         back_populates="profile",

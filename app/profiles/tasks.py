@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import io
-from uuid import uuid4
 
 from dishka.integrations.taskiq import FromDishka, inject
 from taskiq import AsyncBroker

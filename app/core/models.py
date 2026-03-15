@@ -13,3 +13,5 @@ from app.profiles.models.profile import Profile
 from app.projects.models.member import ProjectMembership
 from app.projects.models.project import Project
 from app.projects.models.role import ProjectRole
+from app.projects.models.position import Position
+from app.projects.models.application import Application
