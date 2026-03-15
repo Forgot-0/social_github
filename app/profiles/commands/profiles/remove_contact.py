@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.exceptions import AccessDeniedException
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.exceptions import AccessDeniedException
 from app.core.services.auth.rbac import RBACManager
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.repositories.profiles import ProfileRepository

@@ -47,3 +47,20 @@ class NotAuthenticatedException(ApplicationException):
     @property
     def detail(self) -> dict[str, Any]:
         return {}
+
+
+@dataclass(kw_only=True)
+class AccessDeniedException(ApplicationException):
+    need_permissions: set[str]
+
+    code: str = "ACCESS_DENIED"
+    status: int = 403
+
+    @property
+    def message(self) -> str:
+        return "Access denied"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"permissions": list(self.need_permissions)}
+

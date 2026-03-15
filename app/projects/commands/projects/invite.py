@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.exceptions import AccessDeniedException
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.exceptions import NotFoundProjectException
@@ -34,7 +35,7 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
     event_bus: BaseEventBus
 
     async def handle(self, command: InviteMemberCommand) -> None:
-        project = await self.project_repository.get_by_id(command.project_id)
+        project = await self.project_repository.get_by_id(command.project_id, with_member=True)
         if not project:
             raise NotFoundProjectException(project_id=command.project_id)
 
@@ -46,7 +47,7 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
             user_jwt_data=command.user_jwt_data,
             project=project,
             role=role
-        ): raise 
+        ): raise AccessDeniedException(need_permissions={"memebr:invite", })
 
         project.invite_memeber(
             user_id=command.user_id,

@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MemberDTO(BaseModel):
@@ -10,5 +10,5 @@ class MemberDTO(BaseModel):
     status: str
     invited_by: int | None
     joined_at: datetime | None
-    permissions: dict
+    permissions: dict = Field(alias="permissions_overrides")
 

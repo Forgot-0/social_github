@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.exceptions import AccessDeniedException
 from app.projects.exceptions import NotFoundProjectException
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
@@ -49,7 +50,7 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
             user_jwt_data=command.user_jwt_data,
             project=project,
             must_permissions={"position:create", }
-        ): raise 
+        ): raise AccessDeniedException(need_permissions={"position:create", })
 
         project.new_position(
             title=command.title,

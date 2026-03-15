@@ -5,7 +5,6 @@ from app.auth.commands.permissions.create import CreatePermissionCommand, Create
 from app.auth.commands.permissions.delete import DeletePermissionCommand, DeletePermissionCommandHandler
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import (
-    AccessDeniedException,
     NotFoundPermissionsException,
     ProtectedPermissionException,
 )
@@ -13,6 +12,7 @@ from app.auth.models.permission import Permission
 from app.auth.models.user import User
 from app.auth.repositories.permission import PermissionInvalidateRepository, PermissionRepository
 from app.auth.services.rbac import AuthRBACManager
+from app.core.services.auth.exceptions import AccessDeniedException
 
 
 @pytest.mark.integration

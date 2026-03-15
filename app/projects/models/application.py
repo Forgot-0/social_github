@@ -30,7 +30,7 @@ class Application(BaseModel, DateMixin):
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     decided_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     @classmethod
     def create(
@@ -45,6 +45,7 @@ class Application(BaseModel, DateMixin):
             project_id=project_id,
             position_id=position_id,
             candidate_id=candidate_id,
+            status=ApplicationStatus.pending,
             message=message,
         )
 

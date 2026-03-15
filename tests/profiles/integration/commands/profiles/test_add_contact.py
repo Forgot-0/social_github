@@ -1,8 +1,8 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.exceptions import AccessDeniedException
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.exceptions import AccessDeniedException
 from app.core.services.auth.rbac import RBACManager
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand, AddContactToProfileCommandHandler
 from app.profiles.exceptions import NotFoundProfileException

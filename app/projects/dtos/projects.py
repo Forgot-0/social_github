@@ -9,7 +9,8 @@ class ProjectDTO(BaseModel):
     owner_id: int
     name: str
     slug: str
-    description: str | None
+    small_description: str | None
+    full_description: str | None
     visibility: str
     meta_data: dict
     tags: set[str]

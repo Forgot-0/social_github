@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.applications import ApplicationRepository
+from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.services.permission_service import ProjectPermissionService
 
 
@@ -25,3 +26,9 @@ async def application_repository(db_session: AsyncSession) -> ApplicationReposit
 @pytest_asyncio.fixture
 async def project_permission_service(rbac_manager) -> ProjectPermissionService:
     return ProjectPermissionService(rbac_manager)
+
+
+@pytest_asyncio.fixture
+async def project_role_repository(db_session: AsyncSession) -> ProjectRoleRepository:
+    return ProjectRoleRepository(session=db_session)
+ 

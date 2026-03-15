@@ -2,11 +2,11 @@ import pytest
 
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import (
-    AccessDeniedException,
     InvalidRoleNameException,
     ProtectedPermissionException,
 )
 from app.auth.services.rbac import AuthRBACManager
+from app.core.services.auth.exceptions import AccessDeniedException
 
 
 @pytest.mark.unit

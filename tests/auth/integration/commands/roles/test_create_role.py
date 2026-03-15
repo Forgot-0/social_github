@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.commands.roles.create import CreateRoleCommand, CreateRoleCommandHandler
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import (
-    AccessDeniedException,
     DuplicateRoleException,
     InvalidRoleNameException,
     NotFoundPermissionsException,
@@ -14,6 +13,7 @@ from app.auth.models.user import User
 from app.auth.repositories.permission import PermissionRepository
 from app.auth.repositories.role import RoleRepository
 from app.auth.services.rbac import AuthRBACManager
+from app.core.services.auth.exceptions import AccessDeniedException
 from tests.auth.integration.factories import RoleFactory, UserFactory
 
 

@@ -288,4 +288,5 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: Медленные тесты")
     config.addinivalue_line("markers", "auth: Тесты модуля аутентификации")
     config.addinivalue_line("markers", "profiles: Тесты модуля профиля")
+    config.addinivalue_line("markers", "projects: Тесты модуля projects")
 
