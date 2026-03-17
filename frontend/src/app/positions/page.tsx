@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { usePositionsQuery } from "@/api/hooks";
@@ -29,7 +30,11 @@ export default function PositionsPage() {
         <>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {data?.items.map((pos) => (
-              <div key={pos.id} className="card flex flex-col">
+              <Link
+                key={pos.id}
+                href={`/positions/${pos.id}`}
+                className="card flex flex-col hover:border-brand-200"
+              >
                 <div className="mb-3 flex items-start justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">{pos.title}</h3>
                   <Badge variant={pos.is_open ? "success" : "danger"}>
@@ -51,7 +56,7 @@ export default function PositionsPage() {
                   <span>&middot;</span>
                   <span>Нагрузка: {pos.expected_load}</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 

@@ -5,7 +5,7 @@ from app.core.filters.condition import FilterOperator
 
 
 @dataclass
-class RolesFilter(BaseFilter):
+class ProjectRoleFilter(BaseFilter):
     name: str | None = None
 
     def __post_init__(self):

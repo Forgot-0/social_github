@@ -6,6 +6,8 @@ import { apiClient } from "@/api/client";
 import type {
   InviteMemberRequest,
   MemberUpdatePermissionsRequest,
+  PageResult,
+  PaginationParams,
   ProjectCreateRequest,
   ProjectDTO,
   ProjectUpdateRequest,
@@ -13,8 +15,19 @@ import type {
 
 export const projectKeys = {
   all: ["projects"] as const,
+  list: (params?: PaginationParams) => [...projectKeys.all, "list", params] as const,
   detail: (id: number) => [...projectKeys.all, "detail", id] as const,
 };
+
+export function useProjectsQuery(params?: PaginationParams) {
+  return useQuery({
+    queryKey: projectKeys.list(params),
+    queryFn: async () => {
+      const { data } = await apiClient.get<PageResult<ProjectDTO>>("/v1/projects/", { params });
+      return data;
+    },
+  });
+}
 
 export function useProjectQuery(projectId: number) {
   return useQuery({

@@ -5,12 +5,12 @@ from app.projects.models.role import ProjectRole
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.dtos.roles import ProjectRoleDTO
 from app.core.db.repository import PageResult
-from app.projects.filters.roles import RolesFilter
+from app.projects.filters.roles import ProjectRoleFilter
 
 
 @dataclass(frozen=True)
 class GetProjectRolesQuery(BaseQuery):
-    filter: RolesFilter
+    filter: ProjectRoleFilter
 
 
 @dataclass(frozen=True)

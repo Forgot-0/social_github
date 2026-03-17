@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/useAuth";
 
 export function Header() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, hasRole, hasPermission } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -36,6 +36,14 @@ export function Header() {
                 >
                   Панель
                 </Link>
+                {(hasRole("admin") || hasPermission("admin:*")) && (
+                  <Link
+                    href="/admin"
+                    className="text-sm font-medium text-gray-600 transition-colors hover:text-brand-600"
+                  >
+                    Админка
+                  </Link>
+                )}
                 <Link
                   href="/projects/new"
                   className="text-sm font-medium text-gray-600 transition-colors hover:text-brand-600"

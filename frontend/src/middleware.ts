@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_PATHS = ["/dashboard", "/profile", "/settings", "/projects"];
+const PROTECTED_PATHS = ["/dashboard", "/profile", "/settings", "/projects", "/admin"];
 const AUTH_PATHS = ["/login", "/register"];
 
 /**
@@ -40,6 +40,7 @@ export const config = {
     "/profile/:path*",
     "/settings/:path*",
     "/projects/:path*",
+    "/admin/:path*",
     "/login",
     "/register",
   ],
