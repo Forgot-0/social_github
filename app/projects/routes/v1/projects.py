@@ -1,15 +1,17 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from app.core.api.builder import create_response
+from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 from app.projects.commands.positions.create import CreatePositionCommand
 from app.projects.dtos.projects import ProjectDTO
 from app.projects.exceptions import NotFoundProjectException
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
+from app.projects.queries.projects.get_list import GetProjectsQuery
 from app.projects.schemas.positions.requests import PositionCreateRequest
-from app.projects.schemas.projects.requests import ProjectCreateRequest, ProjectUpdateRequest, InviteMemberRequest
+from app.projects.schemas.projects.requests import GetProjectsRequest, ProjectCreateRequest, ProjectUpdateRequest, InviteMemberRequest
 from app.projects.schemas.members.requests import MemberUpdatePermissionsRequest
 from app.projects.commands.projects.create import CreateProjectCommand
 from app.projects.commands.projects.update import UpdateProjectCommand
@@ -41,6 +43,23 @@ async def create_project(
             tags=project_request.tags or set(),
         )
     )
+
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK
+)
+async def get_projects(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+    project_filter: GetProjectsRequest = Query(...),
+) -> PageResult[ProjectDTO]:
+    return await mediator.handle_query(
+        GetProjectsQuery(
+            filter=project_filter.to_projects_filter(),
+            user_jwt_data=user_jwt_data
+        )
+    )
+
 
 @router.get(
     "/{project_id}", status_code=status.HTTP_200_OK,

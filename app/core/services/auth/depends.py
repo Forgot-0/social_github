@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import Depends, Request
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.services.auth.dto import UserJWTData
@@ -15,7 +15,6 @@ class UserJWTDataGetter:
     @inject
     async def __call__(
         self,
-        requests: Request,
         jwt_manager: FromDishka[JWTManager],
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
     ) -> UserJWTData:
