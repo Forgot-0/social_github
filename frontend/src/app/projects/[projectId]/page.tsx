@@ -1,37 +1,91 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { useAcceptInviteMutation, useInviteMemberMutation, useProjectQuery, useRolesQuery, useUpdateMemberPermissionsMutation } from "@/api/hooks";
+import {
+  useAcceptInviteMutation,
+  useApplicationsQuery,
+  useApproveApplicationMutation,
+  useCreatePositionMutation,
+  useInviteMemberMutation,
+  usePositionsQuery,
+  useProjectQuery,
+  useRejectApplicationMutation,
+  useRolesQuery,
+  useUpdateMemberPermissionsMutation,
+  useUpdateProjectMutation,
+} from "@/api/hooks";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/lib/auth/useAuth";
+import { extractErrorMessage } from "@/lib/api-error";
 import { formatDateTime } from "@/lib/utils";
+import { filterProjectRoles } from "@/lib/rbac/roles";
+import type { ApplicationDTO, PositionDTO } from "@/types";
 
 function ProjectDetailContent() {
   const params = useParams();
   const projectId = Number(params.projectId);
   const { data: project, isLoading, error } = useProjectQuery(projectId);
   const { user } = useAuth();
-  const roles = useRolesQuery({ page: 1, page_size: 200 });
+  const roles = useRolesQuery({ page: 1, page_size: 20 });
   const invite = useInviteMemberMutation();
   const accept = useAcceptInviteMutation();
   const updateOverrides = useUpdateMemberPermissionsMutation();
+  const updateProject = useUpdateProjectMutation();
+  const createPosition = useCreatePositionMutation();
+  const approve = useApproveApplicationMutation();
+  const reject = useRejectApplicationMutation();
+
+  const positions = usePositionsQuery({ page: 1, page_size: 20 });
+  const applications = useApplicationsQuery({ page: 1, page_size: 20 });
 
   const [inviteUserId, setInviteUserId] = useState<number>(0);
-  const roleOptions = useMemo(
-    () => roles.data?.items.map((r) => ({ id: r.id, name: r.name })) ?? [],
-    [roles.data?.items],
-  );
+  const roleOptions = useMemo(() => {
+    const items = filterProjectRoles(roles.data?.items ?? []);
+    return items.map((r) => ({ id: r.id, name: r.name }));
+  }, [roles.data?.items]);
   const [inviteRoleId, setInviteRoleId] = useState<number>(0);
+  const isOwner = user?.id === project?.owner_id;
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    visibility: "public",
+    tags: "",
+  });
+
+  const [posFormOpen, setPosFormOpen] = useState(false);
+  const [posError, setPosError] = useState<string | null>(null);
+  const [posForm, setPosForm] = useState({
+    title: "",
+    description: "",
+    responsibilities: "",
+    required_skills: "",
+    location_type: "remote",
+    expected_load: "medium",
+  });
 
   useEffect(() => {
     if (inviteRoleId === 0 && roleOptions.length > 0) {
       setInviteRoleId(roleOptions[0]!.id);
     }
   }, [inviteRoleId, roleOptions]);
+
+  useEffect(() => {
+    if (!project) return;
+    setEditForm({
+      name: project.name ?? "",
+      description: project.full_description ?? project.small_description ?? "",
+      visibility: project.visibility ?? "public",
+      tags: (project.tags ?? []).join(", "),
+    });
+  }, [project]);
 
   if (isLoading) {
     return (
@@ -62,7 +116,206 @@ function ProjectDetailContent() {
             {project.visibility === "public" ? "Публичный" : "Приватный"}
           </Badge>
         </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/projects" className="btn-secondary text-sm">
+            Все проекты
+          </Link>
+          {isOwner && (
+            <button
+              className="btn-secondary text-sm"
+              type="button"
+              onClick={() => setEditOpen((v) => !v)}
+            >
+              {editOpen ? "Закрыть редактирование" : "Редактировать проект"}
+            </button>
+          )}
+          {isOwner && (
+            <button
+              className="btn-primary text-sm"
+              type="button"
+              onClick={() => setPosFormOpen((v) => !v)}
+            >
+              {posFormOpen ? "Закрыть форму позиции" : "Создать позицию"}
+            </button>
+          )}
+        </div>
       </div>
+
+      {isOwner && editOpen && (
+        <div className="card mb-6">
+          <h2 className="mb-2 text-lg font-semibold text-gray-900">Редактирование проекта</h2>
+          {editError && <div className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-700">{editError}</div>}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="label mb-1">Название</label>
+              <input
+                className="input"
+                value={editForm.name}
+                onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label mb-1">Описание</label>
+              <textarea
+                className="input min-h-28"
+                value={editForm.description}
+                onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="label mb-1">Видимость</label>
+              <select
+                className="input"
+                value={editForm.visibility}
+                onChange={(e) => setEditForm((p) => ({ ...p, visibility: e.target.value }))}
+              >
+                <option value="public">public</option>
+                <option value="private">private</option>
+              </select>
+            </div>
+            <div>
+              <label className="label mb-1">Теги (через запятую)</label>
+              <input
+                className="input"
+                value={editForm.tags}
+                onChange={(e) => setEditForm((p) => ({ ...p, tags: e.target.value }))}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <button
+                className="btn-primary"
+                type="button"
+                onClick={async () => {
+                  setEditError(null);
+                  try {
+                    await updateProject.mutateAsync({
+                      projectId,
+                      body: {
+                        name: editForm.name || null,
+                        description: editForm.description || null,
+                        visibility: editForm.visibility || null,
+                        tags: editForm.tags
+                          ? editForm.tags.split(",").map((t) => t.trim()).filter(Boolean)
+                          : null,
+                      },
+                    });
+                    setEditOpen(false);
+                  } catch (err) {
+                    setEditError(extractErrorMessage(err, "Не удалось обновить проект"));
+                  }
+                }}
+                disabled={updateProject.isPending}
+              >
+                {updateProject.isPending ? "Сохранение..." : "Сохранить"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isOwner && posFormOpen && (
+        <div className="card mb-6">
+          <h2 className="mb-2 text-lg font-semibold text-gray-900">Новая позиция</h2>
+          {posError && <div className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-700">{posError}</div>}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="label mb-1">Название</label>
+              <input
+                className="input"
+                value={posForm.title}
+                onChange={(e) => setPosForm((p) => ({ ...p, title: e.target.value }))}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label mb-1">Описание</label>
+              <textarea
+                className="input min-h-28"
+                value={posForm.description}
+                onChange={(e) => setPosForm((p) => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label mb-1">Обязанности (опционально)</label>
+              <textarea
+                className="input min-h-24"
+                value={posForm.responsibilities}
+                onChange={(e) => setPosForm((p) => ({ ...p, responsibilities: e.target.value }))}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label mb-1">Навыки (через запятую)</label>
+              <input
+                className="input"
+                value={posForm.required_skills}
+                onChange={(e) => setPosForm((p) => ({ ...p, required_skills: e.target.value }))}
+                placeholder="react, typescript, postgres"
+              />
+            </div>
+            <div>
+              <label className="label mb-1">Формат</label>
+              <select
+                className="input"
+                value={posForm.location_type}
+                onChange={(e) => setPosForm((p) => ({ ...p, location_type: e.target.value }))}
+              >
+                <option value="remote">remote</option>
+                <option value="onsite">onsite</option>
+                <option value="hybrid">hybrid</option>
+              </select>
+            </div>
+            <div>
+              <label className="label mb-1">Загрузка</label>
+              <select
+                className="input"
+                value={posForm.expected_load}
+                onChange={(e) => setPosForm((p) => ({ ...p, expected_load: e.target.value }))}
+              >
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <button
+                className="btn-primary"
+                type="button"
+                onClick={async () => {
+                  setPosError(null);
+                  try {
+                    await createPosition.mutateAsync({
+                      projectId,
+                      body: {
+                        title: posForm.title,
+                        description: posForm.description,
+                        responsibilities: posForm.responsibilities || null,
+                        required_skills: posForm.required_skills
+                          ? posForm.required_skills.split(",").map((t) => t.trim()).filter(Boolean)
+                          : null,
+                        location_type: posForm.location_type || null,
+                        expected_load: posForm.expected_load || null,
+                      },
+                    });
+                    setPosFormOpen(false);
+                    setPosForm({
+                      title: "",
+                      description: "",
+                      responsibilities: "",
+                      required_skills: "",
+                      location_type: "remote",
+                      expected_load: "medium",
+                    });
+                  } catch (err) {
+                    setPosError(extractErrorMessage(err, "Не удалось создать позицию"));
+                  }
+                }}
+                disabled={createPosition.isPending || !posForm.title || !posForm.description}
+              >
+                {createPosition.isPending ? "Создание..." : "Создать"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {project.full_description && (
         <div className="card mb-6">
@@ -88,7 +341,6 @@ function ProjectDetailContent() {
         ) : (
           <ul className="divide-y divide-gray-100">
             {project.memberships.map((member) => {
-              const isOwner = user?.id === project.owner_id;
               const isMe = user?.id === member.user_id;
               const canAccept = isMe && member.status !== "accepted";
 
@@ -134,6 +386,18 @@ function ProjectDetailContent() {
           </ul>
         )}
       </div>
+
+      <ProjectPositionsSection projectId={projectId} positions={positions.data?.items ?? []} />
+
+      {isOwner && (
+        <ProjectApplicationsSection
+          projectId={projectId}
+          applications={applications.data?.items ?? []}
+          onApprove={(id) => approve.mutate({ applicationId: id })}
+          onReject={(id) => reject.mutate({ applicationId: id })}
+          isMutating={approve.isPending || reject.isPending}
+        />
+      )}
 
       {user?.id === project.owner_id && (
         <div className="card mb-6">
@@ -182,6 +446,106 @@ function ProjectDetailContent() {
         Создан: {formatDateTime(project.created_at)} &middot; Обновлён:{" "}
         {formatDateTime(project.updated_at)}
       </div>
+    </div>
+  );
+}
+
+function ProjectPositionsSection({ projectId, positions }: { projectId: number; positions: PositionDTO[] }) {
+  const items = useMemo(() => positions.filter((p) => p.project_id === projectId), [positions, projectId]);
+
+  return (
+    <div className="card mb-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-gray-900">Позиции проекта</h2>
+        <Link href="/positions" className="text-sm text-brand-700 hover:underline">
+          Все позиции
+        </Link>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-500">Пока нет позиций для этого проекта</p>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {items.map((p) => (
+            <Link key={p.id} href={`/positions/${p.id}`} className="rounded-lg border border-gray-100 p-3 hover:border-brand-200">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="font-semibold text-gray-900">{p.title}</div>
+                <Badge variant={p.is_open ? "success" : "danger"}>{p.is_open ? "open" : "closed"}</Badge>
+              </div>
+              <div className="mt-1 text-sm text-gray-600">{p.description.slice(0, 120)}{p.description.length > 120 ? "..." : ""}</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {p.required_skills.slice(0, 6).map((s) => (
+                  <Badge key={s} variant="info">
+                    {s}
+                  </Badge>
+                ))}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectApplicationsSection({
+  projectId,
+  applications,
+  onApprove,
+  onReject,
+  isMutating,
+}: {
+  projectId: number;
+  applications: ApplicationDTO[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  isMutating: boolean;
+}) {
+  const items = useMemo(
+    () => applications.filter((a) => a.project_id === projectId),
+    [applications, projectId],
+  );
+
+  return (
+    <div className="card mb-6">
+      <h2 className="mb-3 text-lg font-semibold text-gray-900">Заявки по проекту</h2>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-500">Нет заявок</p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {items.map((a) => (
+            <li key={a.id} className="py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge>app #{a.id.slice(0, 8)}</Badge>
+                    <Badge>position #{a.position_id.slice(0, 8)}</Badge>
+                    <Badge>candidate #{a.candidate_id}</Badge>
+                    <Badge variant={a.status === "accepted" ? "success" : a.status === "rejected" ? "danger" : "warning"}>
+                      {String(a.status)}
+                    </Badge>
+                  </div>
+                  {a.message && <div className="mt-2 text-sm text-gray-700">{a.message}</div>}
+                </div>
+                {a.status === "pending" && (
+                  <div className="flex gap-2">
+                    <button className="btn-primary text-sm" type="button" onClick={() => onApprove(a.id)} disabled={isMutating}>
+                      Approve
+                    </button>
+                    <button
+                      className="btn-secondary text-sm hover:border-red-200 hover:text-red-700"
+                      type="button"
+                      onClick={() => onReject(a.id)}
+                      disabled={isMutating}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

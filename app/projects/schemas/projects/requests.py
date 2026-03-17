@@ -8,6 +8,7 @@ from app.projects.filters.projects import ProjectFilter
 class ProjectCreateRequest(BaseModel):
     name: str
     slug: str
+    small_description: str | None = None
     description: str | None = None
     visibility: str | None = None
     meta_data: dict | None = None

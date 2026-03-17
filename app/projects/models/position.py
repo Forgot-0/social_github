@@ -7,7 +7,9 @@ from sqlalchemy.orm import Mapped, mapped_column, validates, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.projects.config import project_config
-from app.projects.exceptions import TooLongTagNameException
+from app.projects.exceptions import AlreadyMemberException, TooLongTagNameException
+from app.projects.models.member import MembershipStatus
+from app.projects.models.application import Application
 
 if TYPE_CHECKING:
     from app.projects.models.project import Project
@@ -58,6 +60,7 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="positions")
+    applications: Mapped[list["Application"]] = relationship("Application", back_populates="position", lazy="noload")
 
     @classmethod
     def create(
@@ -81,6 +84,23 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
             expected_load=expected_load,
         )
         return instance
+
+    def add_application(
+        self, candidate_id: int, message: str | None
+    ) -> None:
+        member = self.project.get_memeber_by_user_id(candidate_id)
+        if member and member.status != MembershipStatus.active:
+            raise AlreadyMemberException()
+
+        self.applications.append(
+            Application.create(
+                project_id=self.project.id,
+                position_id=self.id,
+                candidate_id=candidate_id,
+                message=message
+            )
+        )
+
 
     @validates("required_skills")
     def validate_skills(self, key, value):

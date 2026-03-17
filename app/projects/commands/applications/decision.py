@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.projects.exceptions import NotFoundProjectException
+from app.core.services.auth.exceptions import AccessDeniedException
+from app.projects.exceptions import AlreadyMemberException, NotFoundProjectException
 from app.projects.models.application import ApplicationStatus
 from app.projects.models.member import MembershipStatus
 from app.projects.models.project import Project
@@ -50,14 +51,14 @@ class DecideApplicationCommandHandler(BaseCommandHandler[DecideApplicationComman
             project=project,
             must_permissions={"member:invite"},
         ):
-            raise
+            raise AccessDeniedException(need_permissions={"member:invite"})
 
         if command.approve:
             application.accept(decided_by=int(command.user_jwt_data.id))
 
             existing_member = project.get_memeber_by_user_id(application.candidate_id)
             if existing_member is not None:
-                raise
+                raise AlreadyMemberException()
 
             project.invite_memeber(
                 user_id=application.candidate_id,

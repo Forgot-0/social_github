@@ -20,6 +20,9 @@ export default function HomePage() {
             <Link href="/positions" className="btn-secondary px-8 py-3 text-base">
               Открытые позиции
             </Link>
+            <Link href="/projects" className="btn-secondary px-8 py-3 text-base">
+              Проекты
+            </Link>
           </div>
         </div>
 

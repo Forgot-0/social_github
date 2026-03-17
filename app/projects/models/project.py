@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Self
+from typing import Any, Optional, Self
+from uuid import UUID
 
 from sqlalchemy import  BigInteger, Boolean, Enum as SAEnum, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
@@ -15,6 +16,7 @@ from app.projects.exceptions import (
     TooLongNameException,
     TooLongTagNameException,
 )
+from app.projects.models.application import Application
 from app.projects.models.position import Position, PositionLoad, PositionLocationType
 from app.projects.models.member import MembershipStatus, ProjectMembership
 
@@ -58,7 +60,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(project_config.MAX_LEN_NAME), nullable=False)
     slug: Mapped[str] = mapped_column(String(project_config.MAX_LEN_SLUG), nullable=False, index=True)
 
-    small_description: Mapped[str] = mapped_column(Text, nullable=True)
+    small_description: Mapped[str] = mapped_column(Text(length=256), nullable=True)
     full_description: Mapped[str] = mapped_column(Text, nullable=False)
 
     visibility: Mapped[ProjectVisibility] = mapped_column(
@@ -81,6 +83,12 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
     positions: Mapped[list["Position"]] = relationship(
         "Position",
+        back_populates="project",
+        cascade="all, delete"
+    )
+
+    applications: Mapped[list[Application]] = relationship(
+        "Application",
         back_populates="project",
         cascade="all, delete"
     )
@@ -174,6 +182,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             )
         )
 
+
     def update_name(self, name: str) -> None:
         self._validate_name(name)
         self.name = name
@@ -191,6 +200,11 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         for member in self.memberships:
             if member.user_id == user_id:
                 return member
+
+    def get_position_by_id(self, position_id: UUID) -> Optional["Position"]:
+        for pos in self.positions:
+            if pos.id == position_id:
+                return pos
 
     @validates("tags")
     def validate_tags(self, key, value):

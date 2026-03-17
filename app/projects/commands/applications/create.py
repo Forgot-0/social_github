@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundPositionException, NotFoundProjectException
 from app.projects.models.application import Application
 from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
@@ -31,30 +31,22 @@ class CreateApplicationCommandHandler(BaseCommandHandler[CreateApplicationComman
     application_repository: ApplicationRepository
 
     async def handle(self, command: CreateApplicationCommand) -> None:
-        position = await self.position_repository.get_by_id(str(command.position_id))
+        position = await self.position_repository.get_by_id(str(command.position_id), with_project=True)
         if not position:
-            raise NotFoundProjectException(project_id=0)
+            raise NotFoundPositionException(position_id=str(command.position_id))
 
-        project = await self.project_repository.get_by_id(position.project_id)
-        if not project:
-            raise NotFoundProjectException(project_id=position.project_id)
-
-        application = Application.create(
-            project_id=project.id,
-            position_id=position.id,
+        position.add_application(
             candidate_id=int(command.user_jwt_data.id),
-            message=command.message,
+            message=command.message
         )
 
-        await self.application_repository.create(application)
         await self.session.commit()
 
         logger.info(
             "Application created",
             extra={
-                "application_id": str(application.id),
                 "position_id": str(position.id),
-                "project_id": project.id,
+                "project_id": position.project.id,
                 "candidate_id": command.user_jwt_data.id,
             },
         )

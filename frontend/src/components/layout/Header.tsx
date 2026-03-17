@@ -36,6 +36,18 @@ export function Header() {
                 >
                   Панель
                 </Link>
+                <Link
+                  href="/projects"
+                  className="text-sm font-medium text-gray-600 transition-colors hover:text-brand-600"
+                >
+                  Проекты
+                </Link>
+                <Link
+                  href="/profiles"
+                  className="text-sm font-medium text-gray-600 transition-colors hover:text-brand-600"
+                >
+                  Профили
+                </Link>
                 {(hasRole("admin") || hasPermission("admin:*")) && (
                   <Link
                     href="/admin"

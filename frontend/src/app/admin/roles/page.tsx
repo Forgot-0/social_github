@@ -11,6 +11,7 @@ import {
 } from "@/api/hooks";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { filterSystemRoles } from "@/lib/rbac/roles";
 import type { RoleDTO } from "@/types";
 
 function RoleCard({ role, permissionNames }: { role: RoleDTO; permissionNames: string[] }) {
@@ -140,7 +141,7 @@ export default function AdminRolesPage() {
       </div>
 
       <div className="mt-6 grid gap-4">
-        {roles.data?.items.map((r) => (
+        {filterSystemRoles(roles.data?.items ?? []).map((r) => (
           <RoleCard key={r.id} role={r} permissionNames={permissionNames} />
         ))}
       </div>

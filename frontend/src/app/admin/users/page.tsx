@@ -12,6 +12,7 @@ import {
 } from "@/api/hooks";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { filterSystemRoles } from "@/lib/rbac/roles";
 import type { UserDTO } from "@/types";
 
 function UserCard({
@@ -141,9 +142,12 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const users = useUsersQuery({ page, page_size: pageSize });
-  const roles = useRolesQuery({ page: 1, page_size: 200 });
+  const roles = useRolesQuery({ page: 1, page_size: 20 });
 
-  const roleNames = useMemo(() => roles.data?.items.map((r) => r.name) ?? [], [roles.data?.items]);
+  const roleNames = useMemo(
+    () => filterSystemRoles(roles.data?.items ?? []).map((r) => r.name),
+    [roles.data?.items],
+  );
   const totalPages = users.data ? Math.ceil(users.data.total / pageSize) : 1;
 
   if (users.isLoading || roles.isLoading) {

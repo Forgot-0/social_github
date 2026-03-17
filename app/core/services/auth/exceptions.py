@@ -9,7 +9,7 @@ class InvalidTokenException(ApplicationException):
     token: str | None = None
 
     code: str = "INVALID_TOKEN"
-    status: int = 400
+    status: int = 403
 
     @property
     def message(self) -> str:

@@ -32,7 +32,7 @@ function CreateProjectContent() {
         visibility: form.visibility,
         tags: form.tags ? form.tags.split(",").map((t) => t.trim()) : null,
       });
-      router.push("/dashboard");
+      router.push("/projects");
     } catch (err) {
       setError(extractErrorMessage(err, "Не удалось создать проект"));
     }

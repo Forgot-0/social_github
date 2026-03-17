@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  trailingSlash: false,   // добавить
+  trailingSlash: false,
   skipTrailingSlashRedirect: true,
 
   async rewrites() {

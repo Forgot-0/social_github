@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.projects.commands.applications.create import CreateApplicationCommand, CreateApplicationCommandHandler
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundPositionException, NotFoundProjectException
 from app.projects.models.application import  ApplicationStatus
 from app.projects.models.position import Position
 from app.projects.repositories.applications import ApplicationRepository
@@ -74,7 +74,7 @@ class TestCreateApplicationCommand:
             user_jwt_data=candidate_jwt,
         )
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundPositionException):
             await handler.handle(command)
 
     # @pytest.mark.asyncio

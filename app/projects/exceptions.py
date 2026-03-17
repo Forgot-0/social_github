@@ -20,6 +20,36 @@ class NotFoundProjectException(ApplicationException):
 
 
 @dataclass(kw_only=True)
+class NotFoundPositionException(ApplicationException):
+    position_id: str
+
+    code: str = "NOT_FOUND_POSTION"
+    status: int = 404
+
+    @property
+    def message(self) -> str:
+        return "Position not found"
+
+    @property
+    def detail(self):
+        return {"position_id": self.position_id}
+
+
+@dataclass(kw_only=True)
+class AlreadyMemberException(ApplicationException):
+    code: str = "ALREADY_MEMBER"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return "Already member"
+
+    @property
+    def detail(self):
+        return {}
+
+
+@dataclass(kw_only=True)
 class TooLongTagNameException(ApplicationException):
     name: str
     code: str = "TOO_LONG_TAG_NAME"
@@ -34,6 +64,7 @@ class TooLongTagNameException(ApplicationException):
         return {
             "tag_name": self.name
         }
+
 
 @dataclass(kw_only=True)
 class TooLongNameException(ApplicationException):

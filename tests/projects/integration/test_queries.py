@@ -111,7 +111,7 @@ class TestGetProjectsQuery:
         f = ProjectFilter()
         f.set_pagination(Pagination(page=1, page_size=20))
 
-        result = await handler.handle(GetProjectsQuery(filter=f))
+        result = await handler.handle(GetProjectsQuery(filter=f, user_jwt_data=user_jwt))
 
         assert isinstance(result, PageResult)
         ids = [p.id for p in result.items]
@@ -127,7 +127,7 @@ class TestGetProjectsQuery:
         f = ProjectFilter(name=persisted_project.name[:10])
         f.set_pagination(Pagination(page=1, page_size=20))
 
-        result = await handler.handle(GetProjectsQuery(filter=f))
+        result = await handler.handle(GetProjectsQuery(filter=f, user_jwt_data=user_jwt))
 
         ids = [p.id for p in result.items]
         assert persisted_project.id in ids
@@ -135,13 +135,14 @@ class TestGetProjectsQuery:
     @pytest.mark.asyncio
     async def test_pagination_works(
         self,
+        user_jwt: UserJWTData,
         persisted_project: Project,
         handler: GetProjectsQueryHandler,
     ) -> None:
         f = ProjectFilter()
         f.set_pagination(Pagination(page=1, page_size=1))
 
-        result = await handler.handle(GetProjectsQuery(filter=f))
+        result = await handler.handle(GetProjectsQuery(filter=f, user_jwt_data=user_jwt))
 
         assert result.page_size == 1
         assert len(result.items) <= 1
