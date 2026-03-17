@@ -1,22 +1,26 @@
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.exceptions import InvalidTokenException
 from app.core.services.auth.jwt_manager import JWTManager
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 class UserJWTDataGetter:
     @inject
     async def __call__(
         self,
+        requests: Request,
         jwt_manager: FromDishka[JWTManager],
-        credentials: HTTPAuthorizationCredentials = Depends(security),
+        credentials: HTTPAuthorizationCredentials | None = Depends(security),
     ) -> UserJWTData:
+        if credentials is None:
+            raise InvalidTokenException(token=None)
 
         user_jwt_data = UserJWTData.create_from_token(
             await jwt_manager.validate_token(credentials.credentials)

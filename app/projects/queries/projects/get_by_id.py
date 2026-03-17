@@ -20,7 +20,7 @@ class GetProjectByIdQueryHandler(BaseQueryHandler[GetProjectByIdQuery, ProjectDT
     project_permission_servise: ProjectPermissionService
 
     async def handle(self, query: GetProjectByIdQuery) -> ProjectDTO:
-        project = await self.project_repository.get_by_id(query.project_id)
+        project = await self.project_repository.get_by_id(query.project_id, with_member=True, with_positon=True)
         if not project:
             raise NotFoundProjectException(project_id=query.project_id)
 

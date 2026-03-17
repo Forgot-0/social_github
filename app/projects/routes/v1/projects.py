@@ -26,19 +26,19 @@ router = APIRouter(route_class=DishkaRoute)
     status_code=status.HTTP_201_CREATED
 )
 async def create_project(
-    request: ProjectCreateRequest,
+    project_request: ProjectCreateRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 ) -> None:
     await mediator.handle_command(
         CreateProjectCommand(
             owner_id=int(user_jwt_data.id),
-            name=request.name,
-            slug=request.slug,
-            small_description=request.description,
-            visibility=request.visibility,
-            meta_data=request.meta_data,
-            tags=request.tags or set(),
+            name=project_request.name,
+            slug=project_request.slug,
+            small_description=project_request.description,
+            visibility=project_request.visibility,
+            meta_data=project_request.meta_data,
+            tags=project_request.tags or set(),
         )
     )
 
@@ -79,7 +79,7 @@ async def update_project(
 @router.post("/{project_id}/invite", status_code=status.HTTP_200_OK)
 async def invite_member(
     project_id: int,
-    request: InviteMemberRequest,
+    invite_request: InviteMemberRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 ) -> None:
@@ -87,9 +87,9 @@ async def invite_member(
         InviteMemberCommand(
             user_jwt_data=user_jwt_data,
             project_id=project_id,
-            user_id=request.user_id,
-            role_id=request.role_id,
-            permissions_overrides=request.permissions_overrides,
+            user_id=invite_request.user_id,
+            role_id=invite_request.role_id,
+            permissions_overrides=invite_request.permissions_overrides,
         )
     )
 
@@ -112,7 +112,7 @@ async def accept_invite(
 async def update_member_permissions(
     project_id: int,
     user_id: int,
-    request: MemberUpdatePermissionsRequest,
+    member_request: MemberUpdatePermissionsRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 ) -> None:
@@ -121,7 +121,7 @@ async def update_member_permissions(
             user_jwt_data=user_jwt_data,
             project_id=project_id,
             target_user_id=user_id,
-            permissions_overrides=request.permissions_overrides,
+            permissions_overrides=member_request.permissions_overrides,
         )
     )
 
@@ -132,21 +132,21 @@ async def update_member_permissions(
 )
 async def create_position(
     project_id: int,
-    request: PositionCreateRequest,
+    position_request: PositionCreateRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 )  -> None:
-    required_skills = request.required_skills or set()
+    required_skills = position_request.required_skills or set()
 
     await mediator.handle_command(
         CreatePositionCommand(
             project_id=project_id,
-            title=request.title,
-            description=request.description,
+            title=position_request.title,
+            description=position_request.description,
             required_skills=required_skills,
-            responsibilities=request.responsibilities,
-            location_type=request.location_type,
-            expected_load=request.expected_load,
+            responsibilities=position_request.responsibilities,
+            location_type=position_request.location_type,
+            expected_load=position_request.expected_load,
             user_jwt_data=user_jwt_data,
         )
     )

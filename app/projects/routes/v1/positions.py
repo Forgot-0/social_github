@@ -57,7 +57,7 @@ async def get_position(
 )
 async def update_position(
     position_id: UUID,
-    request: PositionUpdateRequest,
+    update_request: PositionUpdateRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 ) -> None:
@@ -65,12 +65,12 @@ async def update_position(
         UpdatePositionCommand(
             position_id=position_id,
             user_jwt_data=user_jwt_data,
-            title=request.title,
-            description=request.description,
-            responsibilities=request.responsibilities,
-            required_skills=request.required_skills,
-            location_type=request.location_type,
-            expected_load=request.expected_load,
+            title=update_request.title,
+            description=update_request.description,
+            responsibilities=update_request.responsibilities,
+            required_skills=update_request.required_skills,
+            location_type=update_request.location_type,
+            expected_load=update_request.expected_load,
         )
     )
 
@@ -96,14 +96,14 @@ async def delete_position(
 )
 async def apply_to_position(
     position_id: UUID,
-    request: ApplicationCreateRequest,
+    apply_request: ApplicationCreateRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 ) -> None:
     await mediator.handle_command(
         CreateApplicationCommand(
             position_id=position_id,
-            message=request.message,
+            message=apply_request.message,
             user_jwt_data=user_jwt_data,
         )
     )

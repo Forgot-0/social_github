@@ -57,14 +57,21 @@ def setup_middleware(app: FastAPI) -> None:
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-    if app_config.BACKEND_CORS_ORIGINS:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=[str(origin).strip("/") for origin in app_config.BACKEND_CORS_ORIGINS],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+    # if app_config.BACKEND_CORS_ORIGINS:
+    #     app.add_middleware(
+    #         CORSMiddleware,
+    #         allow_origins=[str(origin).strip("/") for origin in app_config.BACKEND_CORS_ORIGINS],
+    #         allow_credentials=True,
+    #         allow_methods=["*"],
+    #         allow_headers=["*"],
+    #     )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     app.add_middleware(ContextMiddleware)
 
@@ -201,6 +208,7 @@ def init_app() -> FastAPI:
             else None
         ),
         lifespan=lifespan,
+        redirect_slashes=False
     )
 
     PrometheusFastApiInstrumentator().instrument(
