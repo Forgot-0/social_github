@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/useAuth";
 
 export function Header() {
-  const { user, isAuthenticated, logout, hasRole, hasPermission } = useAuth();
+  const { user, isAuthenticated, logout, hasRole } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -48,7 +48,7 @@ export function Header() {
                 >
                   Профили
                 </Link>
-                {(hasRole("admin") || hasPermission("admin:*")) && (
+                {(hasRole("super_admin") || hasRole("system_admin")) && (
                   <Link
                     href="/admin"
                     className="text-sm font-medium text-gray-600 transition-colors hover:text-brand-600"

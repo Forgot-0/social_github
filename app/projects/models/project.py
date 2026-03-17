@@ -60,7 +60,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     name: Mapped[str] = mapped_column(String(project_config.MAX_LEN_NAME), nullable=False)
     slug: Mapped[str] = mapped_column(String(project_config.MAX_LEN_SLUG), nullable=False, index=True)
 
-    small_description: Mapped[str] = mapped_column(Text(length=256), nullable=True)
+    small_description: Mapped[str] = mapped_column(String(length=256), nullable=True)
     full_description: Mapped[str] = mapped_column(Text, nullable=False)
 
     visibility: Mapped[ProjectVisibility] = mapped_column(

@@ -10,8 +10,15 @@ from app.projects.dtos.projects import ProjectDTO
 from app.projects.exceptions import NotFoundProjectException
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
 from app.projects.queries.projects.get_list import GetProjectsQuery
+from app.projects.queries.projects.get_my import GetMyProjectsQuery
 from app.projects.schemas.positions.requests import PositionCreateRequest
-from app.projects.schemas.projects.requests import GetProjectsRequest, ProjectCreateRequest, ProjectUpdateRequest, InviteMemberRequest
+from app.projects.schemas.projects.requests import (
+    GetMyProjectsRequest,
+    GetProjectsRequest,
+    InviteMemberRequest,
+    ProjectCreateRequest,
+    ProjectUpdateRequest,
+)
 from app.projects.schemas.members.requests import MemberUpdatePermissionsRequest
 from app.projects.commands.projects.create import CreateProjectCommand
 from app.projects.commands.projects.update import UpdateProjectCommand
@@ -58,6 +65,23 @@ async def get_projects(
         GetProjectsQuery(
             filter=project_filter.to_projects_filter(),
             user_jwt_data=user_jwt_data
+        )
+    )
+
+@router.get(
+    "/my",
+    status_code=status.HTTP_200_OK
+)
+async def get_my_projects(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+    request: GetMyProjectsRequest = Query(...),
+) -> PageResult[ProjectDTO]:
+    return await mediator.handle_query(
+        GetMyProjectsQuery(
+            user_jwt_data=user_jwt_data,
+            page=request.page,
+            page_size=request.page_size,
         )
     )
 

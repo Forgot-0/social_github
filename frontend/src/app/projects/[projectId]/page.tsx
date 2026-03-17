@@ -10,10 +10,10 @@ import {
   useApproveApplicationMutation,
   useCreatePositionMutation,
   useInviteMemberMutation,
+  useProjectRolesQuery,
   usePositionsQuery,
   useProjectQuery,
   useRejectApplicationMutation,
-  useRolesQuery,
   useUpdateMemberPermissionsMutation,
   useUpdateProjectMutation,
 } from "@/api/hooks";
@@ -23,7 +23,6 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/lib/auth/useAuth";
 import { extractErrorMessage } from "@/lib/api-error";
 import { formatDateTime } from "@/lib/utils";
-import { filterProjectRoles } from "@/lib/rbac/roles";
 import type { ApplicationDTO, PositionDTO } from "@/types";
 
 function ProjectDetailContent() {
@@ -31,7 +30,7 @@ function ProjectDetailContent() {
   const projectId = Number(params.projectId);
   const { data: project, isLoading, error } = useProjectQuery(projectId);
   const { user } = useAuth();
-  const roles = useRolesQuery({ page: 1, page_size: 20 });
+  const projectRoles = useProjectRolesQuery({ page: 1, page_size: 50 });
   const invite = useInviteMemberMutation();
   const accept = useAcceptInviteMutation();
   const updateOverrides = useUpdateMemberPermissionsMutation();
@@ -45,9 +44,8 @@ function ProjectDetailContent() {
 
   const [inviteUserId, setInviteUserId] = useState<number>(0);
   const roleOptions = useMemo(() => {
-    const items = filterProjectRoles(roles.data?.items ?? []);
-    return items.map((r) => ({ id: r.id, name: r.name }));
-  }, [roles.data?.items]);
+    return (projectRoles.data?.items ?? []).map((r) => ({ id: r.id, name: r.name }));
+  }, [projectRoles.data?.items]);
   const [inviteRoleId, setInviteRoleId] = useState<number>(0);
   const isOwner = user?.id === project?.owner_id;
 
@@ -342,7 +340,7 @@ function ProjectDetailContent() {
           <ul className="divide-y divide-gray-100">
             {project.memberships.map((member) => {
               const isMe = user?.id === member.user_id;
-              const canAccept = isMe && member.status !== "accepted";
+              const canAccept = isMe && member.status !== "active";
 
               const overridesJson = JSON.stringify(member.permissions_overrides ?? {}, null, 2);
               return (

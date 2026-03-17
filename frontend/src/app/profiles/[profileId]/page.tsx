@@ -4,14 +4,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { useInviteMemberMutation, useProfileQuery, useProjectsQuery, useRolesQuery } from "@/api/hooks";
+import { useInviteMemberMutation, useMyProjectsQuery, useProfileQuery, useProjectRolesQuery } from "@/api/hooks";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { extractErrorMessage } from "@/lib/api-error";
 import { useAuth } from "@/lib/auth/useAuth";
-import { filterProjectRoles } from "@/lib/rbac/roles";
-import type { RoleDTO } from "@/types";
 
 function ProfilePublicContent() {
   const params = useParams();
@@ -20,33 +18,32 @@ function ProfilePublicContent() {
 
   const profile = useProfileQuery(profileId);
 
-  const myProjects = useProjectsQuery({ page: 1, page_size: 20 });
-  const roles = useRolesQuery({ page: 1, page_size: 20 });
+  const myProjects = useMyProjectsQuery({ page: 1, page_size: 50 });
+  const projectRoles = useProjectRolesQuery({ page: 1, page_size: 50 });
   const invite = useInviteMemberMutation();
 
-  const ownedProjects = useMemo(() => {
+  const availableProjects = useMemo(() => {
     const items = myProjects.data?.items ?? [];
     const myId = user?.id;
     if (!myId) return [];
-    return items.filter((p) => p.owner_id === myId);
+    return items.filter((p) => {
+      if (p.owner_id === myId) return true;
+      return (p.memberships ?? []).some((m) => m.user_id === myId && m.status === "active");
+    });
   }, [myProjects.data?.items, user?.id]);
-
-  const projectRoles = useMemo<RoleDTO[]>(
-    () => filterProjectRoles(roles.data?.items ?? []),
-    [roles.data?.items],
-  );
 
   const [selectedProjectId, setSelectedProjectId] = useState<number>(0);
   const [selectedRoleId, setSelectedRoleId] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (selectedProjectId === 0 && ownedProjects.length > 0) setSelectedProjectId(ownedProjects[0]!.id);
-  }, [selectedProjectId, ownedProjects]);
+    if (selectedProjectId === 0 && availableProjects.length > 0) setSelectedProjectId(availableProjects[0]!.id);
+  }, [selectedProjectId, availableProjects]);
 
   useEffect(() => {
-    if (selectedRoleId === 0 && projectRoles.length > 0) setSelectedRoleId(projectRoles[0]!.id);
-  }, [selectedRoleId, projectRoles]);
+    const items = projectRoles.data?.items ?? [];
+    if (selectedRoleId === 0 && items.length > 0) setSelectedRoleId(items[0]!.id);
+  }, [selectedRoleId, projectRoles.data?.items]);
 
   if (profile.isLoading) {
     return (
@@ -146,24 +143,24 @@ function ProfilePublicContent() {
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div>
-              <div className="label mb-1">Проект (где вы owner)</div>
+              <div className="label mb-1">Проект (где вы owner или участник)</div>
               <select
                 className="input"
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(Number(e.target.value))}
-                disabled={myProjects.isLoading || ownedProjects.length === 0}
+                disabled={myProjects.isLoading || availableProjects.length === 0}
               >
-                {ownedProjects.length === 0 ? (
+                {availableProjects.length === 0 ? (
                   <option value={0}>Нет проектов</option>
                 ) : (
-                  ownedProjects.map((pr) => (
+                  availableProjects.map((pr) => (
                     <option key={pr.id} value={pr.id}>
                       {pr.name} (#{pr.id})
                     </option>
                   ))
                 )}
               </select>
-              {ownedProjects.length === 0 && (
+              {availableProjects.length === 0 && (
                 <div className="mt-2 text-sm text-gray-500">
                   Создайте проект, чтобы приглашать кандидатов.{" "}
                   <Link className="text-brand-700 hover:underline" href="/projects/new">
@@ -179,23 +176,18 @@ function ProfilePublicContent() {
                 className="input"
                 value={selectedRoleId}
                 onChange={(e) => setSelectedRoleId(Number(e.target.value))}
-                disabled={roles.isLoading || projectRoles.length === 0}
+                disabled={projectRoles.isLoading || (projectRoles.data?.items ?? []).length === 0}
               >
-                {projectRoles.length === 0 ? (
+                {(projectRoles.data?.items ?? []).length === 0 ? (
                   <option value={0}>Нет ролей</option>
                 ) : (
-                  projectRoles.map((r) => (
+                  (projectRoles.data?.items ?? []).map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name} (#{r.id})
                     </option>
                   ))
                 )}
               </select>
-              {projectRoles.length > 0 && (
-                <div className="mt-2 text-xs text-gray-500">
-                  Если project roles не выделяются по имени, используется fallback (все роли).
-                </div>
-              )}
             </div>
           </div>
 
@@ -214,7 +206,7 @@ function ProfilePublicContent() {
                   setError(extractErrorMessage(err, "Не удалось отправить приглашение"));
                 }
               }}
-              disabled={!selectedProjectId || !selectedRoleId || invite.isPending || ownedProjects.length === 0}
+              disabled={!selectedProjectId || !selectedRoleId || invite.isPending || availableProjects.length === 0}
             >
               {invite.isPending ? "Отправка..." : "Пригласить"}
             </button>

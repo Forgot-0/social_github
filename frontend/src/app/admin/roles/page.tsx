@@ -78,7 +78,7 @@ export default function AdminRolesPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const roles = useRolesQuery({ page, page_size: pageSize });
-  const permissions = usePermissionsQuery({ page: 1, page_size: 500 });
+  const permissions = usePermissionsQuery({ page: 1, page_size: 100 });
   const createRole = useCreateRoleMutation();
 
   const permissionNames = useMemo(

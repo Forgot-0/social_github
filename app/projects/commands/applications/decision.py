@@ -38,7 +38,7 @@ class DecideApplicationCommandHandler(BaseCommandHandler[DecideApplicationComman
     project_permission_service: ProjectPermissionService
 
     async def handle(self, command: DecideApplicationCommand) -> None:
-        application = await self.application_repository.get_by_id(command.application_id)
+        application = await self.application_repository.get_by_id(command.application_id, with_position=True)
         if not application:
             raise NotFoundProjectException(project_id=0)
 

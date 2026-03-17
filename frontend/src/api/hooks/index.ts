@@ -7,3 +7,4 @@ export * from "./applications";
 export * from "./sessions";
 export * from "./roles";
 export * from "./permissions";
+export * from "./project-roles";

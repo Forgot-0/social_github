@@ -171,6 +171,12 @@ export interface AvatarUploadCompleteRequest {
 
 // ─── Projects ────────────────────────────────────────────────────────────────
 
+export interface ProjectRoleDTO {
+  id: number;
+  name: string;
+  permissions: Record<string, boolean>;
+}
+
 export interface ProjectDTO {
   id: number;
   owner_id: number;

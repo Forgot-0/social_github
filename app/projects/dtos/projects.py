@@ -1,5 +1,7 @@
 from datetime import datetime
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 from app.projects.dtos.members import MemberDTO
 
@@ -12,9 +14,9 @@ class ProjectDTO(BaseModel):
     small_description: str | None
     full_description: str | None
     visibility: str
-    meta_data: dict
-    tags: set[str]
+    meta_data: dict[str, Any]
+    tags: list[str]
     created_at: datetime | None
     updated_at: datetime | None
-    memberships: list[MemberDTO] = []
+    memberships: list[MemberDTO] = Field(default_factory=list)
 

@@ -49,11 +49,12 @@ class TestDecideApplicationCommand:
 
         await handler.handle(command)
 
-        updated = await application_repository.get_by_id(persisted_application.id)
+        updated = await application_repository.get_by_id(persisted_application.id, with_position=True)
         assert updated is not None
         assert updated.status == ApplicationStatus.accepted
         assert updated.decided_by == int(user_jwt.id)
         assert updated.decided_at is not None
+        assert updated.position.is_open == False
 
     @pytest.mark.asyncio
     async def test_approve_creates_membership(

@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.core.db.repository import IRepository
 from app.core.filters.base import BaseFilter
-from app.projects.models.member import ProjectMembership
+from app.projects.models.member import MembershipStatus, ProjectMembership
 from app.projects.models.project import Project
 
 
@@ -52,6 +52,39 @@ class ProjectRepository(IRepository[Project]):
             select(ProjectMembership).where(ProjectMembership.project_id == project_id)
         )
         return list(result.scalars().all())
+
+    async def list_my_projects(self, user_id: int, page: int = 1, page_size: int = 20):
+        """
+        List projects where user is owner or active member.
+        """
+        stmt = (
+            select(Project)
+            .outerjoin(ProjectMembership, ProjectMembership.project_id == Project.id)
+            .where(
+                or_(
+                    Project.owner_id == user_id,
+                    and_(
+                        ProjectMembership.user_id == user_id,
+                        ProjectMembership.status == MembershipStatus.active,
+                    ),
+                )
+            )
+            .distinct()
+            .options(selectinload(Project.memberships).selectinload(ProjectMembership.role))
+            .order_by(Project.created_at.desc())
+        )
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total_result = await self.session.execute(count_stmt)
+        total = total_result.scalar_one()
+
+        offset = (page - 1) * page_size
+        result = await self.session.execute(stmt.offset(offset).limit(page_size))
+        items = result.scalars().all()
+
+        from app.core.db.repository import PageResult
+
+        return PageResult(items=list(items), total=total, page=page, page_size=page_size)
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

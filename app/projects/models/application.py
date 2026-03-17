@@ -69,8 +69,6 @@ class Application(BaseModel, DateMixin):
             message=message,
         )
 
-
-
         return instance
 
     def accept(self, decided_by: int) -> None:
@@ -80,6 +78,7 @@ class Application(BaseModel, DateMixin):
         self.status = ApplicationStatus.accepted
         self.decided_by = decided_by
         self.decided_at = now_utc()
+        self.position.close()
 
     def reject(self, decided_by: int) -> None:
         if self.status != ApplicationStatus.pending:

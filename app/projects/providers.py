@@ -58,6 +58,10 @@ from app.projects.queries.projects.get_list import (
     GetProjectsQuery,
     GetProjectsQueryHandler,
 )
+from app.projects.queries.projects.get_my import (
+    GetMyProjectsQuery,
+    GetMyProjectsQueryHandler,
+)
 from app.projects.commands.members.accept import (
     AcceptInviteCommand,
     AcceptInviteCommandHandler,
@@ -119,6 +123,7 @@ class ProjectModuleProvider(Provider):
         # queries
         GetProjectByIdQueryHandler,
         GetProjectsQueryHandler,
+        GetMyProjectsQueryHandler,
         GetProjectRolesQueryHandler,
         GetProjectPositionsQueryHandler,
         GetPositionByIdQueryHandler,
@@ -153,6 +158,7 @@ class ProjectModuleProvider(Provider):
 
         query_registry.register_query(GetProjectByIdQuery, GetProjectByIdQueryHandler)
         query_registry.register_query(GetProjectsQuery, GetProjectsQueryHandler)
+        query_registry.register_query(GetMyProjectsQuery, GetMyProjectsQueryHandler)
         query_registry.register_query(GetProjectRolesQuery, GetProjectRolesQueryHandler)
         query_registry.register_query(GetProjectPositionsQuery, GetProjectPositionsQueryHandler)
 

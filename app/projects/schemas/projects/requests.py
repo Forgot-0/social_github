@@ -55,3 +55,8 @@ class GetProjectsRequest(BaseModel):
             projeect_filter.add_sort(sort_field.field, sort_field.direction)
 
         return projeect_filter
+
+
+class GetMyProjectsRequest(BaseModel):
+    page: int = Field(1, ge=1)
+    page_size: int = Field(20, ge=1, le=100)

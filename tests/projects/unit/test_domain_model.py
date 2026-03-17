@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from app.projects.models.application import Application, ApplicationStatus
 from app.projects.models.member import MembershipStatus, ProjectMembership
+from app.projects.models.position import Position
 from app.projects.models.role import ProjectRole
 
 
@@ -11,12 +12,16 @@ from app.projects.models.role import ProjectRole
 class TestApplicationModel:
 
     def _make_application(self) -> Application:
-        return Application.create(
+        application = Application.create(
             project_id=1,
             position_id=uuid4(),
             candidate_id=10,
             message="Please consider me",
         )
+        application.position = Position.create(
+            1, "test", "test", {"test", }
+        )
+        return application
 
     def test_create_has_pending_status(self) -> None:
         app = self._make_application()

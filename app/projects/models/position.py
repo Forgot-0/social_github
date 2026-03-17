@@ -101,6 +101,8 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
             )
         )
 
+    def close(self) -> None:
+        self.is_open = False
 
     @validates("required_skills")
     def validate_skills(self, key, value):

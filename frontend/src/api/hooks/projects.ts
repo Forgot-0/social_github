@@ -16,6 +16,7 @@ import type {
 export const projectKeys = {
   all: ["projects"] as const,
   list: (params?: PaginationParams) => [...projectKeys.all, "list", params] as const,
+  my: (params?: PaginationParams) => [...projectKeys.all, "my", params] as const,
   detail: (id: number) => [...projectKeys.all, "detail", id] as const,
 };
 
@@ -24,6 +25,16 @@ export function useProjectsQuery(params?: PaginationParams) {
     queryKey: projectKeys.list(params),
     queryFn: async () => {
       const { data } = await apiClient.get<PageResult<ProjectDTO>>("/v1/projects/", { params });
+      return data;
+    },
+  });
+}
+
+export function useMyProjectsQuery(params?: PaginationParams) {
+  return useQuery({
+    queryKey: projectKeys.my(params),
+    queryFn: async () => {
+      const { data } = await apiClient.get<PageResult<ProjectDTO>>("/v1/projects/my", { params });
       return data;
     },
   });
