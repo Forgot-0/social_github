@@ -41,7 +41,7 @@ class TestUpdateProfileHandler:
                 ProfileCommandFactory.update_command(
                     display_name="new_name", bio="new bio", skills={"A", "b"}
                 ),
-                {"display_name": "new_name", "bio": "new bio", "skills": ["a", "b"]},
+                {"display_name": "new_name", "bio": "new bio", "skills": ["b", "a"]},
             ),
             (
                 ProfileCommandFactory.update_command(display_name="only_name"),

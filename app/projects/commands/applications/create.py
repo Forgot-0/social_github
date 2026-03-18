@@ -41,6 +41,8 @@ class CreateApplicationCommandHandler(BaseCommandHandler[CreateApplicationComman
         )
 
         await self.session.commit()
+        await self.project_repository.invadate_cache()
+        await self.application_repository.invadate_cache()
 
         logger.info(
             "Application created",

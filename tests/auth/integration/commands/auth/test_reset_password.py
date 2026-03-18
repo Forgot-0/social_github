@@ -100,7 +100,7 @@ class TestResetPasswordCommand:
         assert updated_user is not None
         assert updated_user.password_hash is not None
         assert hash_service.verify_password(new_password, updated_user.password_hash)
-    
+
     @pytest.mark.asyncio
     async def test_reset_password_invalid_token(
         self,

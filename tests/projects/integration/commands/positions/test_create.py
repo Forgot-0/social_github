@@ -26,6 +26,7 @@ class TestCreatePositionCommand:
         self,
         db_session: AsyncSession,
         project_repository: ProjectRepository,
+        position_repository: PositionRepository,
         project_role_repository: ProjectRoleRepository,
         project_permission_service: ProjectPermissionService,
         mock_event_bus: BaseEventBus,
@@ -33,6 +34,7 @@ class TestCreatePositionCommand:
         return CreatePositionCommandHandler(
             session=db_session,
             project_repository=project_repository,
+            position_repository=position_repository,
             project_role_repository=project_role_repository,
             project_permission_service=project_permission_service,
             event_bus=mock_event_bus,

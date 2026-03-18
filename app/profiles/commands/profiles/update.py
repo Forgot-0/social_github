@@ -54,6 +54,8 @@ class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]
         profile.change_birthday(command.date_birthday)
 
         await self.session.commit()
+        await self.profile_repository.invadate_cache()
+
         logger.info(
             "Update profile",
             extra={

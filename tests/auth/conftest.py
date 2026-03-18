@@ -19,8 +19,8 @@ from app.core.configs.app import app_config
 
 
 @pytest_asyncio.fixture
-async def user_repository(db_session: AsyncSession) -> UserRepository:
-    return UserRepository(session=db_session)
+async def user_repository(db_session: AsyncSession, redis_client) -> UserRepository:
+    return UserRepository(session=db_session, redis=redis_client)
 
 @pytest_asyncio.fixture
 async def role_repository(db_session: AsyncSession) -> RoleRepository:

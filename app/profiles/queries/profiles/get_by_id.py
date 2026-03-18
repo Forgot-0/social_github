@@ -16,6 +16,12 @@ class GetProfileByIdQueryHandler(BaseQueryHandler[GetProfileByIdQuery, ProfileDT
     profile_repository: ProfileRepository
 
     async def handle(self, query: GetProfileByIdQuery) -> ProfileDTO:
+        return await self.profile_repository.cache(
+            ProfileDTO, self._handle, ttl=60,
+            query=query
+        )
+
+    async def _handle(self, query: GetProfileByIdQuery) -> ProfileDTO:
         profile = await self.profile_repository.get_by_id(query.profile_id)
         if profile is None:
             raise NotFoundProfileException(profile_id=query.profile_id)

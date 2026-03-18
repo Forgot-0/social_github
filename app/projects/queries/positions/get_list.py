@@ -19,6 +19,12 @@ class GetProjectPositionsQueryHandler(BaseQueryHandler[GetProjectPositionsQuery,
     position_repository: PositionRepository
 
     async def handle(self, query: GetProjectPositionsQuery) -> PageResult[PositionDTO]:
+        return await self.position_repository.cache_paginated(
+            PositionDTO, self._handle, ttl=400,
+            query=query
+        )
+
+    async def _handle(self, query: GetProjectPositionsQuery) -> PageResult[PositionDTO]:
         page = await self.position_repository.find_by_filter(Position, query.filter)
 
         return PageResult(
@@ -30,5 +36,4 @@ class GetProjectPositionsQueryHandler(BaseQueryHandler[GetProjectPositionsQuery,
             page=page.page,
             page_size=page.page_size,
         )
-
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,8 @@ from app.core.services.auth.rbac import RBACManager
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.repositories.profiles import ProfileRepository
 
+
+logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class RemoveContactToProfileCommand(BaseCommand):
@@ -40,4 +43,12 @@ class RemoveContactToProfileCommandHandler(BaseCommandHandler[RemoveContactToPro
 
         profile.remove_contact(command.provider)
         await self.session.commit()
+        await self.profile_repository.invadate_cache()
 
+        logger.info(
+            "Remove contact profile", extra={
+                "removed_by": command.user_jwt_data.id,
+                "provider": command.provider,
+                "profile_id": command.profile_id
+            }
+        )

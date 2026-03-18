@@ -18,6 +18,12 @@ class GetApplicationsQueryHandler(BaseQueryHandler[GetApplicationsQuery, PageRes
     application_repository: ApplicationRepository
 
     async def handle(self, query: GetApplicationsQuery) -> PageResult[ApplicationDTO]:
+        return await self.application_repository.cache_paginated(
+            ApplicationDTO, self._handle, ttl=400,
+            query=query
+        )
+
+    async def _handle(self, query: GetApplicationsQuery) -> PageResult[ApplicationDTO]:
         page = await self.application_repository.find_by_filter(Application, query.filter)
 
         return PageResult(
@@ -29,4 +35,3 @@ class GetApplicationsQueryHandler(BaseQueryHandler[GetApplicationsQuery, PageRes
             page=page.page,
             page_size=page.page_size,
         )
-

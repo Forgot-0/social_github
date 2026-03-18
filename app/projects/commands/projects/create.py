@@ -56,4 +56,5 @@ class CreateProjectCommandHandler(BaseCommandHandler[CreateProjectCommand, None]
         await self.project_repository.create(project)
         await self.session.commit()
 
+        await self.project_repository.invadate_cache()
         logger.info("Project created", extra={"project": project.name, "owner": command.owner_id})

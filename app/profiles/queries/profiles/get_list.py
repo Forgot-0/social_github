@@ -18,6 +18,12 @@ class GetProfilesQueryHandler(BaseQueryHandler[GetProfilesQuery, PageResult[Prof
     profile_repository: ProfileRepository
 
     async def handle(self, query: GetProfilesQuery) -> PageResult[ProfileDTO]:
+        return await self.profile_repository.cache_paginated(
+            ProfileDTO, self._handle, ttl=360,
+            query=query
+        )
+
+    async def _handle(self, query: GetProfilesQuery) -> PageResult[ProfileDTO]:
         profiles = await self.profile_repository.find_by_filter(
             Profile, query.profile_filter
         )

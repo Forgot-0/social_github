@@ -4,13 +4,15 @@ from uuid import UUID
 from sqlalchemy import Select, select
 from sqlalchemy.orm import selectinload
 
-from app.core.db.repository import IRepository
+from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
 from app.projects.models.application import Application
 
 
 @dataclass
-class ApplicationRepository(IRepository[Application]):
+class ApplicationRepository(IRepository[Application], CacheRepository):
+    _LIST_VERSION_KEY = "applications:list"
+
     async def get_by_id(self, id: UUID, with_position: bool = False) -> Application | None:
         stmt = select(Application).where(Application.id == id)
 

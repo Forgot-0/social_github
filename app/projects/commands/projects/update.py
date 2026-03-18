@@ -55,7 +55,10 @@ class UpdateProjectCommandHandler(BaseCommandHandler[UpdateProjectCommand, None]
         if command.tags is not None:
             project.update_tags(command.tags)
 
+        await self.project_repository.update(project)
+
         await self.session.commit()
         await self.event_bus.publish(project.pull_events())
 
+        await self.project_repository.invadate_cache()
         logger.info("Project updated", extra={"project_id": project.id})

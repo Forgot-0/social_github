@@ -7,11 +7,13 @@ from app.auth.filters.users import UserFilter
 from app.auth.models.permission import Permission
 from app.auth.models.role import Role
 from app.auth.models.user import User
-from app.core.db.repository import IRepository
+from app.core.db.repository import CacheRepository, IRepository
 
 
 @dataclass
-class UserRepository(IRepository[User]):
+class UserRepository(IRepository[User], CacheRepository):
+    _LIST_VERSION_KEY = "user:list"
+
     async def get_by_email(self, email: str) -> (User | None):
         result = await self.session.execute(User.select_not_deleted().where(User.email == email))
         return result.scalars().first()
@@ -54,6 +56,9 @@ class UserRepository(IRepository[User]):
 
     async def create(self, user: User) -> None:
         self.session.add(user)
+
+    async def update(self, user: User) -> None:
+        await self.session.merge(user)
 
     async def delete_by_id(self, user_id: int) -> None:
         user = await self.get_by_id(user_id=user_id)

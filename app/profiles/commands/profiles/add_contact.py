@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,8 @@ from app.core.services.auth.rbac import RBACManager
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.repositories.profiles import ProfileRepository
 
+
+logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class AddContactToProfileCommand(BaseCommand):
@@ -41,4 +44,13 @@ class AddContactToProfileCommandHandler(BaseCommandHandler[AddContactToProfileCo
 
         profile.add_contact(command.provider, command.contact)
         await self.session.commit()
+        await self.profile_repository.invadate_cache()
 
+        logger.info(
+            "Add contact profile", extra={
+                "aded_by": command.user_jwt_data.id,
+                "provider": command.provider,
+                "contact": command.contact,
+                "profile_id": command.profile_id
+            }
+        )

@@ -20,6 +20,12 @@ class GetProjectsQueryHandler(BaseQueryHandler[GetProjectsQuery, PageResult[Proj
     project_repository: ProjectRepository
 
     async def handle(self, query: GetProjectsQuery) -> PageResult[ProjectDTO]:
+        return await self.project_repository.cache_paginated(
+            ProjectDTO, self._handle, ttl=400,
+            query=query
+        )
+
+    async def _handle(self, query: GetProjectsQuery) -> PageResult[ProjectDTO]:
         page = await self.project_repository.find_by_filter(Project, query.filter)
         return PageResult(
             items=[ProjectDTO.model_validate(project.to_dict()) for project in page.items],

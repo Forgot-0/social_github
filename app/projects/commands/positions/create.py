@@ -8,6 +8,7 @@ from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
 from app.projects.exceptions import NotFoundProjectException
+from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.services.permission_service import ProjectPermissionService
@@ -36,6 +37,7 @@ class CreatePositionCommand(BaseCommand):
 class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, None]):
     session: AsyncSession
     project_repository: ProjectRepository
+    position_repository: PositionRepository
     project_role_repository: ProjectRoleRepository
     project_permission_service: ProjectPermissionService
     event_bus: BaseEventBus
@@ -63,6 +65,9 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
         await self.session.commit()
 
         await self.event_bus.publish(project.pull_events())
+
+        await self.position_repository.invadate_cache()
+        await self.project_repository.invadate_cache()
 
         logger.info(
             "Create new position", extra={

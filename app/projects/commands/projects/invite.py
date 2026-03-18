@@ -58,6 +58,7 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
 
         await self.session.commit()
         await self.event_bus.publish(project.pull_events())
+        await self.project_repository.invadate_cache()
 
         logger.info("Member invited", extra={
             "project_id": command.project_id,

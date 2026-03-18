@@ -3,14 +3,16 @@ from dataclasses import dataclass
 from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from app.core.db.repository import IRepository
+from app.core.db.repository import CacheRepository, IRepository, PageResult
 from app.core.filters.base import BaseFilter
 from app.projects.models.member import MembershipStatus, ProjectMembership
 from app.projects.models.project import Project
 
 
 @dataclass
-class ProjectRepository(IRepository[Project]):
+class ProjectRepository(IRepository[Project], CacheRepository):
+    _LIST_VERSION_KEY = "project:list"
+
     async def get_by_id(self, id: int, with_member: bool=False, with_positon: bool=False) -> Project | None:
         stmt = select(Project).where(Project.id==id)
         if with_member:
@@ -37,6 +39,9 @@ class ProjectRepository(IRepository[Project]):
     async def create(self, project: Project) -> None:
         self.session.add(project)
 
+    async def update(self, project: Project) -> None:
+        return
+
     async def get_membership(self, project_id: int, user_id: int) -> ProjectMembership | None:
         result = await self.session.execute(
             select(ProjectMembership).where(
@@ -54,9 +59,6 @@ class ProjectRepository(IRepository[Project]):
         return list(result.scalars().all())
 
     async def list_my_projects(self, user_id: int, page: int = 1, page_size: int = 20):
-        """
-        List projects where user is owner or active member.
-        """
         stmt = (
             select(Project)
             .outerjoin(ProjectMembership, ProjectMembership.project_id == Project.id)
@@ -71,7 +73,7 @@ class ProjectRepository(IRepository[Project]):
             )
             .distinct()
             .options(selectinload(Project.memberships).selectinload(ProjectMembership.role))
-            .order_by(Project.created_at.desc())
+            .order_by(Project.updated_at.desc())
         )
 
         count_stmt = select(func.count()).select_from(stmt.subquery())
@@ -81,8 +83,6 @@ class ProjectRepository(IRepository[Project]):
         offset = (page - 1) * page_size
         result = await self.session.execute(stmt.offset(offset).limit(page_size))
         items = result.scalars().all()
-
-        from app.core.db.repository import PageResult
 
         return PageResult(items=list(items), total=total, page=page, page_size=page_size)
 

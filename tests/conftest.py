@@ -59,7 +59,6 @@ def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     with AsyncRedisContainer("redis:7.2-alpine") as redis:
         yield redis
 
-
 @pytest_asyncio.fixture(scope="session")
 async def db_engine(postgres_container: PostgresContainer) -> AsyncGenerator[AsyncEngine, None]:
     database_url = postgres_container.get_connection_url(driver="asyncpg")
