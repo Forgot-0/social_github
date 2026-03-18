@@ -22,6 +22,7 @@ from app.projects.commands.positions.update import (
     UpdatePositionCommand,
     UpdatePositionCommandHandler,
 )
+from app.projects.commands.projects.delete import DeleteProjectCommand, DeleteProjectCommandHandler
 from app.projects.queries.applications.get_list import (
     GetApplicationsQuery,
     GetApplicationsQueryHandler,
@@ -102,6 +103,7 @@ class ProjectModuleProvider(Provider):
     project_handlers = provide_all(
         # project commands
         CreateProjectCommandHandler,
+        DeleteProjectCommandHandler,
         UpdateProjectCommandHandler,
         InviteMemberCommandHandler,
         AcceptInviteCommandHandler,
@@ -134,6 +136,7 @@ class ProjectModuleProvider(Provider):
     def register_project_command_handlers(self, command_registry: CommandRegisty) -> CommandRegisty:
 
         command_registry.register_command(CreateProjectCommand, [CreateProjectCommandHandler])
+        command_registry.register_command(DeleteProjectCommand, [DeleteProjectCommandHandler])
         command_registry.register_command(UpdateProjectCommand, [UpdateProjectCommandHandler])
         command_registry.register_command(InviteMemberCommand, [InviteMemberCommandHandler])
         command_registry.register_command(AcceptInviteCommand, [AcceptInviteCommandHandler])

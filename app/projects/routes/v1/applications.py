@@ -30,6 +30,23 @@ async def list_applications(
     )
 
 
+@router.get(
+    "/me",
+    status_code=status.HTTP_200_OK,
+)
+async def me_applications(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+    filters: GetApplicationsRequest = Query(...),
+) -> PageResult[ApplicationDTO]:
+    filters.candidate_id = int(user_jwt_data.id)
+    return await mediator.handle_query(
+        GetApplicationsQuery(
+            filter=filters.to_application_filter(),
+        )
+    )
+
+
 @router.post(
     "/{application_id}/approve",
     status_code=status.HTTP_200_OK,

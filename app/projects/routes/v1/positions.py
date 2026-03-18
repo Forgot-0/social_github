@@ -9,10 +9,12 @@ from app.core.services.auth.depends import CurrentUserJWTData
 from app.projects.commands.applications.create import CreateApplicationCommand
 from app.projects.commands.positions.update import UpdatePositionCommand
 from app.projects.commands.positions.delete import DeletePositionCommand
+from app.projects.dtos.applications import ApplicationDTO
 from app.projects.dtos.positions import PositionDTO
+from app.projects.queries.applications.get_list import GetApplicationsQuery
 from app.projects.queries.positions.get_by_id import GetPositionByIdQuery
 from app.projects.queries.positions.get_list import GetProjectPositionsQuery
-from app.projects.schemas.applications.requests import ApplicationCreateRequest
+from app.projects.schemas.applications.requests import ApplicationCreateRequest, GetApplicationsRequest
 from app.projects.schemas.positions.requests import GetPositionsRequest, PositionUpdateRequest
 
 
@@ -90,8 +92,26 @@ async def delete_position(
         )
     )
 
+
+@router.get(
+    "/{position_id}/applications",
+    status_code=status.HTTP_200_OK,
+)
+async def get_applications_position(
+    position_id: UUID,
+    mediator: FromDishka[BaseMediator],
+    filters: GetApplicationsRequest = Query(...),
+) -> PageResult[ApplicationDTO]:
+    filters.position_id = position_id
+    return await mediator.handle_query(
+        GetApplicationsQuery(
+            filter=filters.to_application_filter(),
+        )
+    )
+
+
 @router.post(
-    "/{position_id}/apply",
+    "/{position_id}/applications",
     status_code=status.HTTP_201_CREATED,
 )
 async def apply_to_position(

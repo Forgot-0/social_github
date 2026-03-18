@@ -6,12 +6,14 @@ from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 from app.projects.commands.positions.create import CreatePositionCommand
+from app.projects.commands.projects.delete import DeleteProjectCommand
 from app.projects.dtos.projects import ProjectDTO
 from app.projects.exceptions import NotFoundProjectException
+from app.projects.queries.positions.get_list import GetProjectPositionsQuery
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
 from app.projects.queries.projects.get_list import GetProjectsQuery
 from app.projects.queries.projects.get_my import GetMyProjectsQuery
-from app.projects.schemas.positions.requests import PositionCreateRequest
+from app.projects.schemas.positions.requests import GetPositionsRequest, PositionCreateRequest
 from app.projects.schemas.projects.requests import (
     GetMyProjectsRequest,
     GetProjectsRequest,
@@ -119,6 +121,40 @@ async def update_project(
         )
     )
 
+@router.delete(
+    "/{project_id}",
+    summary="Delete project",
+    description="Delete project if you owner or admin",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_project(
+    project_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        DeleteProjectCommand(
+            project_id=project_id,
+            user_jwt_data=user_jwt_data
+        )
+    )
+
+@router.get(
+    "/{project_id}/positions",
+    summary="Get project positions",
+    status_code=status.HTTP_200_OK
+)
+async def get_project_positions(
+    project_id: int,
+    mediator: FromDishka[BaseMediator],
+    filters: GetPositionsRequest=Query(...),
+) -> None:
+    filters.project_id = project_id
+    return await mediator.handle_query(
+        GetProjectPositionsQuery(
+            filter=filters.to_position_filter()
+        )
+    )
 
 @router.post("/{project_id}/invite", status_code=status.HTTP_200_OK)
 async def invite_member(

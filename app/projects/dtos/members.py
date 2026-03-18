@@ -10,5 +10,5 @@ class MemberDTO(BaseModel):
     status: str
     invited_by: int | None
     joined_at: datetime | None
-    permissions: dict = Field(alias="permissions_overrides")
+    permissions_overrides: dict = Field(alias="permissions_overrides")
 
