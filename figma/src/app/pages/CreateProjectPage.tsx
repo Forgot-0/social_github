@@ -195,7 +195,7 @@ export function CreateProjectPage() {
 
             <div className="flex gap-3 pt-4">
               <Button type="submit" className="flex-1">
-                {createProjectMutation.isLoading ? (
+                {createProjectMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   'Создать проект'

@@ -1,18 +1,18 @@
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { CheckCircle2, Users } from 'lucide-react';
-import { Position } from '../types';
+import { CheckCircle2, ExternalLink } from 'lucide-react';
+import { PositionDTO } from '../../api/types';
+import { Link } from 'react-router';
 
 interface PositionCardProps {
-  position: Position;
+  position: PositionDTO;
   onApply?: () => void;
+  projectId?: number;
   showProjectLink?: boolean;
 }
 
-export function PositionCard({ position, onApply, showProjectLink = false }: PositionCardProps) {
-  const applicationsCount = position.applications.length;
-  
+export function PositionCard({ position, onApply, projectId, showProjectLink = false }: PositionCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -21,21 +21,21 @@ export function PositionCard({ position, onApply, showProjectLink = false }: Pos
             <CardTitle className="text-lg">{position.title}</CardTitle>
             <CardDescription className="mt-2">{position.description}</CardDescription>
           </div>
-          <Badge variant={position.status === 'open' ? 'default' : 'secondary'}>
-            {position.status === 'open' ? 'Открыта' : 'Закрыта'}
+          <Badge variant={position.is_open ? 'default' : 'secondary'}>
+            {position.is_open ? 'Открыта' : 'Закрыта'}
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {position.requiredSkills.length > 0 && (
+          {position.required_skills && position.required_skills.length > 0 && (
             <div>
               <div className="text-sm font-medium mb-2">Требуемые навыки:</div>
               <div className="flex flex-wrap gap-2">
-                {position.requiredSkills.map((skill) => (
-                  <Badge key={skill.id} variant="outline" className="gap-1">
+                {position.required_skills.map((skill, index) => (
+                  <Badge key={`${skill}-${index}`} variant="outline" className="gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    {skill.name}
+                    {skill}
                   </Badge>
                 ))}
               </div>
@@ -43,12 +43,18 @@ export function PositionCard({ position, onApply, showProjectLink = false }: Pos
           )}
 
           <div className="flex items-center justify-between pt-2 border-t">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="w-4 h-4" />
-              <span>{applicationsCount} {applicationsCount === 1 ? 'отклик' : 'откликов'}</span>
+            <div className="flex gap-2">
+              {showProjectLink && projectId && (
+                <Link to={`/projects/${projectId}`}>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <ExternalLink className="w-4 h-4" />
+                    Перейти к проекту
+                  </Button>
+                </Link>
+              )}
             </div>
 
-            {position.status === 'open' && onApply && (
+            {position.is_open && onApply && (
               <Button onClick={onApply} size="sm">
                 Откликнуться
               </Button>

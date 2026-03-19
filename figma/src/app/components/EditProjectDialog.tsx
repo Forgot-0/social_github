@@ -151,11 +151,11 @@ export function EditProjectDialog({ open, onOpenChange, project, updateProjectMu
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={updateProjectMutation.isLoading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={updateProjectMutation.isPending}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={!name.trim() || updateProjectMutation.isLoading}>
-            {updateProjectMutation.isLoading ? (
+          <Button onClick={handleSubmit} disabled={!name.trim() || updateProjectMutation.isPending}>
+            {updateProjectMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Сохранение...

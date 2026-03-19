@@ -13,16 +13,7 @@ import { X, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfileQuery, useUpdateProfileMutation } from '../../api/hooks/useProfiles';
-
-const COMMON_SKILLS = [
-  'React', 'TypeScript', 'Python', 'JavaScript', 'Node.js',
-  'Django', 'FastAPI', 'PostgreSQL', 'MongoDB', 'Docker',
-  'Kubernetes', 'AWS', 'GCP', 'UI/UX Design', 'Figma',
-  'Product Management', 'Marketing', 'Sales', 'Business Analytics',
-  'Machine Learning', 'Data Science', 'DevOps', 'Mobile Development',
-  'Flutter', 'React Native', 'Swift', 'Kotlin', 'Java',
-  'C++', 'Go', 'Rust', 'GraphQL', 'REST API'
-];
+import { COMMON_SKILLS } from '../constants/skills';
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -87,7 +78,7 @@ export function SettingsPage() {
           toast.success('Навыки обновлены!');
         },
         onError: (error: any) => {
-          toast.error('Ошибка при обновлении навыков', {
+          toast.error('Ошибка при обнов��ении навыков', {
             description: error?.error?.message || 'Попробуйте позже',
           });
         },
@@ -125,7 +116,7 @@ export function SettingsPage() {
     );
   }
 
-  const avatarUrl = profile?.avatars?.medium || profile?.avatars?.original;
+  const avatarUrl = profile?.avatars?.['medium'] || profile?.avatars?.['small'] || profile?.avatars?.['original'];
   const displayNameValue = profile?.display_name || user.username;
 
   return (
@@ -390,7 +381,7 @@ export function SettingsPage() {
                   <div>✓ Неограниченные проекты</div>
                   <div>✓ Неограниченные вакансии</div>
                   <div>✓ Неограниченные просмотры</div>
-                  <div>✓ Персональный мене��жер</div>
+                  <div>✓ Персональный менежер</div>
                   <div>✓ API доступ</div>
                 </div>
                 <Button variant="outline" className="w-full">

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Mail, Calendar, Edit, Briefcase, Loader2, Camera } from 'lucide-react';
+import { Mail, Briefcase, Loader2, Camera, Pencil, Edit } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ export function ProfilePage() {
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [isEditingSkills, setIsEditingSkills] = useState(false);
   const updateProfileMutation = useUpdateProfileMutation();
 
   const handleSaveProfile = async (data: any) => {
@@ -46,6 +47,11 @@ export function ProfilePage() {
     }
   };
 
+  const handleEditSkills = () => {
+    setIsEditingSkills(false);
+    setIsEditDialogOpen(true);
+  };
+
   if (profileLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[400px]">
@@ -56,7 +62,8 @@ export function ProfilePage() {
 
   const projects = projectsData?.items || [];
   const displayName = profile?.display_name || user?.username || 'User';
-  const avatarUrl = profile?.avatars?.['medium']?.['url'] || profile?.avatars?.['original']?.['url'];
+  // Исправлено: avatars теперь Record<string, string>, где значение - это уже URL
+  const avatarUrl = profile?.avatars?.['medium'] || profile?.avatars?.['small'] || profile?.avatars?.['original'];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -114,12 +121,6 @@ export function ProfilePage() {
                   <span>{user?.email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    Зарегистрирован {formatDistanceToNow(new Date(user?.created_at || ''), { addSuffix: true, locale: ru })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
                   <Briefcase className="w-4 h-4" />
                   <span>{projects.length} {projects.length === 1 ? 'проект' : 'проектов'}</span>
                 </div>
@@ -137,7 +138,17 @@ export function ProfilePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Навыки</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Навыки</CardTitle>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setIsEditDialogOpen(true)}
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {profile && profile.skills && profile.skills.length > 0 ? (
@@ -150,7 +161,7 @@ export function ProfilePage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Добавьте навыки в настройках профиля
+                  Добавьте навыки через редактирование профиля
                 </p>
               )}
             </CardContent>

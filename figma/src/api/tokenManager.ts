@@ -33,6 +33,13 @@ class TokenManager {
   }
 
   /**
+   * Clear all tokens (alias for clearAccessToken)
+   */
+  clearTokens(): void {
+    this.clearAccessToken();
+  }
+
+  /**
    * Check if user is authenticated (has valid access token)
    */
   isAuthenticated(): boolean {

@@ -31,7 +31,7 @@ function ApplicationCard({ application, onApprove, onReject, isLoading }: {
   const { data: profile } = useProfileQuery(application.candidate_id);
   
   const displayName = profile?.display_name || `Кандидат ${application.candidate_id}`;
-  const avatarUrl = profile?.avatars?.['medium']?.['url'] || profile?.avatars?.['original']?.['url'];
+  const avatarUrl = profile?.avatars?.['medium'] || profile?.avatars?.['small'] || profile?.avatars?.['original'];
 
   const statusConfig = {
     pending: { label: 'На рассмотрении', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
@@ -86,10 +86,14 @@ function ApplicationCard({ application, onApprove, onReject, isLoading }: {
         )}
 
         <div className="text-xs text-muted-foreground">
-          Подано {formatDistanceToNow(new Date(application.decided_at || Date.now()), { 
-            addSuffix: true, 
-            locale: ru 
-          })}
+          {application.decided_at ? (
+            `Подано ${formatDistanceToNow(new Date(application.decided_at), { 
+              addSuffix: true, 
+              locale: ru 
+            })}`
+          ) : (
+            'Недавно'
+          )}
         </div>
 
         {application.status === 'pending' && (

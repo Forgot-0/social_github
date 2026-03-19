@@ -172,7 +172,7 @@ export function ProjectDetailPage() {
   const isOwner = user && project.owner_id === user.id;
   const openPositions = positions?.filter(p => p.is_open) || [];
   const ownerDisplayName = ownerProfile?.display_name || `User ${project.owner_id}`;
-  const ownerAvatarUrl = ownerProfile?.avatars?.small || ownerProfile?.avatars?.original;
+  const ownerAvatarUrl = ownerProfile?.avatars?.['medium'] || ownerProfile?.avatars?.['small'] || ownerProfile?.avatars?.['original'];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -223,9 +223,28 @@ export function ProjectDetailPage() {
                 </TabsContent>
 
                 <TabsContent value="positions" className="space-y-4 mt-6">
+                  {isOwner && (
+                    <Button onClick={handleCreatePosition} className="w-full mb-4 gap-2">
+                      <Plus className="w-4 h-4" />
+                      Добавить вакансию
+                    </Button>
+                  )}
+                  
                   {positionsLoading ? (
-                    <div className="flex justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <Card key={i} className="animate-pulse">
+                          <CardHeader>
+                            <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div className="h-4 bg-gray-200 rounded w-full"></div>
+                              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   ) : positions && positions.length > 0 ? (
                     positions.map((position) => (
@@ -390,9 +409,6 @@ export function ProjectDetailPage() {
                 <Button className="w-full" variant="outline" onClick={handleCreatePosition}>
                   Добавить вакансию
                 </Button>
-                <Button className="w-full" variant="outline" onClick={handleViewApplications}>
-                  Просмотреть отклики
-                </Button>
                 <Button className="w-full" variant="outline" onClick={handleInviteMember}>
                   Пригласить участника
                 </Button>
@@ -412,7 +428,7 @@ export function ProjectDetailPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="message">Сопроводительное сообщение</Label>
+              <Label htmlFor="message">��опроводительное сообщение</Label>
               <Textarea
                 id="message"
                 placeholder="Опишите свой опыт и мотивацию..."

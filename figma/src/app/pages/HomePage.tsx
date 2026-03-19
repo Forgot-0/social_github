@@ -9,10 +9,12 @@ import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
 import { Search, Filter, Briefcase, Users, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
-import { useProjectsQuery } from '../../api/hooks';
+import { useProjectsQuery, usePositionsQuery } from '../../api/hooks';
+import { useAuth } from '../contexts/AuthContext';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
@@ -21,6 +23,25 @@ export function HomePage() {
     tags: selectedTags.length > 0 ? selectedTags : undefined,
     page: 1,
     page_size: 20,
+  });
+
+  const { data: allProjectsData } = useProjectsQuery({
+    page: 1,
+    page_size: 100,
+  });
+
+  const { data: positionsData } = usePositionsQuery({
+    is_open: true,
+    page: 1,
+    page_size: 100,
+  });
+
+  const { data: newProjectsData } = useProjectsQuery({
+    name: searchQuery || undefined,
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    page: 1,
+    page_size: 20,
+    sort: '-created_at',
   });
 
   const toggleTag = (tag: string) => {
@@ -32,20 +53,29 @@ export function HomePage() {
   };
 
   const projects = projectsData?.items || [];
-  const totalPositions = projects.reduce((acc, p) => acc + (p.memberships?.length || 0), 0);
+  const newProjects = newProjectsData?.items || [];
+  const totalProjects = allProjectsData?.total || projectsData?.total || 0;
+  const totalPositions = positionsData?.total || 0;
 
   const popularTags = ['React', 'TypeScript', 'Python', 'Design', 'Mobile', 'Backend', 'Frontend', 'Стартап'];
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Hero Banner */}
-      <HeroBanner />
+      {/* Hero Banner или приветствие */}
+      {!user ? (
+        <HeroBanner />
+      ) : (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 mb-8 border border-blue-100">
+          <h2 className="text-2xl font-bold mb-2">Привет, {user.username}! Найдите новый проект.</h2>
+          <p className="text-muted-foreground">Исследуйте актуальные проекты и находите идеальные возможности для сотрудничества.</p>
+        </div>
+      )}
 
       {/* Статистика */}
       <div className="grid gap-4 md:grid-cols-4 mb-8">
         <StatsCard
           title="Активных проектов"
-          value={projectsData?.total || 0}
+          value={totalProjects}
           icon={Briefcase}
           trend={{ value: 12, isPositive: true }}
         />
@@ -57,15 +87,15 @@ export function HomePage() {
         />
         <StatsCard
           title="Участников"
-          value="150+"
+          value="—"
           icon={Users}
-          description="Активных пользователей"
+          description="Скоро доступно"
         />
         <StatsCard
           title="Успешных матчей"
-          value="45"
+          value="—"
           icon={Sparkles}
-          description="За этот месяц"
+          description="Скоро доступно"
         />
       </div>
 
@@ -141,22 +171,35 @@ export function HomePage() {
         </TabsContent>
 
         <TabsContent value="recommended" className="mt-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {projects.slice(0, 2).map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
-          <div className="text-center py-8 text-sm text-muted-foreground">
-            Рекомендации основаны на ваших навыках: React, TypeScript, Node.js
-          </div>
+          <EmptyState
+            icon={Sparkles}
+            title="Рекомендации скоро появятся"
+            description="Заполните профиль и навыки для персональных рекомендаций проектов"
+            action={{
+              label: 'Перейти к настройкам',
+              onClick: () => navigate('/settings'),
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="new" className="mt-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {[...projects].reverse().map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center">
+              <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
+            </div>
+          ) : newProjects.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+              {newProjects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Search}
+              title="Новые проекты не найдены"
+              description="Попробуйте изменить критерии поиска"
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

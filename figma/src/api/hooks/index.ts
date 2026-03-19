@@ -2,6 +2,7 @@ export * from './useAuth';
 export * from './useUsers';
 export * from './usePermissions';
 export * from './useRoles';
+export * from './useProjectRoles';
 export * from './useProfiles';
 export * from './useProjects';
 export * from './usePositions';

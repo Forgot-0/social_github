@@ -14,13 +14,39 @@ import { ru } from 'date-fns/locale';
 export function MyProjectsPage() {
   const { data: myProjectsData, isLoading: projectsLoading } = useMyProjectsQuery();
   const { data: applicationsData, isLoading: applicationsLoading } = useMyApplicationsQuery();
-  const { data: positionsData, isLoading: positionsLoading } = usePositionsQuery();
-  const { data: projectsData, isLoading: projectsDataLoading } = useProjectsQuery();
 
   const myProjects = myProjectsData?.items || [];
   const myApplications = applicationsData?.items || [];
+
+  // Оптимизация: загружаем только нужные позиции и проекты для откликов
+  // Примечание: API не поддерживает фильтрацию по массиву ID, поэтому загружаем все,
+  // но только если есть заявки (enabled: myApplications.length > 0)
+  const { data: positionsData, isLoading: positionsLoading } = usePositionsQuery(
+    {
+      page: 1,
+      page_size: 100,
+    },
+    {
+      enabled: myApplications.length > 0,
+    }
+  );
+
+  const { data: projectsData, isLoading: projectsDataLoading } = useProjectsQuery(
+    {
+      page: 1,
+      page_size: 100,
+    },
+    {
+      enabled: myApplications.length > 0,
+    }
+  );
+
   const positions = positionsData?.items || [];
   const projects = projectsData?.items || [];
+
+  // Создаем Map для быстрого поиска по ID
+  const positionsMap = new Map(positions.map(p => [p.id, p]));
+  const projectsMap = new Map(projects.map(p => [p.id, p]));
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -117,8 +143,8 @@ export function MyProjectsPage() {
             </div>
           ) : myApplications.length > 0 ? (
             myApplications.map((application) => {
-              const position = positions.find(pos => pos.id === application.position_id);
-              const project = projects.find(p => p.id === application.project_id);
+              const position = positionsMap.get(application.position_id);
+              const project = projectsMap.get(application.project_id);
 
               if (!position || !project) return null;
 

@@ -5,8 +5,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Plus } from 'lucide-react';
 import type { ProfileDTO } from '../../api/types';
+import { COMMON_SKILLS } from '../constants/skills';
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -32,9 +33,10 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSave, isLoadi
     }
   }, [profile, open]);
 
-  const handleAddSkill = () => {
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      setSkills([...skills, skillInput.trim()]);
+  const handleAddSkill = (skill?: string) => {
+    const skillToAdd = skill || skillInput.trim();
+    if (skillToAdd && !skills.includes(skillToAdd)) {
+      setSkills([...skills, skillToAdd]);
       setSkillInput('');
     }
   };
@@ -53,6 +55,9 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSave, isLoadi
 
     await onSave(data);
   };
+
+  // Фильтруем навыки, которые еще не добавлены
+  const availableSkills = COMMON_SKILLS.filter(skill => !skills.includes(skill));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,6 +132,16 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSave, isLoadi
                     >
                       <X className="w-3 h-3" />
                     </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {availableSkills.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {availableSkills.map((skill) => (
+                  <Badge key={skill} variant="outline" className="gap-1 cursor-pointer" onClick={() => handleAddSkill(skill)}>
+                    {skill}
+                    <Plus className="w-3 h-3 ml-1" />
                   </Badge>
                 ))}
               </div>

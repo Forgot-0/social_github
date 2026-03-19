@@ -45,7 +45,8 @@ export function UserProfilePage() {
   }
 
   const displayName = profile.display_name || `User ${profileId}`;
-  const avatarUrl = profile.avatars?.['medium']?.['url'] || profile.avatars?.['original']?.['url'];
+  // Исправлено: avatars теперь Record<string, string>, где значение - это уже URL
+  const avatarUrl = profile.avatars?.['medium'] || profile.avatars?.['small'] || profile.avatars?.['original'];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -140,7 +141,7 @@ export function UserProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <h3 className="font-medium mb-2">ID пользова��еля</h3>
+                    <h3 className="font-medium mb-2">ID пользоваеля</h3>
                     <p className="text-sm text-muted-foreground">#{profileId}</p>
                   </div>
 

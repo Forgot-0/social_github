@@ -9,6 +9,7 @@ import { MyProjectsPage } from './pages/MyProjectsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PositionsPage } from './pages/PositionsPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
     Component: RootLayout,
     children: [
       { index: true, Component: HomePage },
+      { path: 'positions', Component: PositionsPage },
       { path: 'projects/:id', Component: ProjectDetailPage },
       { 
         path: 'create-project', 

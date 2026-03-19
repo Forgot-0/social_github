@@ -14,6 +14,7 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const membersCount = project.memberships?.length || 0;
+  const visibilityText = project.visibility === 'public' ? 'Публичный' : 'Приватный';
   
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -30,7 +31,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </CardDescription>
           </div>
           <Badge variant="default">
-            {project.visibility}
+            {visibilityText}
           </Badge>
         </div>
       </CardHeader>

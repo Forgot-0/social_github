@@ -176,7 +176,7 @@ export interface ContactDTO {
 
 export interface ProfileDTO {
   id: number;
-  avatars: Record<string, Record<string, string>>;
+  avatars: Record<string, string>;
   specialization: string | null;
   display_name: string | null;
   bio: string | null;
@@ -350,6 +350,7 @@ export interface ApplicationDTO {
   message: string | null;
   decided_by: number | null;
   decided_at: string | null;
+  created_at?: string;  // Добавлено: поле может присутствовать в ответе API
 }
 
 export interface ApplicationCreateRequest {

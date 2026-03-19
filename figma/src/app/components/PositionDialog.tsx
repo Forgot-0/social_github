@@ -189,11 +189,11 @@ export function PositionDialog({ open, onOpenChange, position, projectId, create
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createPositionMutation.isLoading || updatePositionMutation.isLoading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createPositionMutation.isPending || updatePositionMutation.isPending}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={!title.trim() || !description.trim() || createPositionMutation.isLoading || updatePositionMutation.isLoading}>
-            {createPositionMutation.isLoading || updatePositionMutation.isLoading ? (
+          <Button onClick={handleSubmit} disabled={!title.trim() || !description.trim() || createPositionMutation.isPending || updatePositionMutation.isPending}>
+            {createPositionMutation.isPending || updatePositionMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Сохранение...

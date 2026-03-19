@@ -9,13 +9,19 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from './ui/dropdown-menu';
-import { Home, Briefcase, PlusCircle, User, Settings, LogOut } from 'lucide-react';
+import { Home, Briefcase, PlusCircle, User, Settings, LogOut, FolderOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useProfileQuery } from '../../api/hooks/useProfiles';
 
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  
+  // Загружаем профиль пользователя для аватара (profile_id = user_id)
+  const { data: profile } = useProfileQuery(user?.id || 0, {
+    enabled: !!user?.id,
+  });
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -25,6 +31,10 @@ export function Header() {
     await logout();
     navigate('/auth/login');
   };
+
+  // Исправлено: avatars теперь Record<string, string>, где значение - это уже URL
+  const avatarUrl = profile?.avatars?.['small'] || profile?.avatars?.['medium'] || profile?.avatars?.['original'];
+  const displayName = profile?.display_name || user?.username || 'User';
 
   return (
     <header className="border-b bg-white sticky top-0 z-50">
@@ -44,14 +54,25 @@ export function Header() {
                 Лента
               </Button>
             </Link>
+            
+            <Link to="/positions">
+              <Button 
+                variant={isActive('/positions') ? 'secondary' : 'ghost'} 
+                className="gap-2"
+              >
+                <Briefcase className="w-4 h-4" />
+                Вакансии
+              </Button>
+            </Link>
+            
             {isAuthenticated && (
               <Link to="/my-projects">
                 <Button 
                   variant={isActive('/my-projects') ? 'secondary' : 'ghost'} 
                   className="gap-2"
                 >
-                  <Briefcase className="w-4 h-4" />
-                  Мои проекты
+                  <FolderOpen className="w-4 h-4" />
+                  Мои прое��ты
                 </Button>
               </Link>
             )}
@@ -72,15 +93,15 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar>
-                      <AvatarImage src="" alt={user?.username || 'User'} />
-                      <AvatarFallback>{user?.username?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                      <AvatarImage src={avatarUrl} alt={displayName} />
+                      <AvatarFallback>{displayName[0]?.toUpperCase() || 'U'}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col">
-                      <span className="font-medium">{user?.username || 'User'}</span>
+                      <span className="font-medium">{displayName}</span>
                       <span className="text-xs text-muted-foreground">{user?.email || ''}</span>
                     </div>
                   </DropdownMenuLabel>

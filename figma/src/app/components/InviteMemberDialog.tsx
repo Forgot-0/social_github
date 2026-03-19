@@ -89,11 +89,11 @@ export function InviteMemberDialog({ open, onOpenChange, projectId, inviteMember
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={inviteMemberMutation.isLoading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={inviteMemberMutation.isPending}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={!userId || !roleId || inviteMemberMutation.isLoading}>
-            {inviteMemberMutation.isLoading ? (
+          <Button onClick={handleSubmit} disabled={!userId || !roleId || inviteMemberMutation.isPending}>
+            {inviteMemberMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Отправка...
