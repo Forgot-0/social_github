@@ -13,7 +13,7 @@ from app.projects.queries.positions.get_list import GetProjectPositionsQuery
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
 from app.projects.queries.projects.get_list import GetProjectsQuery
 from app.projects.queries.projects.get_my import GetMyProjectsQuery
-from app.projects.schemas.positions.requests import GetPositionsRequest, PositionCreateRequest
+from app.projects.schemas.positions.requests import GetPositionsRequest, GetProjectPositionRequest, PositionCreateRequest
 from app.projects.schemas.projects.requests import (
     GetMyProjectsRequest,
     GetProjectsRequest,
@@ -147,12 +147,11 @@ async def delete_project(
 async def get_project_positions(
     project_id: int,
     mediator: FromDishka[BaseMediator],
-    filters: GetPositionsRequest=Query(...),
+    filters: GetProjectPositionRequest=Query(...),
 ) -> None:
-    filters.project_id = project_id
     return await mediator.handle_query(
         GetProjectPositionsQuery(
-            filter=filters.to_position_filter()
+            filter=filters.to_position_filter(project_id)
         )
     )
 

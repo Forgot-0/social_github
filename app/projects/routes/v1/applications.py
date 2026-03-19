@@ -9,7 +9,7 @@ from app.core.services.auth.depends import CurrentUserJWTData
 from app.projects.commands.applications.decision import DecideApplicationCommand
 from app.projects.dtos.applications import ApplicationDTO
 from app.projects.queries.applications.get_list import GetApplicationsQuery
-from app.projects.schemas.applications.requests import GetApplicationsRequest
+from app.projects.schemas.applications.requests import GetApplicationsRequest, GetMeApplicationsRequest
 
 
 router = APIRouter(route_class=DishkaRoute)
@@ -37,12 +37,13 @@ async def list_applications(
 async def me_applications(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-    filters: GetApplicationsRequest = Query(...),
+    filters: GetMeApplicationsRequest = Query(...),
 ) -> PageResult[ApplicationDTO]:
-    filters.candidate_id = int(user_jwt_data.id)
     return await mediator.handle_query(
         GetApplicationsQuery(
-            filter=filters.to_application_filter(),
+            filter=filters.to_application_filter(
+                candidate_id=int(user_jwt_data.id)
+            ),
         )
     )
 

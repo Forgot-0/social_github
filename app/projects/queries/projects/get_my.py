@@ -20,6 +20,12 @@ class GetMyProjectsQueryHandler(BaseQueryHandler[GetMyProjectsQuery, PageResult[
     project_repository: ProjectRepository
 
     async def handle(self, query: GetMyProjectsQuery) -> PageResult[ProjectDTO]:
+        return await self.project_repository.cache_paginated(
+            ProjectDTO, func=self._handle, ttl=1200,
+            query=query
+        )
+
+    async def _handle(self, query: GetMyProjectsQuery) -> PageResult[ProjectDTO]:
         page = await self.project_repository.list_my_projects(
             user_id=int(query.user_jwt_data.id),
             page=query.page,
@@ -31,4 +37,3 @@ class GetMyProjectsQueryHandler(BaseQueryHandler[GetMyProjectsQuery, PageResult[
             page=page.page,
             page_size=page.page_size,
         )
-

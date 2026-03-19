@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from uuid import UUID
 
 from app.core.db.repository import PageResult
 from app.core.queries import BaseQuery, BaseQueryHandler
@@ -12,7 +11,6 @@ from app.projects.repositories.positions import PositionRepository
 @dataclass(frozen=True)
 class GetProjectPositionsQuery(BaseQuery):
     filter: PositionFilter
-
 
 @dataclass(frozen=True)
 class GetProjectPositionsQueryHandler(BaseQueryHandler[GetProjectPositionsQuery, PageResult[PositionDTO]]):

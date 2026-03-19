@@ -16,6 +16,64 @@ class ApplicationDecisionRequest(BaseModel):
     application_id: UUID
 
 
+class GetPositionApplicationsRequest(BaseModel):
+    project_id: int | None = None
+    candidate_id: int | None = None
+
+    status: ApplicationStatus = ApplicationStatus.pending
+
+    page: int = Field(1, ge=1)
+    page_size: int = Field(20, ge=1, le=100)
+
+    sort: str | None = Field(default=None, examples=["created_at:desc,username:asc"])
+
+    def to_application_filter(self, position_id: UUID) -> ApplicationFilter:
+        application_filter = ApplicationFilter(
+            project_id=self.project_id,
+            position_id=position_id,
+            candidate_id=self.candidate_id,
+            status=self.status
+        )
+
+        pagination = Pagination(page=self.page, page_size=self.page_size)
+        application_filter.set_pagination(pagination)
+
+        sort_fields = FilterMapper.parse_sort_string(self.sort)
+        for sort_field in sort_fields:
+            application_filter.add_sort(sort_field.field, sort_field.direction)
+
+        return application_filter
+
+
+class GetMeApplicationsRequest(BaseModel):
+    position_id: UUID | None = None
+    project_id: int | None = None
+
+    status: ApplicationStatus = ApplicationStatus.pending
+
+    page: int = Field(1, ge=1)
+    page_size: int = Field(20, ge=1, le=100)
+
+    sort: str | None = Field(default=None, examples=["created_at:desc,username:asc"])
+
+    def to_application_filter(self, candidate_id: int) -> ApplicationFilter:
+        application_filter = ApplicationFilter(
+            project_id=self.project_id,
+            position_id=self.position_id,
+            candidate_id=candidate_id,
+            status=self.status
+        )
+
+        pagination = Pagination(page=self.page, page_size=self.page_size)
+        application_filter.set_pagination(pagination)
+
+        sort_fields = FilterMapper.parse_sort_string(self.sort)
+        for sort_field in sort_fields:
+            application_filter.add_sort(sort_field.field, sort_field.direction)
+
+        return application_filter
+
+
 class GetApplicationsRequest(BaseModel):
     project_id: int | None = None
     position_id: UUID | None = None
