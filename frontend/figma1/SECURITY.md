@@ -489,10 +489,7 @@ import * as SecureStore from 'expo-secure-store';
 await SecureStore.setItemAsync('access_token', token);
 const token = await SecureStore.getItemAsync('access_token');
 ```
-
-Но для веб-приложений - **только память!**
-
----
+x 
 
 ## 🔍 Debugging
 
