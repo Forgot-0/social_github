@@ -37,7 +37,7 @@ class PermissionEnum(Enum):
 
 class RolesEnum(Enum):
     SUPER_ADMIN = Role(
-        name="super_admin",
+        name="Lehi's mom's fuck",
         description="Complete system access with all permissions",
         security_level=10,
         permissions=PermissionEnum.get_all_permissions(),

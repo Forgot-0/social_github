@@ -19,6 +19,7 @@ class PositionFilter(BaseFilter):
         self._build_conditions()
 
     def _build_conditions(self) -> None:
+        self.add_condition("project_id", FilterOperator.EQ, self.project_id)
         self.add_condition("title", FilterOperator.CONTAINS, self.title)
 
         self.add_condition("required_skills", FilterOperator.ALL, self.required_skills)
