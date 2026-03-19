@@ -1,0 +1,92 @@
+forgot@isa:~/social_github/frontend/figma2$ npm run dev
+
+> @figma/my-make-file@0.0.1 dev
+> vite
+
+
+  VITE v6.3.5  ready in 136 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+14:11:40 [vite] Internal server error: Failed to resolve import "../data/mockData" from "src/app/pages/ProfilePage.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/forgot/social_github/frontend/figma2/src/app/pages/ProfilePage.tsx:9:44
+  23 |  import { ProjectCard } from "../components/ProjectCard";
+  24 |  import { Mail, Calendar, Edit, Briefcase, Award } from "lucide-react";
+  25 |  import { CURRENT_USER, MOCK_PROJECTS } from "../data/mockData";
+     |                                               ^
+  26 |  import { formatDistanceToNow } from "date-fns";
+  27 |  import { ru } from "date-fns/locale";
+      at TransformPluginContext._formatLog (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42499:41)
+      at TransformPluginContext.error (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42496:16)
+      at normalizeUrl (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40475:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40594:37
+      at async Promise.all (index 11)
+      at async TransformPluginContext.transform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40521:7)
+      at async EnvironmentPluginContainer.transform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42294:18)
+      at async loadAndTransform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:35735:27)
+14:11:40 [vite] (client) Pre-transform error: Failed to resolve import "../data/mockData" from "src/app/pages/ProfilePage.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/forgot/social_github/frontend/figma2/src/app/pages/ProfilePage.tsx:9:44
+  23 |  import { ProjectCard } from "../components/ProjectCard";
+  24 |  import { Mail, Calendar, Edit, Briefcase, Award } from "lucide-react";
+  25 |  import { CURRENT_USER, MOCK_PROJECTS } from "../data/mockData";
+     |                                               ^
+  26 |  import { formatDistanceToNow } from "date-fns";
+  27 |  import { ru } from "date-fns/locale";
+14:11:40 [vite] Internal server error: Failed to resolve import "../data/mockData" from "src/app/pages/ProjectDetailPage.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/forgot/social_github/frontend/figma2/src/app/pages/ProjectDetailPage.tsx:13:44
+  28 |  import { PositionCard } from "../components/PositionCard";
+  29 |  import { ArrowLeft, Calendar, Users, Target, TrendingUp, CheckCircle2 } from "lucide-react";
+  30 |  import { MOCK_PROJECTS, CURRENT_USER } from "../data/mockData";
+     |                                               ^
+  31 |  import { formatDistanceToNow } from "date-fns";
+  32 |  import { ru } from "date-fns/locale";
+      at TransformPluginContext._formatLog (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42499:41)
+      at TransformPluginContext.error (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42496:16)
+      at normalizeUrl (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40475:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40594:37
+      at async Promise.all (index 15)
+      at async TransformPluginContext.transform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40521:7)
+      at async EnvironmentPluginContainer.transform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42294:18)
+      at async loadAndTransform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:35735:27)
+14:11:40 [vite] (client) Pre-transform error: Failed to resolve import "../data/mockData" from "src/app/pages/ProjectDetailPage.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/forgot/social_github/frontend/figma2/src/app/pages/ProjectDetailPage.tsx:13:44
+  28 |  import { PositionCard } from "../components/PositionCard";
+  29 |  import { ArrowLeft, Calendar, Users, Target, TrendingUp, CheckCircle2 } from "lucide-react";
+  30 |  import { MOCK_PROJECTS, CURRENT_USER } from "../data/mockData";
+     |                                               ^
+  31 |  import { formatDistanceToNow } from "date-fns";
+  32 |  import { ru } from "date-fns/locale";
+14:11:40 [vite] Internal server error: Failed to resolve import "../data/mockData" from "src/app/pages/SettingsPage.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/forgot/social_github/frontend/figma2/src/app/pages/SettingsPage.tsx:13:37
+  28 |  import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+  29 |  import { X, Plus } from "lucide-react";
+  30 |  import { CURRENT_USER, SKILLS } from "../data/mockData";
+     |                                        ^
+  31 |  import { toast } from "sonner";
+  32 |  export function SettingsPage() {
+      at TransformPluginContext._formatLog (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42499:41)
+      at TransformPluginContext.error (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42496:16)
+      at normalizeUrl (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40475:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40594:37
+      at async Promise.all (index 15)
+      at async TransformPluginContext.transform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:40521:7)
+      at async EnvironmentPluginContainer.transform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:42294:18)
+      at async loadAndTransform (file:///home/forgot/social_github/frontend/figma2/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:35735:27)
+14:11:40 [vite] (client) Pre-transform error: Failed to resolve import "../data/mockData" from "src/app/pages/SettingsPage.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/forgot/social_github/frontend/figma2/src/app/pages/SettingsPage.tsx:13:37
+  28 |  import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+  29 |  import { X, Plus } from "lucide-react";
+  30 |  import { CURRENT_USER, SKILLS } from "../data/mockData";
+     |                                        ^
+  31 |  import { toast } from "sonner";
+  32 |  export function SettingsPage() {
