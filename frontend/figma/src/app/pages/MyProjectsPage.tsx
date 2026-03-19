@@ -5,16 +5,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { PlusCircle, Briefcase, Users, Settings, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { MOCK_PROJECTS, CURRENT_USER, MOCK_APPLICATIONS } from '../data/mockData';
+import { PlusCircle, Briefcase, Users, Settings, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
+import { useMyProjectsQuery, useMyApplicationsQuery } from '../../api/hooks';
+import { usePositionsQuery, useProjectsQuery } from '../../api/hooks';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 export function MyProjectsPage() {
-  const myProjects = MOCK_PROJECTS.filter(p => p.ownerId === CURRENT_USER.id);
-  const participatingProjects = MOCK_PROJECTS.filter(p =>
-    p.participants.some(part => part.userId === CURRENT_USER.id)
-  );
+  const { data: myProjectsData, isLoading: projectsLoading } = useMyProjectsQuery();
+  const { data: applicationsData, isLoading: applicationsLoading } = useMyApplicationsQuery();
+  const { data: positionsData, isLoading: positionsLoading } = usePositionsQuery();
+  const { data: projectsData, isLoading: projectsDataLoading } = useProjectsQuery();
+
+  const myProjects = myProjectsData?.items || [];
+  const myApplications = applicationsData?.items || [];
+  const positions = positionsData?.items || [];
+  const projects = projectsData?.items || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -36,12 +42,15 @@ export function MyProjectsPage() {
       <Tabs defaultValue="owned" className="space-y-6">
         <TabsList>
           <TabsTrigger value="owned">Мои проекты ({myProjects.length})</TabsTrigger>
-          <TabsTrigger value="participating">Участвую ({participatingProjects.length})</TabsTrigger>
-          <TabsTrigger value="applications">Мои отклики ({MOCK_APPLICATIONS.length})</TabsTrigger>
+          <TabsTrigger value="applications">Мои отклики ({myApplications.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="owned" className="space-y-4">
-          {myProjects.length > 0 ? (
+          {projectsLoading ? (
+            <div className="flex justify-center">
+              <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
+            </div>
+          ) : myProjects.length > 0 ? (
             myProjects.map((project) => (
               <Card key={project.id}>
                 <CardHeader>
@@ -49,15 +58,15 @@ export function MyProjectsPage() {
                     <div className="flex-1">
                       <CardTitle className="text-xl">
                         <Link to={`/projects/${project.id}`} className="hover:text-blue-600">
-                          {project.title}
+                          {project.name}
                         </Link>
                       </CardTitle>
                       <CardDescription className="mt-2 line-clamp-2">
-                        {project.description}
+                        {project.small_description}
                       </CardDescription>
                     </div>
-                    <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                      {project.status === 'active' ? 'Активен' : 'На паузе'}
+                    <Badge variant="default">
+                      {project.visibility}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -65,16 +74,12 @@ export function MyProjectsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
-                        <Briefcase className="w-4 h-4" />
-                        <span>{project.positions.length} вакансий</span>
-                      </div>
-                      <div className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
-                        <span>{project.participants.length + 1} участников</span>
+                        <span>{project.memberships?.length || 0} участников</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        <span>{formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true, locale: ru })}</span>
+                        <span>{project.updated_at ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: ru }) : ''}</span>
                       </div>
                     </div>
 
@@ -105,64 +110,15 @@ export function MyProjectsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="participating" className="space-y-4">
-          {participatingProjects.length > 0 ? (
-            participatingProjects.map((project) => (
-              <Card key={project.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl">
-                        <Link to={`/projects/${project.id}`} className="hover:text-blue-600">
-                          {project.title}
-                        </Link>
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Avatar className="w-6 h-6">
-                          <AvatarImage src={project.owner.avatar} alt={project.owner.name} />
-                          <AvatarFallback>{project.owner.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-muted-foreground">{project.owner.name}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Моя роль: <span className="font-medium text-foreground">Участник</span>
-                    </div>
-                    <Link to={`/projects/${project.id}`}>
-                      <Button variant="outline" size="sm">
-                        Открыть проект
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Users className="w-12 h-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">Вы пока не участвуете в других проектах</p>
-                <Link to="/">
-                  <Button>Найти проекты</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
         <TabsContent value="applications" className="space-y-4">
-          {MOCK_APPLICATIONS.length > 0 ? (
-            MOCK_APPLICATIONS.map((application) => {
-              const position = MOCK_PROJECTS
-                .flatMap(p => p.positions)
-                .find(pos => pos.id === application.positionId);
-              const project = MOCK_PROJECTS.find(p =>
-                p.positions.some(pos => pos.id === application.positionId)
-              );
+          {applicationsLoading || positionsLoading || projectsDataLoading ? (
+            <div className="flex justify-center">
+              <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
+            </div>
+          ) : myApplications.length > 0 ? (
+            myApplications.map((application) => {
+              const position = positions.find(pos => pos.id === application.position_id);
+              const project = projects.find(p => p.id === application.project_id);
 
               if (!position || !project) return null;
 
@@ -173,7 +129,7 @@ export function MyProjectsPage() {
                       <div className="flex-1">
                         <CardTitle className="text-lg">{position.title}</CardTitle>
                         <CardDescription className="mt-1">
-                          в проекте "{project.title}"
+                          в проекте "{project.name}"
                         </CardDescription>
                       </div>
                       <Badge
@@ -199,13 +155,15 @@ export function MyProjectsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Сообщение: </span>
-                        {application.message}
-                      </div>
+                      {application.message && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Сообщение: </span>
+                          {application.message}
+                        </div>
+                      )}
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>
-                          Отправлено {formatDistanceToNow(new Date(application.createdAt), { addSuffix: true, locale: ru })}
+                          Отправлено {application.created_at ? formatDistanceToNow(new Date(application.created_at), { addSuffix: true, locale: ru }) : 'недавно'}
                         </span>
                         <Link to={`/projects/${project.id}`}>
                           <Button variant="outline" size="sm">

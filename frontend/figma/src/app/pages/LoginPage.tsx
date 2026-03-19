@@ -1,20 +1,25 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { authApi, setAccessToken } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export function LoginPage() {
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  if (isAuthenticated) {
+    navigate('/');
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,27 +32,13 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Временно используем mock - раскомментируйте когда backend будет готов
-      // const response = await authApi.login(username, password);
-      // setAccessToken(response.access_token);
-      
-      // Mock login
-      if (username === 'demo' && password === 'demo') {
-        toast.success('Вход выполнен успешно!');
-        navigate('/');
-      } else {
-        toast.error('Неверные учетные данные', {
-          description: 'Используйте demo/demo для входа',
-        });
-      }
+      await login(username, password);
+      toast.success('Вход выполнен успешно!');
+      navigate('/');
     } catch (error: any) {
-      if (error?.error?.code === 'WRONG_LOGIN_DATA') {
-        toast.error('Неверный логин или пароль');
-      } else {
-        toast.error('Ошибка при входе', {
-          description: 'Попробуйте позже',
-        });
-      }
+      toast.error('Ошибка входа', {
+        description: error?.error?.message || 'Проверьте логин и пароль',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +48,7 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">InCollab</h1>
+          <h1 className="text-4xl font-bold text-blue-600 mb-2">ProjectHub</h1>
           <p className="text-muted-foreground">
             Найди команду для своего проекта
           </p>
@@ -116,7 +107,7 @@ export function LoginPage() {
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Вход...' : 'Войти'}
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Войти'}
               </Button>
             </form>
 
@@ -166,7 +157,7 @@ export function LoginPage() {
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-sm text-center text-muted-foreground">
               Нет аккаунта?{' '}
-              <Link to="/register" className="text-blue-600 hover:underline font-medium">
+              <Link to="/auth/register" className="text-blue-600 hover:underline font-medium">
                 Зарегистрироваться
               </Link>
             </div>

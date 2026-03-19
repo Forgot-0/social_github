@@ -28,6 +28,59 @@ export interface UserResponse {
   updated_at: string;
 }
 
+export interface ProfileDTO {
+  id: number;
+  avatars?: Record<string, string>;
+  specialization?: string;
+  display_name?: string;
+  bio?: string;
+  date_birthday?: string;
+  skills: string[];
+  contacts: Array<{ provider: string; contact: string }>;
+}
+
+export interface ProjectDTO {
+  id: number;
+  owner_id: number;
+  name: string;
+  slug: string;
+  small_description?: string;
+  full_description?: string;
+  visibility: 'public' | 'private';
+  tags: string[];
+  meta_data?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  memberships?: Array<any>;
+}
+
+export interface PositionDTO {
+  id: string;
+  project_id: number;
+  title: string;
+  description?: string;
+  responsibilities?: string;
+  required_skills: string[];
+  is_open: boolean;
+  location_type: 'remote' | 'onsite' | 'hybrid';
+  expected_load: 'low' | 'medium' | 'high';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ApplicationDTO {
+  id: string;
+  project_id: number;
+  position_id: string;
+  candidate_id: number;
+  status: 'pending' | 'accepted' | 'rejected';
+  message?: string;
+  decided_by?: number;
+  decided_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface PageResult<T> {
   items: T[];
   total: number;
@@ -106,7 +159,7 @@ export const authApi = {
     email: string;
     username: string;
     password: string;
-    repeat_password: string;
+    password_repeat: string;
   }): Promise<UserResponse> {
     return apiRequest<UserResponse>('/api/v1/users/register', {
       method: 'POST',
@@ -154,85 +207,286 @@ export const usersApi = {
   },
 };
 
-// Projects API (будущие endpoints)
-export const projectsApi = {
-  // TODO: Реализовать когда будут доступны endpoints
-  async getProjects(params?: {
+// Profiles API
+export const profilesApi = {
+  async createProfile(data: {
+    display_name?: string;
+    bio?: string;
+    skills?: string[];
+    date_birthday?: string;
+  }): Promise<ProfileDTO> {
+    return apiRequest<ProfileDTO>('/api/v1/profiles/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getProfiles(params?: {
+    display_name?: string;
+    skills?: string[];
     page?: number;
     page_size?: number;
-    search?: string;
+  }): Promise<PageResult<ProfileDTO>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach(v => queryParams.append(key, String(v)));
+          } else {
+            queryParams.append(key, String(value));
+          }
+        }
+      });
+    }
+
+    return apiRequest<PageResult<ProfileDTO>>(
+      `/api/v1/profiles/${params ? '?' + queryParams.toString() : ''}`
+    );
+  },
+
+  async getProfile(id: number): Promise<ProfileDTO> {
+    return apiRequest<ProfileDTO>(`/api/v1/profiles/${id}`);
+  },
+
+  async updateProfile(id: number, data: {
+    specialization?: string;
+    display_name?: string;
+    bio?: string;
     skills?: string[];
-    status?: string;
-  }): Promise<any> {
-    // Mock implementation
-    throw new Error('Projects API не реализован');
+    date_birthday?: string;
+  }): Promise<ProfileDTO> {
+    return apiRequest<ProfileDTO>(`/api/v1/profiles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 
-  async getProject(id: string): Promise<any> {
-    throw new Error('Projects API не реализован');
+  async addContact(id: number, data: {
+    provider: string;
+    contact: string;
+  }): Promise<void> {
+    return apiRequest<void>(`/api/v1/profiles/${id}/contacts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
-  async createProject(data: any): Promise<any> {
-    throw new Error('Projects API не реализован');
-  },
-
-  async updateProject(id: string, data: any): Promise<any> {
-    throw new Error('Projects API не реализован');
-  },
-
-  async deleteProject(id: string): Promise<void> {
-    throw new Error('Projects API не реализован');
+  async deleteContact(id: number, provider: string): Promise<void> {
+    return apiRequest<void>(`/api/v1/profiles/${id}/${provider}/delete`, {
+      method: 'DELETE',
+    });
   },
 };
 
-// Positions API (будущие endpoints)
+// Projects API
+export const projectsApi = {
+  async getProjects(params?: {
+    name?: string;
+    slug?: string;
+    tags?: string[];
+    page?: number;
+    page_size?: number;
+    sort?: string;
+  }): Promise<PageResult<ProjectDTO>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach(v => queryParams.append(key, String(v)));
+          } else {
+            queryParams.append(key, String(value));
+          }
+        }
+      });
+    }
+
+    return apiRequest<PageResult<ProjectDTO>>(
+      `/api/v1/projects/${params ? '?' + queryParams.toString() : ''}`
+    );
+  },
+
+  async getMyProjects(params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PageResult<ProjectDTO>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    return apiRequest<PageResult<ProjectDTO>>(
+      `/api/v1/projects/my${params ? '?' + queryParams.toString() : ''}`
+    );
+  },
+
+  async getProject(id: number): Promise<ProjectDTO> {
+    return apiRequest<ProjectDTO>(`/api/v1/projects/${id}`);
+  },
+
+  async createProject(data: {
+    name: string;
+    slug: string;
+    small_description?: string;
+    description?: string;
+    visibility: 'public' | 'private';
+    tags?: string[];
+    meta_data?: Record<string, any>;
+  }): Promise<ProjectDTO> {
+    return apiRequest<ProjectDTO>('/api/v1/projects/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateProject(id: number, data: Partial<ProjectDTO>): Promise<ProjectDTO> {
+    return apiRequest<ProjectDTO>(`/api/v1/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteProject(id: number): Promise<void> {
+    return apiRequest<void>(`/api/v1/projects/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getProjectPositions(id: number): Promise<PositionDTO[]> {
+    return apiRequest<PositionDTO[]>(`/api/v1/projects/${id}/positions`);
+  },
+
+  async createProjectPosition(id: number, data: {
+    title: string;
+    description?: string;
+    responsibilities?: string;
+    required_skills?: string[];
+    is_open?: boolean;
+    location_type?: 'remote' | 'onsite' | 'hybrid';
+    expected_load?: 'low' | 'medium' | 'high';
+  }): Promise<PositionDTO> {
+    return apiRequest<PositionDTO>(`/api/v1/projects/${id}/positions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// Positions API
 export const positionsApi = {
-  async getPositions(projectId: string): Promise<any> {
-    throw new Error('Positions API не реализован');
+  async getPositions(params?: {
+    project_id?: number;
+    title?: string;
+    required_skills?: string[];
+    is_open?: boolean;
+    location_type?: 'remote' | 'onsite' | 'hybrid';
+    expected_load?: 'low' | 'medium' | 'high';
+    page?: number;
+    page_size?: number;
+  }): Promise<PageResult<PositionDTO>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach(v => queryParams.append(key, String(v)));
+          } else {
+            queryParams.append(key, String(value));
+          }
+        }
+      });
+    }
+
+    return apiRequest<PageResult<PositionDTO>>(
+      `/api/v1/positions/${params ? '?' + queryParams.toString() : ''}`
+    );
   },
 
-  async createPosition(projectId: string, data: any): Promise<any> {
-    throw new Error('Positions API не реализован');
+  async getPosition(uuid: string): Promise<PositionDTO> {
+    return apiRequest<PositionDTO>(`/api/v1/positions/${uuid}`);
   },
 
-  async deletePosition(positionId: string): Promise<void> {
-    throw new Error('Positions API не реализован');
+  async updatePosition(uuid: string, data: Partial<PositionDTO>): Promise<PositionDTO> {
+    return apiRequest<PositionDTO>(`/api/v1/positions/${uuid}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deletePosition(uuid: string): Promise<void> {
+    return apiRequest<void>(`/api/v1/positions/${uuid}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getPositionApplications(uuid: string): Promise<ApplicationDTO[]> {
+    return apiRequest<ApplicationDTO[]>(`/api/v1/positions/${uuid}/applications`);
+  },
+
+  async createApplication(uuid: string, data?: { message?: string }): Promise<ApplicationDTO> {
+    return apiRequest<ApplicationDTO>(`/api/v1/positions/${uuid}/applications`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
   },
 };
 
-// Applications API (будущие endpoints)
+// Applications API
 export const applicationsApi = {
-  async getMyApplications(): Promise<any> {
-    throw new Error('Applications API не реализован');
+  async getApplications(params?: {
+    project_id?: number;
+    position_id?: string;
+    candidate_id?: number;
+    status?: 'pending' | 'accepted' | 'rejected';
+    page?: number;
+    page_size?: number;
+  }): Promise<PageResult<ApplicationDTO>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    return apiRequest<PageResult<ApplicationDTO>>(
+      `/api/v1/applications/${params ? '?' + queryParams.toString() : ''}`
+    );
   },
 
-  async createApplication(positionId: string, data: any): Promise<any> {
-    throw new Error('Applications API не реализован');
+  async getMyApplications(params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PageResult<ApplicationDTO>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    return apiRequest<PageResult<ApplicationDTO>>(
+      `/api/v1/applications/me${params ? '?' + queryParams.toString() : ''}`
+    );
   },
 
-  async getApplicationsForProject(projectId: string): Promise<any> {
-    throw new Error('Applications API не реализован');
+  async approveApplication(uuid: string): Promise<ApplicationDTO> {
+    return apiRequest<ApplicationDTO>(`/api/v1/applications/${uuid}/approve`, {
+      method: 'POST',
+    });
   },
 
-  async updateApplicationStatus(
-    applicationId: string,
-    status: 'accepted' | 'rejected'
-  ): Promise<any> {
-    throw new Error('Applications API не реализован');
-  },
-};
-
-// Skills API (будущие endpoints)
-export const skillsApi = {
-  async getSkills(): Promise<any> {
-    throw new Error('Skills API не реализован');
-  },
-
-  async getUserSkills(userId: number): Promise<any> {
-    throw new Error('Skills API не реализован');
-  },
-
-  async updateUserSkills(skills: string[]): Promise<any> {
-    throw new Error('Skills API не реализован');
+  async rejectApplication(uuid: string): Promise<ApplicationDTO> {
+    return apiRequest<ApplicationDTO>(`/api/v1/applications/${uuid}/reject`, {
+      method: 'POST',
+    });
   },
 };

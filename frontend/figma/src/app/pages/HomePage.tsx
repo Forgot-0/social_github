@@ -8,36 +8,33 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
-import { Search, Filter, Briefcase, Users, TrendingUp, Sparkles } from 'lucide-react';
-import { MOCK_PROJECTS, SKILLS } from '../data/mockData';
+import { Search, Filter, Briefcase, Users, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
+import { useProjectsQuery } from '../../api/hooks';
 
 export function HomePage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  const toggleSkill = (skillId: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skillId)
-        ? prev.filter(id => id !== skillId)
-        : [...prev, skillId]
+  const { data: projectsData, isLoading } = useProjectsQuery({
+    name: searchQuery || undefined,
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    page: 1,
+    page_size: 20,
+  });
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
     );
   };
 
-  const filteredProjects = MOCK_PROJECTS.filter(project => {
-    const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         project.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (selectedSkills.length === 0) return matchesSearch;
-    
-    const projectSkills = project.positions.flatMap(p => p.requiredSkills.map(s => s.id));
-    const hasMatchingSkills = selectedSkills.some(skillId => projectSkills.includes(skillId));
-    
-    return matchesSearch && hasMatchingSkills;
-  });
+  const projects = projectsData?.items || [];
+  const totalPositions = projects.reduce((acc, p) => acc + (p.memberships?.length || 0), 0);
 
-  const totalPositions = MOCK_PROJECTS.reduce((acc, p) => acc + p.positions.length, 0);
-  const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'active').length;
+  const popularTags = ['React', 'TypeScript', 'Python', 'Design', 'Mobile', 'Backend', 'Frontend', 'Стартап'];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -48,7 +45,7 @@ export function HomePage() {
       <div className="grid gap-4 md:grid-cols-4 mb-8">
         <StatsCard
           title="Активных проектов"
-          value={activeProjects}
+          value={projectsData?.total || 0}
           icon={Briefcase}
           trend={{ value: 12, isPositive: true }}
         />
@@ -86,21 +83,21 @@ export function HomePage() {
         <div className="flex items-center gap-2 flex-wrap">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Фильтр по навыкам:</span>
-          {SKILLS.slice(0, 8).map((skill) => (
+          {popularTags.map((tag) => (
             <Badge
-              key={skill.id}
-              variant={selectedSkills.includes(skill.id) ? 'default' : 'outline'}
+              key={tag}
+              variant={selectedTags.includes(tag) ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => toggleSkill(skill.id)}
+              onClick={() => toggleTag(tag)}
             >
-              {skill.name}
+              {tag}
             </Badge>
           ))}
-          {selectedSkills.length > 0 && (
+          {selectedTags.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedSkills([])}
+              onClick={() => setSelectedTags([])}
               className="text-xs"
             >
               Сбросить
@@ -117,9 +114,13 @@ export function HomePage() {
         </TabsList>
         
         <TabsContent value="all" className="mt-6">
-          {filteredProjects.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center">
+              <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
+            </div>
+          ) : projects.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-              {filteredProjects.map((project) => (
+              {projects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
             </div>
@@ -132,7 +133,7 @@ export function HomePage() {
                 label: 'Сбросить фильтры',
                 onClick: () => {
                   setSearchQuery('');
-                  setSelectedSkills([]);
+                  setSelectedTags([]);
                 },
               }}
             />
@@ -141,7 +142,7 @@ export function HomePage() {
 
         <TabsContent value="recommended" className="mt-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {filteredProjects.slice(0, 2).map((project) => (
+            {projects.slice(0, 2).map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
           </div>
@@ -152,7 +153,7 @@ export function HomePage() {
 
         <TabsContent value="new" className="mt-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {[...filteredProjects].reverse().map((project) => (
+            {[...projects].reverse().map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
           </div>

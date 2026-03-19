@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from '../components/ui/separator';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { authApi } from '../services/api';
+import { useRegisterMutation } from '../../api';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -18,7 +18,33 @@ export function RegisterPage() {
     repeat_password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const registerMutation = useRegisterMutation({
+    onSuccess: () => {
+      toast.success('Регистрация успешна!', {
+        description: 'Проверьте email для подтверждения аккаунта',
+      });
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 1500);
+    },
+    onError: (error) => {
+      const errorCode = error.response?.data?.error?.code;
+      const errorDetail = error.response?.data?.error?.detail;
+      
+      if (errorCode === 'DUPLICATE_USER') {
+        toast.error('Пользователь уже существует', {
+          description: `${errorDetail.field}: ${errorDetail.value}`,
+        });
+      } else if (errorCode === 'PASSWORD_MISMATCH') {
+        toast.error('Пароли не совпадают');
+      } else {
+        toast.error('Ошибка при регистрации', {
+          description: 'Попробуйте позже',
+        });
+      }
+    },
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -57,42 +83,14 @@ export function RegisterPage() {
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      // Временно используем mock - раскомментируйте когда backend будет готов
-      // await authApi.register(formData);
-      
-      // Mock registration
-      toast.success('Регистрация успешна!', {
-        description: 'Проверьте email для подтверждения аккаунта',
-      });
-      
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500);
-    } catch (error: any) {
-      if (error?.error?.code === 'DUPLICATE_USER') {
-        toast.error('Пользователь уже существует', {
-          description: `${error.error.detail.field}: ${error.error.detail.value}`,
-        });
-      } else if (error?.error?.code === 'PASSWORD_MISMATCH') {
-        toast.error('Пароли не совпадают');
-      } else {
-        toast.error('Ошибка при регистрации', {
-          description: 'Попробуйте позже',
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    registerMutation.mutate(formData);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">InCollab</h1>
+          <h1 className="text-4xl font-bold text-blue-600 mb-2">ProjectHub</h1>
           <p className="text-muted-foreground">
             Создайте аккаунт и найдите команду
           </p>
@@ -203,8 +201,8 @@ export function RegisterPage() {
                 </a>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Регистрация...' : 'Создать аккаунт'}
+              <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                {registerMutation.isPending ? 'Регистрация...' : 'Создать аккаунт'}
               </Button>
             </form>
 
@@ -254,7 +252,7 @@ export function RegisterPage() {
           <CardFooter className="flex justify-center">
             <div className="text-sm text-muted-foreground">
               Уже есть аккаунт?{' '}
-              <Link to="/login" className="text-blue-600 hover:underline font-medium">
+              <Link to="/auth/login" className="text-blue-600 hover:underline font-medium">
                 Войти
               </Link>
             </div>

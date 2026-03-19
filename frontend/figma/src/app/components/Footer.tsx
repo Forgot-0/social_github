@@ -7,7 +7,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-blue-600">InCollab</h3>
+            <h3 className="text-lg font-bold text-blue-600">ProjectHub</h3>
             <p className="text-sm text-muted-foreground">
               Платформа для поиска участников проектов и стартапов
             </p>
@@ -107,7 +107,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; 2026 InCollab. Все права защищены.</p>
+          <p>&copy; 2026 ProjectHub. Все права защищены.</p>
         </div>
       </div>
     </footer>

@@ -8,20 +8,72 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
-import { PositionCard } from '../components/PositionCard';
-import { ArrowLeft, Calendar, Users, Target, TrendingUp, CheckCircle2 } from 'lucide-react';
-import { MOCK_PROJECTS, CURRENT_USER } from '../data/mockData';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
+import { ArrowLeft, Calendar, Users, Target, Loader2, Edit, Trash2, Plus, UserPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
+import { useProjectQuery, useProjectPositionsQuery, useCreatePositionMutation, useInviteMemberMutation, useUpdateProjectMutation } from '../../api/hooks/useProjects';
+import { useProfileQuery } from '../../api/hooks/useProfiles';
+import { useCreateApplicationMutation } from '../../api/hooks/useApplications';
+import { useUpdatePositionMutation, useDeletePositionMutation } from '../../api/hooks/usePositions';
+import { PositionDialog } from '../components/PositionDialog';
+import { InviteMemberDialog } from '../components/InviteMemberDialog';
+import { EditProjectDialog } from '../components/EditProjectDialog';
+import { ApplicationsDialog } from '../components/ApplicationsDialog';
+import type { PositionDTO } from '../../api/types';
 
 export function ProjectDetailPage() {
   const { id } = useParams();
+  const projectId = parseInt(id || '0');
+  
   const [applicationDialog, setApplicationDialog] = useState(false);
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
   const [applicationMessage, setApplicationMessage] = useState('');
+  const [positionDialog, setPositionDialog] = useState(false);
+  const [editingPosition, setEditingPosition] = useState<PositionDTO | null>(null);
+  const [inviteMemberDialog, setInviteMemberDialog] = useState(false);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [positionToDelete, setPositionToDelete] = useState<string | null>(null);
+  const [editProjectDialog, setEditProjectDialog] = useState(false);
+  const [applicationsDialog, setApplicationsDialog] = useState(false);
+  const [selectedPositionForApplications, setSelectedPositionForApplications] = useState<PositionDTO | null>(null);
 
-  const project = MOCK_PROJECTS.find(p => p.id === id);
+  const { user } = useAuth();
+  const { data: project, isLoading: projectLoading } = useProjectQuery(projectId, {
+    enabled: !!projectId,
+  });
+  const { data: positions, isLoading: positionsLoading } = useProjectPositionsQuery(projectId, {
+    enabled: !!projectId,
+  });
+  const { data: ownerProfile } = useProfileQuery(project?.owner_id || 0, {
+    enabled: !!project?.owner_id,
+  });
+
+  const createApplicationMutation = useCreateApplicationMutation();
+  const createPositionMutation = useCreatePositionMutation();
+  const updatePositionMutation = useUpdatePositionMutation();
+  const deletePositionMutation = useDeletePositionMutation();
+  const inviteMemberMutation = useInviteMemberMutation();
+  const updateProjectMutation = useUpdateProjectMutation();
+
+  if (projectLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -42,15 +94,85 @@ export function ProjectDetailPage() {
   };
 
   const handleSubmitApplication = () => {
-    toast.success('Отклик отправлен!', {
-      description: 'Владелец проекта получит уведомление о вашем отклике.',
-    });
-    setApplicationDialog(false);
-    setApplicationMessage('');
-    setSelectedPositionId(null);
+    if (!selectedPositionId) return;
+
+    createApplicationMutation.mutate(
+      {
+        positionId: selectedPositionId,
+        data: { message: applicationMessage },
+      },
+      {
+        onSuccess: () => {
+          toast.success('Отклик отправлен!', {
+            description: 'Владелец проекта получит уведомление о вашем отклике.',
+          });
+          setApplicationDialog(false);
+          setApplicationMessage('');
+          setSelectedPositionId(null);
+        },
+        onError: (error: any) => {
+          toast.error('Ошибка при отправке отклика', {
+            description: error?.error?.message || 'Попробуйте позже',
+          });
+        },
+      }
+    );
   };
 
-  const isOwner = project.ownerId === CURRENT_USER.id;
+  const handleCreatePosition = () => {
+    setEditingPosition(null);
+    setPositionDialog(true);
+  };
+
+  const handleEditPosition = (position: PositionDTO) => {
+    setEditingPosition(position);
+    setPositionDialog(true);
+  };
+
+  const handleDeletePosition = (positionId: string) => {
+    setPositionToDelete(positionId);
+    setDeleteAlertOpen(true);
+  };
+
+  const handleConfirmDeletePosition = () => {
+    if (!positionToDelete) return;
+
+    deletePositionMutation.mutate(
+      positionToDelete,
+      {
+        onSuccess: () => {
+          toast.success('Вакансия удалена!', {
+            description: 'Вакансия успешно удалена из проекта.',
+          });
+          setDeleteAlertOpen(false);
+          setPositionToDelete(null);
+        },
+        onError: (error: any) => {
+          toast.error('Ошибка при удалении вакансии', {
+            description: error?.error?.message || 'Попробуйте позже',
+          });
+        },
+      }
+    );
+  };
+
+  const handleInviteMember = () => {
+    setInviteMemberDialog(true);
+  };
+
+  const handleEditProject = () => {
+    setEditProjectDialog(true);
+  };
+
+  const handleViewApplications = (position: PositionDTO) => {
+    setSelectedPositionForApplications(position);
+    setApplicationsDialog(true);
+  };
+
+  const isOwner = user && project.owner_id === user.id;
+  const openPositions = positions?.filter(p => p.is_open) || [];
+  const ownerDisplayName = ownerProfile?.display_name || `User ${project.owner_id}`;
+  const ownerAvatarUrl = ownerProfile?.avatars?.small || ownerProfile?.avatars?.original;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -67,25 +189,24 @@ export function ProjectDetailPage() {
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <CardTitle className="text-3xl mb-2">{project.title}</CardTitle>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {project.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                  <CardTitle className="text-3xl mb-2">{project.name}</CardTitle>
+                  {project.tags && project.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {project.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <Badge variant={project.status === 'active' ? 'default' : 'secondary'} className="text-sm">
-                  {project.status === 'active' ? 'Активен' : project.status === 'paused' ? 'На паузе' : 'Завершен'}
-                </Badge>
               </div>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="about">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="about">О проекте</TabsTrigger>
-                  <TabsTrigger value="positions">Вакансии ({project.positions.length})</TabsTrigger>
+                  <TabsTrigger value="positions">Вакансии ({positions?.length || 0})</TabsTrigger>
                   <TabsTrigger value="team">Команда</TabsTrigger>
                 </TabsList>
 
@@ -95,34 +216,78 @@ export function ProjectDetailPage() {
                       <Target className="w-5 h-5 text-blue-600" />
                       Описание
                     </h3>
-                    <p className="text-muted-foreground leading-relaxed">{project.description}</p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                      Цели
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed">{project.goals}</p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-blue-600" />
-                      Текущий прогресс
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed">{project.progress}</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {project.full_description || project.small_description || 'Нет описания'}
+                    </p>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="positions" className="space-y-4 mt-6">
-                  {project.positions.length > 0 ? (
-                    project.positions.map((position) => (
-                      <PositionCard
-                        key={position.id}
-                        position={position}
-                        onApply={isOwner ? undefined : () => handleApply(position.id)}
-                      />
+                  {positionsLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : positions && positions.length > 0 ? (
+                    positions.map((position) => (
+                      <Card key={position.id}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <CardTitle className="text-lg">{position.title}</CardTitle>
+                            {isOwner && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditPosition(position)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeletePosition(position.id)}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {position.description && (
+                            <p className="text-sm text-muted-foreground mb-3">
+                              {position.description}
+                            </p>
+                          )}
+                          {position.required_skills && position.required_skills.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {position.required_skills.map((skill, index) => (
+                                <Badge key={index} variant="outline">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-2 text-sm text-muted-foreground">
+                              <Badge variant="secondary">{position.location_type}</Badge>
+                              <Badge variant="secondary">{position.expected_load}</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              {isOwner && (
+                                <Button size="sm" variant="outline" onClick={() => handleViewApplications(position)}>
+                                  Отклики
+                                </Button>
+                              )}
+                              {!isOwner && position.is_open && (
+                                <Button size="sm" onClick={() => handleApply(position.id)}>
+                                  Откликнуться
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
@@ -135,30 +300,34 @@ export function ProjectDetailPage() {
                   <div className="space-y-3">
                     <Card>
                       <CardContent className="pt-6">
-                        <div className="flex items-center gap-4">
-                          <Avatar className="w-12 h-12">
-                            <AvatarImage src={project.owner.avatar} alt={project.owner.name} />
-                            <AvatarFallback>{project.owner.name[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="font-semibold">{project.owner.name}</div>
-                            <div className="text-sm text-muted-foreground">Владелец проекта</div>
-                            {project.owner.bio && (
-                              <p className="text-sm text-muted-foreground mt-1">{project.owner.bio}</p>
-                            )}
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {project.owner.skills.map((skill) => (
-                                <Badge key={skill.id} variant="outline" className="text-xs">
-                                  {skill.name}
-                                </Badge>
-                              ))}
+                        <Link to={`/users/${project.owner_id}`}>
+                          <div className="flex items-center gap-4 hover:bg-muted/50 -m-6 p-6 rounded-lg transition-colors cursor-pointer">
+                            <Avatar className="w-12 h-12">
+                              <AvatarImage src={ownerAvatarUrl} alt={ownerDisplayName} />
+                              <AvatarFallback>{ownerDisplayName[0]?.toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="font-semibold">{ownerDisplayName}</div>
+                              <div className="text-sm text-muted-foreground">Владелец проекта</div>
+                              {ownerProfile?.bio && (
+                                <p className="text-sm text-muted-foreground mt-1">{ownerProfile.bio}</p>
+                              )}
+                              {ownerProfile?.skills && ownerProfile.skills.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {ownerProfile.skills.map((skill, index) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       </CardContent>
                     </Card>
 
-                    {project.participants.length === 0 && (
+                    {(!project.memberships || project.memberships.length === 0) && (
                       <div className="text-center py-8 text-muted-foreground">
                         Пока нет других участников
                       </div>
@@ -181,7 +350,7 @@ export function ProjectDetailPage() {
                 <div>
                   <div className="font-medium">Создан</div>
                   <div className="text-muted-foreground">
-                    {formatDistanceToNow(new Date(project.createdAt), { addSuffix: true, locale: ru })}
+                    {formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: ru })}
                   </div>
                 </div>
               </div>
@@ -191,7 +360,7 @@ export function ProjectDetailPage() {
                 <div>
                   <div className="font-medium">Участники</div>
                   <div className="text-muted-foreground">
-                    {project.participants.length + 1} человек
+                    {(project.memberships?.length || 0) + 1} человек
                   </div>
                 </div>
               </div>
@@ -201,7 +370,7 @@ export function ProjectDetailPage() {
                 <div>
                   <div className="font-medium">Открытых вакансий</div>
                   <div className="text-muted-foreground">
-                    {project.positions.filter(p => p.status === 'open').length}
+                    {openPositions.length}
                   </div>
                 </div>
               </div>
@@ -215,14 +384,17 @@ export function ProjectDetailPage() {
                 <CardDescription>Вы владелец этого проекта</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full" variant="outline">
+                <Button className="w-full" variant="outline" onClick={handleEditProject}>
                   Редактировать проект
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full" variant="outline" onClick={handleCreatePosition}>
                   Добавить вакансию
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full" variant="outline" onClick={handleViewApplications}>
                   Просмотреть отклики
+                </Button>
+                <Button className="w-full" variant="outline" onClick={handleInviteMember}>
+                  Пригласить участника
                 </Button>
               </CardContent>
             </Card>
@@ -254,12 +426,79 @@ export function ProjectDetailPage() {
             <Button variant="outline" onClick={() => setApplicationDialog(false)}>
               Отмена
             </Button>
-            <Button onClick={handleSubmitApplication} disabled={!applicationMessage.trim()}>
-              Отправить отклик
+            <Button 
+              onClick={handleSubmitApplication} 
+              disabled={!applicationMessage.trim() || createApplicationMutation.isPending}
+            >
+              {createApplicationMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Отправка...
+                </>
+              ) : (
+                'Отправить отклик'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PositionDialog
+        open={positionDialog}
+        onOpenChange={setPositionDialog}
+        position={editingPosition}
+        projectId={projectId}
+        createPositionMutation={createPositionMutation}
+        updatePositionMutation={updatePositionMutation}
+      />
+
+      <InviteMemberDialog
+        open={inviteMemberDialog}
+        onOpenChange={setInviteMemberDialog}
+        projectId={projectId}
+        inviteMemberMutation={inviteMemberMutation}
+      />
+
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить вакансию</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить эту вакансию? Это действие необратимо.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeletePosition}
+              disabled={deletePositionMutation.isPending}
+            >
+              {deletePositionMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Удаление...
+                </>
+              ) : (
+                'Удалить'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <EditProjectDialog
+        open={editProjectDialog}
+        onOpenChange={setEditProjectDialog}
+        project={project}
+        updateProjectMutation={updateProjectMutation}
+      />
+
+      <ApplicationsDialog
+        open={applicationsDialog}
+        onOpenChange={setApplicationsDialog}
+        projectId={projectId}
+        selectedPosition={selectedPositionForApplications}
+      />
     </div>
   );
 }

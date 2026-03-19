@@ -13,8 +13,8 @@ export function NotFoundPage() {
         </p>
         <Link to="/">
           <Button className="gap-2">
-            <Home className="w-4 h-4" />
-            На главную
+            <Home className="size-4" />
+            Вернуться на главную
           </Button>
         </Link>
       </div>

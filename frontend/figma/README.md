@@ -1,4 +1,4 @@
-# 🚀 InCollab - Платформа поиска участников проектов
+# 🚀 ProjectHub - Платформа поиска участников проектов
 
 > Современная веб-платформа для студентов и стартапов, помогающая формировать команды и находить интересные проекты.
 
@@ -9,7 +9,7 @@
 
 ## 📖 О проекте
 
-**InCollab** - это платформа, которая соединяет создателей проектов с талантливыми исполнителями. Идеально подходит для:
+**ProjectHub** - это платформа, которая соединяет создателей проектов с талантливыми исполнителями. Идеально подходит для:
 
 - 🎓 **Студентов**, ищущих участников для учебных проектов
 - 💡 **Стартаперов**, формирующих команды
@@ -65,10 +65,10 @@
 
 ```bash
 # Клонируйте репозиторий
-git clone https://github.com/your-username/InCollab.git
+git clone https://github.com/your-username/projecthub.git
 
 # Перейдите в директорию
-cd InCollab
+cd projecthub
 
 # Установите зависимости
 npm install
@@ -88,7 +88,7 @@ npm run dev
 ## 📁 Структура проекта
 
 ```
-InCollab/
+projecthub/
 ├── src/
 │   ├── app/
 │   │   ├── components/     # React компоненты
@@ -206,9 +206,9 @@ echo "VITE_API_BASE_URL=http://localhost:8000" > .env
 
 ## 📞 Контакты
 
-- **Email**: support@InCollab.com
-- **Website**: https://InCollab.com
-- **GitHub**: https://github.com/InCollab
+- **Email**: support@projecthub.com
+- **Website**: https://projecthub.com
+- **GitHub**: https://github.com/projecthub
 
 ## 🙏 Благодарности
 

@@ -16,7 +16,7 @@ export function HeroBanner() {
         </h1>
         
         <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-2xl">
-          InCollab соединяет талантливых специалистов с интересными проектами. 
+          ProjectHub соединяет талантливых специалистов с интересными проектами. 
           Создавай, присоединяйся, реализуй свои идеи вместе!
         </p>
         
@@ -27,7 +27,7 @@ export function HeroBanner() {
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
-          <Link to="/register">
+          <Link to="/auth/register">
             <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 border-white/20 text-white">
               Начать поиск
             </Button>

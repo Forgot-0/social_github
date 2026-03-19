@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -9,34 +9,124 @@ import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { X, Plus } from 'lucide-react';
-import { CURRENT_USER, SKILLS } from '../data/mockData';
+import { X, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
+import { useProfileQuery, useUpdateProfileMutation } from '../../api/hooks/useProfiles';
+
+const COMMON_SKILLS = [
+  'React', 'TypeScript', 'Python', 'JavaScript', 'Node.js',
+  'Django', 'FastAPI', 'PostgreSQL', 'MongoDB', 'Docker',
+  'Kubernetes', 'AWS', 'GCP', 'UI/UX Design', 'Figma',
+  'Product Management', 'Marketing', 'Sales', 'Business Analytics',
+  'Machine Learning', 'Data Science', 'DevOps', 'Mobile Development',
+  'Flutter', 'React Native', 'Swift', 'Kotlin', 'Java',
+  'C++', 'Go', 'Rust', 'GraphQL', 'REST API'
+];
 
 export function SettingsPage() {
-  const [name, setName] = useState(CURRENT_USER.name);
-  const [email, setEmail] = useState(CURRENT_USER.email);
-  const [bio, setBio] = useState(CURRENT_USER.bio || '');
-  const [profileOpen, setProfileOpen] = useState(CURRENT_USER.profileOpen);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(
-    CURRENT_USER.skills.map(s => s.id)
+  const { user } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfileQuery(
+    user?.id || 0,
+    { enabled: !!user?.id }
   );
+  const updateProfileMutation = useUpdateProfileMutation();
+
+  const [displayName, setDisplayName] = useState('');
+  const [specialization, setSpecialization] = useState('');
+  const [bio, setBio] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [showAllSkills, setShowAllSkills] = useState(false);
 
-  const handleSaveProfile = () => {
-    toast.success('Профиль обновлен!');
-  };
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name || '');
+      setSpecialization(profile.specialization || '');
+      setBio(profile.bio || '');
+      setSelectedSkills(profile.skills || []);
+    }
+  }, [profile]);
 
-  const toggleSkill = (skillId: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skillId)
-        ? prev.filter(id => id !== skillId)
-        : [...prev, skillId]
+  const handleSaveProfile = () => {
+    if (!user || !profile) return;
+
+    updateProfileMutation.mutate(
+      {
+        profileId: user.id,
+        data: {
+          display_name: displayName,
+          specialization,
+          bio,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success('Профиль обновлен!');
+        },
+        onError: (error: any) => {
+          toast.error('Ошибка при обновлении профиля', {
+            description: error?.error?.message || 'Попробуйте позже',
+          });
+        },
+      }
     );
   };
 
-  const selectedSkillObjects = SKILLS.filter(s => selectedSkills.includes(s.id));
-  const displayedSkills = showAllSkills ? SKILLS : SKILLS.slice(0, 10);
+  const handleSaveSkills = () => {
+    if (!user || !profile) return;
+
+    updateProfileMutation.mutate(
+      {
+        profileId: user.id,
+        data: {
+          skills: selectedSkills,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success('Навыки обновлены!');
+        },
+        onError: (error: any) => {
+          toast.error('Ошибка при обновлении навыков', {
+            description: error?.error?.message || 'Попробуйте позже',
+          });
+        },
+      }
+    );
+  };
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill)
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+  };
+
+  const displayedSkills = showAllSkills ? COMMON_SKILLS : COMMON_SKILLS.slice(0, 15);
+
+  if (profileLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Пожалуйста, войдите в систему</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const avatarUrl = profile?.avatars?.medium || profile?.avatars?.original;
+  const displayNameValue = profile?.display_name || user.username;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -51,7 +141,6 @@ export function SettingsPage() {
         <TabsList>
           <TabsTrigger value="profile">Профиль</TabsTrigger>
           <TabsTrigger value="skills">Навыки</TabsTrigger>
-          <TabsTrigger value="privacy">Приватность</TabsTrigger>
           <TabsTrigger value="subscription">Подписка</TabsTrigger>
         </TabsList>
 
@@ -66,11 +155,11 @@ export function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-6">
                 <Avatar className="w-20 h-20">
-                  <AvatarImage src={CURRENT_USER.avatar} alt={CURRENT_USER.name} />
-                  <AvatarFallback className="text-xl">{CURRENT_USER.name[0]}</AvatarFallback>
+                  <AvatarImage src={avatarUrl} alt={displayNameValue} />
+                  <AvatarFallback className="text-xl">{displayNameValue[0]?.toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button variant="outline" size="sm">Загрузить фото</Button>
+                  <Button variant="outline" size="sm" disabled>Загрузить фото</Button>
                   <p className="text-xs text-muted-foreground mt-2">
                     JPG, PNG. Макс. 2MB
                   </p>
@@ -81,12 +170,15 @@ export function SettingsPage() {
 
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Имя</Label>
+                  <Label htmlFor="username">Username</Label>
                   <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    id="username"
+                    value={user.username}
+                    disabled
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Username нельзя изменить
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -94,8 +186,31 @@ export function SettingsPage() {
                   <Input
                     id="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={user.email}
+                    disabled
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Email нельзя изменить
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Отображаемое имя</Label>
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Как вас называть?"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="specialization">Специализация</Label>
+                  <Input
+                    id="specialization"
+                    value={specialization}
+                    onChange={(e) => setSpecialization(e.target.value)}
+                    placeholder="Например: Frontend Developer"
                   />
                 </div>
 
@@ -115,8 +230,18 @@ export function SettingsPage() {
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleSaveProfile}>
-                  Сохранить изменения
+                <Button 
+                  onClick={handleSaveProfile}
+                  disabled={updateProfileMutation.isPending}
+                >
+                  {updateProfileMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    'Сохранить изменения'
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -132,15 +257,15 @@ export function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {selectedSkillObjects.length > 0 && (
+              {selectedSkills.length > 0 && (
                 <div>
-                  <Label className="mb-3 block">Выбранные навыки ({selectedSkillObjects.length})</Label>
+                  <Label className="mb-3 block">Выбранные навыки ({selectedSkills.length})</Label>
                   <div className="flex flex-wrap gap-2">
-                    {selectedSkillObjects.map((skill) => (
-                      <Badge key={skill.id} variant="default" className="gap-1 pl-3 pr-2">
-                        {skill.name}
+                    {selectedSkills.map((skill) => (
+                      <Badge key={skill} variant="default" className="gap-1 pl-3 pr-2">
+                        {skill}
                         <button
-                          onClick={() => toggleSkill(skill.id)}
+                          onClick={() => toggleSkill(skill)}
                           className="ml-1 hover:text-red-300"
                         >
                           <X className="w-3 h-3" />
@@ -157,20 +282,20 @@ export function SettingsPage() {
                 <Label className="mb-3 block">Доступные навыки</Label>
                 <div className="flex flex-wrap gap-2">
                   {displayedSkills
-                    .filter(skill => !selectedSkills.includes(skill.id))
+                    .filter(skill => !selectedSkills.includes(skill))
                     .map((skill) => (
                       <Badge
-                        key={skill.id}
+                        key={skill}
                         variant="outline"
                         className="cursor-pointer hover:bg-accent"
-                        onClick={() => toggleSkill(skill.id)}
+                        onClick={() => toggleSkill(skill)}
                       >
                         <Plus className="w-3 h-3 mr-1" />
-                        {skill.name}
+                        {skill}
                       </Badge>
                     ))}
                 </div>
-                {!showAllSkills && SKILLS.length > 10 && (
+                {!showAllSkills && COMMON_SKILLS.length > 15 && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -183,70 +308,18 @@ export function SettingsPage() {
               </div>
 
               <div className="flex justify-end pt-4">
-                <Button onClick={() => toast.success('Навыки обновлены!')}>
-                  Сохранить навыки
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="privacy">
-          <Card>
-            <CardHeader>
-              <CardTitle>Настройки приватности</CardTitle>
-              <CardDescription>
-                Управляйте видимостью вашего профиля
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <Label htmlFor="profile-open" className="text-base">
-                    Открытый профиль
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Владельцы проектов смогут видеть ваш профиль и отправлять приглашения
-                  </p>
-                </div>
-                <Switch
-                  id="profile-open"
-                  checked={profileOpen}
-                  onCheckedChange={setProfileOpen}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <Label htmlFor="email-notifications" className="text-base">
-                    Email уведомления
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Получайте уведомления о новых откликах и сообщениях
-                  </p>
-                </div>
-                <Switch id="email-notifications" defaultChecked />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <Label htmlFor="show-skills" className="text-base">
-                    Показывать навыки публично
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Ваши навыки будут видны в рекомендациях проектов
-                  </p>
-                </div>
-                <Switch id="show-skills" defaultChecked />
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={() => toast.success('Настройки сохранены!')}>
-                  Сохранить настройки
+                <Button 
+                  onClick={handleSaveSkills}
+                  disabled={updateProfileMutation.isPending}
+                >
+                  {updateProfileMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    'Сохранить навыки'
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -317,7 +390,7 @@ export function SettingsPage() {
                   <div>✓ Неограниченные проекты</div>
                   <div>✓ Неограниченные вакансии</div>
                   <div>✓ Неограниченные просмотры</div>
-                  <div>✓ Персональный менеджер</div>
+                  <div>✓ Персональный мене��жер</div>
                   <div>✓ API доступ</div>
                 </div>
                 <Button variant="outline" className="w-full">

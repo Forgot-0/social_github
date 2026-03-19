@@ -4,16 +4,16 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Briefcase, Calendar, Users } from 'lucide-react';
-import { Project } from '../types';
+import { ProjectDTO } from '../../api/types';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 interface ProjectCardProps {
-  project: Project;
+  project: ProjectDTO;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const openPositionsCount = project.positions.filter(p => p.status === 'open').length;
+  const membersCount = project.memberships?.length || 0;
   
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -22,15 +22,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="flex-1">
             <CardTitle className="text-xl mb-2">
               <Link to={`/projects/${project.id}`} className="hover:text-blue-600 transition-colors">
-                {project.title}
+                {project.name}
               </Link>
             </CardTitle>
             <CardDescription className="line-clamp-2">
-              {project.description}
+              {project.small_description || project.full_description}
             </CardDescription>
           </div>
-          <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-            {project.status === 'active' ? 'Активен' : project.status === 'paused' ? 'На паузе' : 'Завершен'}
+          <Badge variant="default">
+            {project.visibility}
           </Badge>
         </div>
       </CardHeader>
@@ -46,28 +46,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
-              <Briefcase className="w-4 h-4" />
-              <span>{openPositionsCount} {openPositionsCount === 1 ? 'вакансия' : 'вакансий'}</span>
-            </div>
-            <div className="flex items-center gap-1">
               <Users className="w-4 h-4" />
-              <span>{project.participants.length} {project.participants.length === 1 ? 'участник' : 'участников'}</span>
+              <span>{membersCount} {membersCount === 1 ? 'участник' : 'участников'}</span>
             </div>
             <div className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
-              <span>{formatDistanceToNow(new Date(project.createdAt), { addSuffix: true, locale: ru })}</span>
+              <span>{project.created_at ? formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: ru }) : ''}</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
-                <AvatarImage src={project.owner.avatar} alt={project.owner.name} />
-                <AvatarFallback>{project.owner.name[0]}</AvatarFallback>
+                <AvatarFallback>О</AvatarFallback>
               </Avatar>
               <div className="text-sm">
-                <div className="font-medium">{project.owner.name}</div>
-                <div className="text-muted-foreground text-xs">Владелец</div>
+                <div className="font-medium">Владелец</div>
+                <div className="text-muted-foreground text-xs">ID: {project.owner_id}</div>
               </div>
             </div>
 

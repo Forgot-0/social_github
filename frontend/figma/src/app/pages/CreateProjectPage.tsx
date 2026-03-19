@@ -6,17 +6,32 @@ import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { ArrowLeft, Plus, X } from 'lucide-react';
+import { ArrowLeft, Plus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCreateProjectMutation } from '../../api/hooks';
 
 export function CreateProjectPage() {
   const navigate = useNavigate();
-  const [title, setTitle] = useState('');
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [smallDescription, setSmallDescription] = useState('');
   const [description, setDescription] = useState('');
-  const [goals, setGoals] = useState('');
-  const [progress, setProgress] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  
+  const createProjectMutation = useCreateProjectMutation({
+    onSuccess: () => {
+      toast.success('Проект создан!', {
+        description: 'Теперь вы можете добавить позиции',
+      });
+      navigate('/my-projects');
+    },
+    onError: (error: any) => {
+      toast.error('Ошибка при создании проекта', {
+        description: error.response?.data?.error?.message || 'Попробуйте еще раз',
+      });
+    },
+  });
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -29,20 +44,36 @@ export function CreateProjectPage() {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const generateSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9а-я]+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (!slug) {
+      setSlug(generateSlug(value));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || !description.trim() || !goals.trim()) {
+    if (!name.trim() || !slug.trim() || !description.trim()) {
       toast.error('Заполните все обязательные поля');
       return;
     }
 
-    toast.success('Проект создан!', {
-      description: 'Теперь вы можете добавить вакансии',
+    createProjectMutation.mutate({
+      name: name.trim(),
+      slug: slug.trim(),
+      small_description: smallDescription.trim() || null,
+      description: description.trim(),
+      visibility: 'public',
+      tags: tags.length > 0 ? tags : null,
     });
-    
-    // Redirect to project page (mock)
-    navigate('/my-projects');
   };
 
   return (
@@ -64,16 +95,45 @@ export function CreateProjectPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="title">
+              <Label htmlFor="name">
                 Название проекта <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="title"
+                id="name"
                 placeholder="Например: Мобильное приложение для..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="slug">
+                URL проекта <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="slug"
+                placeholder="Например: mobilnoe-prilozhenie"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="smallDescription">
+                Короткое описание
+              </Label>
+              <Textarea
+                id="smallDescription"
+                placeholder="Кратко опишите ваш проект..."
+                value={smallDescription}
+                onChange={(e) => setSmallDescription(e.target.value)}
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                Это описание будет отображаться в списке проектов
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -91,33 +151,6 @@ export function CreateProjectPage() {
               <p className="text-xs text-muted-foreground">
                 Расскажите, что делает ваш проект уникальным
               </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="goals">
-                Цели проекта <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="goals"
-                placeholder="Какие задачи вы планируете решить? Какие результаты хотите достичь?"
-                value={goals}
-                onChange={(e) => setGoals(e.target.value)}
-                rows={4}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="progress">
-                Текущий прогресс
-              </Label>
-              <Textarea
-                id="progress"
-                placeholder="Что уже реализовано? На каком этапе находится проект?"
-                value={progress}
-                onChange={(e) => setProgress(e.target.value)}
-                rows={3}
-              />
             </div>
 
             <div className="space-y-2">
@@ -162,7 +195,11 @@ export function CreateProjectPage() {
 
             <div className="flex gap-3 pt-4">
               <Button type="submit" className="flex-1">
-                Создать проект
+                {createProjectMutation.isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Создать проект'
+                )}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate('/')}>
                 Отмена
@@ -172,7 +209,7 @@ export function CreateProjectPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
               <p className="font-medium text-blue-900 mb-1">💡 Совет</p>
               <p className="text-blue-700">
-                После создания проекта не забудьте добавить вакансии. Это поможет быстрее найти участников команды!
+                После создания проекта не забудьте добавить позиции. Это поможет быстрее найти участников команды!
               </p>
             </div>
           </form>
