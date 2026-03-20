@@ -81,12 +81,7 @@ class ConnectionManager(BaseConnectionManager):
                     logger.error("Bad JSON in channel %s", channel)
                     continue
 
-                delivered = await self.send_json_all(connection_id, payload)
-                if not delivered:
-                    logger.debug(
-                        "connection_id %s not on this instance, skipped",
-                        connection_id,
-                    )
+                await self.send_json_all(connection_id, payload)
         except asyncio.CancelledError:
             pass
         except Exception as exc:

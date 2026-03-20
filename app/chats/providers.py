@@ -1,6 +1,7 @@
 from dishka import Provider, Scope, decorate, provide
 
 from app.chats.commands.messages.send_message import SendMessageCommand, SendMessageCommandHandler
+from app.chats.commands.reads.mark_read import MarkReadCommand, MarkReadCommandHandler
 from app.chats.events.messages.sended import SendedMessageEventHandler
 from app.chats.models.chat import SendedMessageEvent
 from app.chats.queries.messages.get_list_by_chat import GetMessagesQuery, GetMessagesQueryHandler
@@ -16,12 +17,15 @@ class ChatModuleProvider(Provider):
     chat_repository = provide(ChatRepository)
     message_repository = provide(MessageRepository)
 
+    mark_read_handler = provide(MarkReadCommandHandler)
     send_message_handler = provide(SendMessageCommandHandler)
     get_messages_handler = provide(GetMessagesQueryHandler)
 
     @decorate
     def register_chat_commands(self, registry: CommandRegisty) -> CommandRegisty:
         registry.register_command(SendMessageCommand, [SendMessageCommandHandler])
+        registry.register_command(MarkReadCommand, [MarkReadCommandHandler])
+
         return registry
 
     @decorate

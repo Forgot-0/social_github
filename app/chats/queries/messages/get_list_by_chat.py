@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 from app.chats.dtos.messages import MessageCursorPage, MessageDTO
+from app.chats.exceptions import NotFoundChatException
+from app.chats.repositories.chats import ChatRepository
 from app.chats.repositories.messages import MessageRepository
 from app.chats.repositories.read_receipts import ReadReceiptRepository
 from app.core.queries import BaseQuery, BaseQueryHandler
@@ -17,10 +19,15 @@ class GetMessagesQuery(BaseQuery):
 
 @dataclass(frozen=True)
 class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPage]):
+    chat_repository: ChatRepository
     message_repository: MessageRepository
     read_receipt_repository: ReadReceiptRepository
 
     async def handle(self, query: GetMessagesQuery) -> MessageCursorPage:
+        chat = await self.chat_repository.get_by_id(query.chat_id)
+        if chat is None:
+            raise NotFoundChatException(chat_id=query.chat_id)
+
         rows = await self.message_repository.get_page(
             chat_id=query.chat_id,
             limit=query.limit,
@@ -30,10 +37,9 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPa
         has_more = len(rows) > query.limit
         items = rows[:query.limit]
 
-        user_ids_in_chat = list({m.sender_id for m in items})
         read_cursors = await self.read_receipt_repository.get_cursors_for_chat(
             chat_id=query.chat_id,
-            user_ids=user_ids_in_chat,
+            user_ids=[chat.user_id_1, chat.user_id_2],
         )
 
         return MessageCursorPage(

@@ -29,9 +29,12 @@ class FlushReadReceiptsTask(BaseTask):
     async def run(
         read_receipt_repository: FromDishka[ReadReceiptRepository],
     ) -> None:
-        count = await read_receipt_repository.flush_dirty_keys()
-        if count:
-            logger.info(
-                "Flushed read receipts", extra={"count": count}
-            )
+        try:
+            count = await read_receipt_repository.flush_dirty_keys()
+            if count:
+                logger.info(
+                    "Flushed read receipts", extra={"count": count}
+                )
+        except:
+            raise
 

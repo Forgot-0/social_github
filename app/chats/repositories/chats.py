@@ -47,5 +47,11 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         )
         return list(result.scalars().all())
 
+    async def get_by_id(self, chat_id: int) -> Chat | None:
+        result = await self.session.execute(
+            select(Chat).where((Chat.id == chat_id))
+        )
+        return result.scalar()
+
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

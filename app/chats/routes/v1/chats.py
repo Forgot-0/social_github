@@ -3,6 +3,7 @@ import logging
 from dishka import AsyncContainer
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from fastapi_limiter.depends import WebSocketRateLimiter
 
 from app.chats.commands.messages.send_message import SendMessageCommand
 from app.chats.commands.reads.mark_read import MarkReadCommand
@@ -92,10 +93,13 @@ async def chat_websocket(
     connection_key = f"chat:{chat_id}"
     await connection_manager.accept_connection(websocket, connection_key)
     logger.info("WS connected", extra={"chat_id": chat_id, "user": token_data.sub})
+    ratelimit = WebSocketRateLimiter(times=1, seconds=5)
 
     try:
         while True:
             data = await websocket.receive_json()
+            await ratelimit(websocket)
+
             event = data.get("event")
             async with container() as scope:
                 mediator = await scope.get(BaseMediator)
