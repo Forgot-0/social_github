@@ -5,7 +5,7 @@ class AuthConfig(BaseConfig):
     USER_REGISTRATION_ALLOWED: bool = False
 
     EMAIL_RESET_TOKEN_EXPIRE_MINUTES: int = 15
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
     REFRESH_TOKEN_EXPIRE_DAYS: int = 60
 
     # OAuth Google

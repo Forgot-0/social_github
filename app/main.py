@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
+from aiojobs import Scheduler
 import redis.asyncio as redis
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI, Request
@@ -26,6 +27,7 @@ from app.core.middlewares.context import ContextMiddleware
 from app.core.middlewares.log import LoggingMiddleware
 from app.core.routers import router as core_router
 from app.core.utils import now_utc
+from app.core.websockets.base import BaseConnectionManager
 from app.init_data import init_data
 from app.pre_start import pre_start
 from app.profiles.routers import router_v1 as profile_router_v1
@@ -47,6 +49,12 @@ async def lifespan(app: FastAPI) :
     await FastAPILimiter.init(redis_client)
     message_broker: BaseMessageBroker = await app.state.dishka_container.get(BaseMessageBroker)
     await message_broker.start()
+
+    connection_manager = await app.state.dishka_container.get(BaseConnectionManager)
+
+    scheduler = Scheduler()
+    await scheduler.spawn(connection_manager.startup())
+
     yield
     await redis_client.aclose()
     await message_broker.close()

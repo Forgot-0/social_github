@@ -9,6 +9,7 @@ from redis.asyncio import Redis
 from sqlalchemy import Select, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db.base_model import SoftDeleteMixin
 from app.core.db.convertor import SQLAlchemyFilterConverter
 from app.core.filters.base import BaseFilter
 
@@ -51,7 +52,10 @@ class IRepository(ABC, Generic[T]):
     session: AsyncSession
 
     async def find_by_filter(self, model: type[T], filters: BaseFilter) -> PageResult[T]:
-        stmt = select(model)
+        if isinstance(model, SoftDeleteMixin):
+            stmt = model.select_not_deleted()
+        else:
+            stmt = select(model)
 
         loading_options = SQLAlchemyFilterConverter.build_loading_options(model, filters.loading_config)
 
@@ -125,7 +129,7 @@ class CacheRepository:
         version = await self._get_list_version()
 
         func_mod = getattr(func, "__module__", "unknown")
-        func_qname = getattr(func, "__qualname__", repr(func))
+        func_qname = getattr(func, "__qualname__", "none")
         serialized = self._serialize_args_kwargs(args, kwargs)
         digest = hashlib.sha256(serialized).hexdigest()
         return f"cache:{type_model.__name__}:ver={version}:{func_mod}.{func_qname}:{digest}"

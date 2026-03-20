@@ -44,7 +44,7 @@ class DeletePositionCommandHandler(BaseCommandHandler[DeletePositionCommand, Non
         ):
             raise
 
-        await self.session.delete(position)
+        position.soft_delete()
         await self.session.commit()
 
         await self.position_repository.invadate_cache()

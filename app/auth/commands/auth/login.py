@@ -30,8 +30,10 @@ class LoginCommandHandler(BaseCommandHandler[LoginCommand, TokenGroup]):
     hash_service: HashService
 
     async def handle(self, command: LoginCommand) -> TokenGroup:
-        user = await self.user_repository.get_with_roles_by_email(command.username) or \
-        await self.user_repository.get_with_roles_by_username(command.username)
+        if "@" in command.username:
+            user = await self.user_repository.get_with_roles_by_email(command.username)
+        else:
+            user = await self.user_repository.get_with_roles_by_username(command.username)
 
         if (
             (user is None) or
