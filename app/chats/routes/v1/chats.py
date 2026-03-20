@@ -1,7 +1,7 @@
 import logging
 
 from dishka import AsyncContainer
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.chats.commands.messages.send_message import SendMessageCommand
@@ -63,11 +63,12 @@ async def get_my_chats(
 
 
 @router.websocket("/ws/{chat_id}")
+@inject
 async def chat_websocket(
     chat_id: int,
     websocket: WebSocket,
     container: FromDishka[AsyncContainer],
-) -> None:
+)  -> None:
 
     connection_manager = await container.get(BaseConnectionManager)
     jwt_manager = await container.get(JWTManager)

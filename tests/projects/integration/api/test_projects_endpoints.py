@@ -288,7 +288,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(candidate_jwt)
 
         response = await client.post(
-            f"/api/v1/positions/{persisted_position.id}/apply",
+            f"/api/v1/positions/{persisted_position.id}/applications",
             json={"message": "I want to join this project"},
             headers=headers,
         )
