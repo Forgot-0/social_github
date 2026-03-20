@@ -20,7 +20,7 @@ class Permission(Enum):
 
     READ_MESSAGES = auto()
 
- 
+
 ROLE_PERMISSIONS: dict[MemberRole, set[Permission]] = {
     MemberRole.VIEWER: {
         Permission.READ_MESSAGES,

@@ -39,10 +39,10 @@ class Message(BaseModel, DateMixin):
     media_url:Mapped[str | None] = mapped_column(String(1024))
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
- 
+
     chat: Mapped["Chat"] = relationship(back_populates="messages", lazy="noload")
     reply_to: Mapped[Optional["Message"]] = relationship(remote_side="Message.id", lazy="noload")
- 
+
     __table_args__ = (
         Index("ix_messages_chat_id_created", "chat_id", "created_at"),
         Index("ix_messages_chat_id_id", "chat_id", "id"),

@@ -24,7 +24,7 @@ class ChatType(str, PyEnum):
 
 class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "chats"
- 
+
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     type: Mapped[ChatType] = mapped_column(Enum(ChatType), nullable=False)
     name: Mapped[str | None] = mapped_column(String(256))
@@ -43,4 +43,3 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         Index("ix_chats_type_public", "type", "is_public"),
         Index("ix_chats_last_activity", "last_activity_at"),
     )
- 
