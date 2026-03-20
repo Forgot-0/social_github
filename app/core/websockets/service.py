@@ -7,6 +7,7 @@ from fastapi import WebSocket
 import orjson
 from redis.asyncio import Redis
 
+from app.core.utils import now_utc
 from app.core.websockets.base import BaseConnectionManager
 
 
@@ -18,6 +19,27 @@ class ConnectionManager(BaseConnectionManager):
     redis: Redis
     lock_map: dict[str, asyncio.Lock] = field(default_factory=dict)
 
+    async def _heartbeat_loop(self, client_id: str):
+        while client_id in self.connections_map:
+            try:
+                await asyncio.sleep(self.heartbeat_interval)
+                await self.send_json_all(client_id, {"type": "ping", "ts": now_utc().isoformat()})
+            except Exception as e:
+                logger.warning(f"Heartbeat failed for {client_id}: {e}")
+                break
+
+    def _ensure_heartbeat(self, key: str) -> None:
+        existing = self.heartbeat_tasks.get(key)
+
+        if existing and not existing.done():
+            return
+
+        task = asyncio.create_task(
+            self._heartbeat_loop(key), name=f"ws:heartbeat:{key}"
+        )
+
+        self.heartbeat_tasks[key] = task
+
     async def accept_connection(self, websocket: WebSocket, key: str, subprotocol: str | None=None) -> None:
         await websocket.accept(subprotocol=subprotocol)
 
@@ -26,6 +48,8 @@ class ConnectionManager(BaseConnectionManager):
 
         async with self.lock_map[key]:
             self.connections_map[key].append(websocket)
+        
+        self._ensure_heartbeat(key)
 
     async def remove_connection(self, websocket: WebSocket, key: str) -> None:
         async with self.lock_map[key]:
@@ -33,6 +57,10 @@ class ConnectionManager(BaseConnectionManager):
             if not self.connections_map[key]:
                 del self.connections_map[key]
                 del self.lock_map[key]
+                task_heartbeat = self.heartbeat_tasks.get(key)
+                if task_heartbeat is not None:
+                    task_heartbeat.cancel()
+                    del self.heartbeat_tasks[key]
 
     async def send_all(self, key: str, bytes_: bytes) -> None:
         for websocket in self.connections_map[key]:
@@ -42,11 +70,11 @@ class ConnectionManager(BaseConnectionManager):
                 await self.remove_connection(websocket, key)
 
     async def send_json_all(self, key: str, data: dict[str, Any]) -> None:
-        for websocket in self.connections_map[key]:
-            try:
-                await websocket.send_json(data)
-            except Exception as ex:
-                await self.remove_connection(websocket, key)
+        tasks = [
+            websocket.send_json(data)
+            for websocket in self.connections_map[key]
+        ]
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     async def disconnect_all(self, key: str) -> None:
         async with self.lock_map[key]:

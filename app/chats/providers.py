@@ -7,6 +7,7 @@ from app.chats.models.chat import SendedMessageEvent
 from app.chats.queries.messages.get_list_by_chat import GetMessagesQuery, GetMessagesQueryHandler
 from app.chats.repositories.chats import ChatRepository
 from app.chats.repositories.messages import MessageRepository
+from app.chats.repositories.read_receipts import ReadReceiptRepository
 from app.core.events.event import EventRegisty
 from app.core.mediators.base import CommandRegisty, QueryRegistry
 
@@ -16,6 +17,7 @@ class ChatModuleProvider(Provider):
 
     chat_repository = provide(ChatRepository)
     message_repository = provide(MessageRepository)
+    reads_repository = provide(ReadReceiptRepository)
 
     mark_read_handler = provide(MarkReadCommandHandler)
     send_message_handler = provide(SendMessageCommandHandler)

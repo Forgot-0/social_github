@@ -23,6 +23,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(route_class=DishkaRoute)
 
 
+
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get_my_chats(
+    user_jwt: CurrentUserJWTData,
+    chat_repository: FromDishka[ChatRepository],
+) -> list[ChatDTO]:
+    chats = await chat_repository.get_user_chats(int(user_jwt.id))
+    return [ChatDTO.model_validate(c.to_dict()) for c in chats]
+
 @router.post(
     "/{recipient_id}/messages",
     status_code=status.HTTP_201_CREATED
@@ -57,15 +66,6 @@ async def get_messages(
             before_id=message_request.before_id,
         )
     )
-
-
-@router.get("/", status_code=status.HTTP_200_OK)
-async def get_my_chats(
-    user_jwt: CurrentUserJWTData,
-    chat_repository: FromDishka[ChatRepository],
-) -> list[ChatDTO]:
-    chats = await chat_repository.get_user_chats(int(user_jwt.id))
-    return [ChatDTO.model_validate(c.to_dict()) for c in chats]
 
 
 @router.websocket("/ws/{chat_id}")
@@ -104,13 +104,13 @@ async def chat_websocket(
             async with container() as scope:
                 mediator = await scope.get(BaseMediator)
 
-                if event == "typing":
-                    await connection_manager.publish(
-                        connection_id=connection_key,
-                        payload={"event": "typing", "user_id": token_data.sub, "chat_id": chat_id},
-                    )
+                # if event == "typing":
+                #     await connection_manager.publish(
+                #         connection_id=connection_key,
+                #         payload={"event": "typing", "user_id": token_data.sub, "chat_id": chat_id},
+                #     )
 
-                elif event == "read":
+                if event == "read":
                     message_id = data.get("message_id")
                     if isinstance(message_id, int):
                         await mediator.handle_command(

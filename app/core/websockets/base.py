@@ -2,6 +2,7 @@ from abc import (
     ABC,
     abstractmethod,
 )
+import asyncio
 from collections import defaultdict
 from dataclasses import (
     dataclass,
@@ -18,6 +19,8 @@ class BaseConnectionManager(ABC):
         default_factory=lambda: defaultdict(list),
         kw_only=True,
     )
+    heartbeat_interval: int = field(default=30, kw_only=True)
+    heartbeat_tasks: dict[str, asyncio.Task] = field(default_factory=dict, kw_only=True)
 
     @abstractmethod
     async def accept_connection(self, websocket: WebSocket, key: str, subprotocol: str | None=None) -> None:
