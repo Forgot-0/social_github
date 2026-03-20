@@ -5,6 +5,7 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.chats.commands.messages.send_message import SendMessageCommand
+from app.chats.commands.reads.mark_read import MarkReadCommand
 from app.chats.dtos.chats import ChatDTO
 from app.chats.dtos.messages import MessageCursorPage
 from app.chats.queries.messages.get_list_by_chat import GetMessagesQuery
@@ -12,6 +13,7 @@ from app.chats.repositories.chats import ChatRepository
 from app.chats.schemas.messages.requests import GetMessagesRequest, SendMessageRequests
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
+from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager
 from app.core.websockets.base import BaseConnectionManager
 
@@ -20,7 +22,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(route_class=DishkaRoute)
 
 
-@router.post("/{recipient_id}/messages", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{recipient_id}/messages",
+    status_code=status.HTTP_201_CREATED
+)
 async def send_message(
     message_request: SendMessageRequests,
     mediator: FromDishka[BaseMediator],
@@ -92,15 +97,25 @@ async def chat_websocket(
         while True:
             data = await websocket.receive_json()
             event = data.get("event")
+            async with container() as scope:
+                mediator = await scope.get(BaseMediator)
 
-            if event == "typing":
-                await connection_manager.publish(
-                    connection_id=connection_key,
-                    payload={"event": "typing", "user_id": token_data.sub, "chat_id": chat_id},
-                )
-            elif event == "read":
-                # fire-and-forget без roundtrip в БД
-                pass
+                if event == "typing":
+                    await connection_manager.publish(
+                        connection_id=connection_key,
+                        payload={"event": "typing", "user_id": token_data.sub, "chat_id": chat_id},
+                    )
+
+                elif event == "read":
+                    message_id = data.get("message_id")
+                    if isinstance(message_id, int):
+                        await mediator.handle_command(
+                            MarkReadCommand(
+                                user_jwt=UserJWTData.create_from_token(token_data),
+                                chat_id=chat_id,
+                                message_id=message_id,
+                            )
+                        )
 
     except WebSocketDisconnect:
         await connection_manager.remove_connection(websocket, connection_key)

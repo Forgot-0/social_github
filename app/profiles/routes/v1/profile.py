@@ -92,7 +92,6 @@ async def update_profile(
     responses={
         404: create_response(NotFoundProfileException(profile_id=123))
     },
-    # dependencies=[Depends(ConfigurableRateLimiter(times=20, seconds=7*24*60*60))],
 )
 async def get_profile(
     profile_id: int,
@@ -104,7 +103,7 @@ async def get_profile(
 @router.post(
     "/avatar/presign",
     status_code=status.HTTP_200_OK,
-    # dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
+    dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def get_avatar_presign_url(
     profile_request: AvatarPreSignUrlRequest,
@@ -124,7 +123,7 @@ async def get_avatar_presign_url(
 @router.post(
     "/avatar/upload_complete",
     status_code=status.HTTP_200_OK,
-    # dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
+    dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def upload_avatar_complete(
     profile_request: AvatarUploadCompleteRequest,

@@ -17,3 +17,4 @@ class MessageCursorPage(BaseModel):
     items: list[MessageDTO]
     next_cursor: int | None
     has_more: bool
+    read_cursors: dict[int, int] = {}

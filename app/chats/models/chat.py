@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import BigInteger, DateTime, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.db.base_model import BaseModel, DateMixin
+from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 from app.core.utils import now_utc
 
@@ -23,7 +23,7 @@ class SendedMessageEvent(BaseEvent):
     text: str
 
 
-class Chat(BaseModel, DateMixin):
+class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "chats"
     __table_args__ = (
         UniqueConstraint("user_id_1", "user_id_2", name="uq_chat_users"),
