@@ -1,0 +1,39 @@
+from dishka import Provider, Scope, decorate, provide
+
+from app.chats.commands.messages.send_message import SendMessageCommand, SendMessageCommandHandler
+from app.chats.events.messages.sended import SendedMessageEventHandler
+from app.chats.models.chat import SendedMessageEvent
+from app.chats.queries.messages.get_list_by_chat import GetMessagesQuery, GetMessagesQueryHandler
+from app.chats.repositories.chats import ChatRepository
+from app.chats.repositories.messages import MessageRepository
+from app.core.events.event import EventRegisty
+from app.core.mediators.base import CommandRegisty, QueryRegistry
+
+
+class ChatModuleProvider(Provider):
+    scope = Scope.REQUEST
+
+    chat_repository = provide(ChatRepository)
+    message_repository = provide(MessageRepository)
+
+    send_message_handler = provide(SendMessageCommandHandler)
+    get_messages_handler = provide(GetMessagesQueryHandler)
+
+    @decorate
+    def register_chat_commands(self, registry: CommandRegisty) -> CommandRegisty:
+        registry.register_command(SendMessageCommand, [SendMessageCommandHandler])
+        return registry
+
+    @decorate
+    def register_chat_queries(self, registry: QueryRegistry) -> QueryRegistry:
+        registry.register_query(GetMessagesQuery, GetMessagesQueryHandler)
+        return registry
+
+
+    sended_handler = provide(SendedMessageEventHandler)
+
+    @decorate
+    def register_profile_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
+        event_registry.subscribe(SendedMessageEvent, [SendedMessageEventHandler])
+
+        return event_registry
