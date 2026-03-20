@@ -18,3 +18,5 @@ from app.projects.models.application import Application
 
 from chats.models.chat import Chat
 from chats.models.message import Message
+from chats.models.chat_members import ChatMember
+from chats.models.read_receipts import ReadReceipt

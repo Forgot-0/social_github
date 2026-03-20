@@ -21,7 +21,7 @@ class SendedMessageEventHandler(BaseEventHandler[SendedMessageEvent, None]):
             "created_at": event.created_at.isoformat(),
         }
         await self.connection_manager.publish(
-            connection_id=f"chat:{event.chat_id}",
+            key=f"chat:{event.chat_id}",
             payload=payload,
         )
 

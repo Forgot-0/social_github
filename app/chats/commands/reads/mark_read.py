@@ -31,7 +31,7 @@ class MarkReadCommandHandler(BaseCommandHandler[MarkReadCommand, None]):
         )
 
         await self.connection_manager.publish(
-            connection_id=f"chat:{command.chat_id}",
+            key=f"chat:{command.chat_id}",
             payload={
                 "event": "message_read",
                 "chat_id": command.chat_id,

@@ -134,13 +134,13 @@ class CacheRepository:
         digest = hashlib.sha256(serialized).hexdigest()
         return f"cache:{type_model.__name__}:ver={version}:{func_mod}.{func_qname}:{digest}"
 
-    async def cache(
+    async def cache_with_key(
         self,
+        key: str,
         type_model: type[B],
         func: Callable[P, Awaitable[B]],
         ttl: int=60, *args, **kwargs
     ) -> B:
-        key = await self._build_key(type_model, func, args, kwargs)
         data = await self.redis.get(key)
 
         if data is None:
@@ -150,13 +150,24 @@ class CacheRepository:
             return data
         return type_model.model_validate_json(data)
 
-    async def cache_paginated(
-        self, type_model: type[B],
+
+    async def cache(
+        self,
+        type_model: type[B],
+        func: Callable[P, Awaitable[B]],
+        ttl: int=60, *args, **kwargs
+    ) -> B:
+        key = await self._build_key(type_model, func, args, kwargs)
+        return await self.cache_with_key(
+            key=key, type_model=type_model, func=func, ttl=ttl,
+            *args, **kwargs
+        )
+
+    async def cache_with_key_paginated(
+        self, key: str, type_model: type[B],
         func: Callable[P, Awaitable[PageResult[B]]],
         ttl: int=60, *args, **kwargs
     ) -> PageResult[B]:
-        key = await self._build_key(type_model, func, args, kwargs)
-
         data = await self.redis.get(key)
         if data is None:
             data = await func(*args, **kwargs)
@@ -175,6 +186,17 @@ class CacheRepository:
             total=data["total"],
             page=data["page"],
             page_size=data["page_size"]
+        )
+
+    async def cache_paginated(
+        self, type_model: type[B],
+        func: Callable[P, Awaitable[PageResult[B]]],
+        ttl: int=60, *args, **kwargs
+    ) -> PageResult[B]:
+        key = await self._build_key(type_model, func, args, kwargs)
+        return await self.cache_with_key_paginated(
+            key=key, type_model=type_model, func=func,
+            ttl=ttl, *args, **kwargs
         )
 
     async def invadate_cache(self, *keys: str) -> None:
