@@ -22,10 +22,6 @@ class ChatKeys:
         return f"user:{user_id}:channel"
 
     @staticmethod
-    def rate_limit(user_id: int, action: str) -> str:
-        return f"ratelimit:{action}:{user_id}"
-
-    @staticmethod
     def chat_member_count(chat_id: int) -> str:
         return f"chat:{chat_id}:member_count"
 

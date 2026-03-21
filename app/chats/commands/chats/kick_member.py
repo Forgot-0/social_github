@@ -58,6 +58,7 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
             raise AccessDeniedChatException()
 
         await self.session.delete(target)
+        await self.chat_repository.invadate_cache(ChatKeys.chat_member_count(chat.id))
         await self.session.commit()
         await self.event_bus.publish(
             [KickedChatMemberEvent(

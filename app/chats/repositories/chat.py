@@ -41,7 +41,6 @@ class ChatRepository(IRepository[Chat], CacheRepository):
                 ChatMember.is_banned.is_(False),
                 Chat.deleted_at.is_(None),
             )
-            .options(selectinload(Chat.members))
             .order_by(Chat.last_activity_at.desc().nullslast())
             .distinct()
         )
@@ -109,6 +108,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             role=role,
         )
         self.session.add(member)
+        await self.invadate_cache(ChatKeys.chat_member_count(chat_id))
 
     async def get_member_count(self, chat_id: int) -> int:
         key = ChatKeys.chat_member_count(chat_id)
@@ -125,10 +125,13 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         await self.redis.setex(key, 300, str(count))
         return count
 
-    async def get_member_user_ids(self, chat_id: int) -> list[int]:
-        result = await self.session.execute(
-            select(ChatMember.user_id).where(ChatMember.chat_id == chat_id)
-        )
+    async def get_member_user_ids(self, chat_id: int, without_member: int | None=None) -> list[int]:
+        stmt = select(ChatMember.user_id).where(ChatMember.chat_id == chat_id)
+
+        if without_member is not None:
+            stmt = stmt.where(ChatMember.user_id != without_member)
+
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:

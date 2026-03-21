@@ -64,10 +64,10 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
         if Permission.SEND_MESSAGES not in ROLE_PERMISSIONS.get(member.role, set()):
             raise AccessDeniedChatException()
 
-        msg = Message(
+        msg = Message.create(
             chat_id=command.chat_id,
-            author_id=user_id,
-            type=command.message_type,
+            sender_id=user_id,
+            message_type=command.message_type,
             content=command.content,
             reply_to_id=command.reply_to_id,
         )

@@ -52,7 +52,7 @@ class GetChatsQueryHandler(BaseQueryHandler[GetChatsQuery, PageResult[ChatListIt
                 created_by=chat.created_by,
                 last_activity_at=chat.last_activity_at,
                 unread_count=unread_map.get(chat.id, 0),
-                member_count=len(chat.members),
+                member_count=await self.chat_repository.get_member_count(chat.id),
             )
             for chat in page.items
         ]

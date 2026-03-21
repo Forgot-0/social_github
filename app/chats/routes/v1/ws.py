@@ -3,7 +3,9 @@ import logging
 
 from dishka.integrations.fastapi import DishkaRoute, inject, FromDishka
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi_limiter.depends import WebSocketRateLimiter
 
+from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
 from app.chats.schemas.ws import WSClientEvent, WSEventType
@@ -46,10 +48,13 @@ async def websocket_endpoint(
     await presence_service.set_online(user_id)
     logger.info("WS connected", extra={"user_id": user_id})
 
+    rate_limit = WebSocketRateLimiter(chat_config.WS_MAX_CONNECTIONS_PER_USER)
+
     try:
         while True:
             try:
                 data = await asyncio.wait_for(websocket.receive_json(), timeout=45.0)
+                await rate_limit(websocket, context_key=data)
             except asyncio.TimeoutError:
                 await presence_service.refresh(user_id)
                 continue

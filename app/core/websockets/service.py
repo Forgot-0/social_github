@@ -101,22 +101,19 @@ class ConnectionManager(BaseConnectionManager):
             async for message in pubsub.listen():
                 if message["type"] != "pmessage":
                     continue
-                channel: bytes = message["channel"]
-                connection_id = channel.decode().removeprefix("ws:")
-                try:
-                    payload = orjson.loads(message["data"])
-                except Exception as ex:
-                    logger.error("Bad JSON in channel %s", channel)
-                    continue
 
-                await self.send_json_all(connection_id, payload)
-        except asyncio.CancelledError:
-            pass
-        except Exception as exc:
-            logger.exception("Pub/Sub listener crashed: %s", exc)
+                asyncio.create_task(self._dispatch(message))
         finally:
             await pubsub.unsubscribe()
             await self.redis.aclose()
+
+    async def _dispatch(self, message: dict) -> None:
+        channel = message["channel"].decode().removeprefix("ws:")
+        try:
+            payload = orjson.loads(message["data"])
+            await self.send_json_all(channel, payload)
+        except Exception:
+            logger.exception("Dispatch error for channel %s", channel)
 
     async def shutdown(self) -> None:
         if self.redis:
