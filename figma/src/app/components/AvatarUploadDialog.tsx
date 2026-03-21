@@ -60,12 +60,26 @@ export function AvatarUploadDialog({ open, onOpenChange, currentAvatarUrl, displ
         content_type: selectedFile.type,
       });
 
+      console.log('Presign data:', presignData);
+
       // Step 2: Upload file to S3
       const formData = new FormData();
+      
+      // ВАЖНО: Добавляем поле "key" первым (используя key_base из ответа)
+      formData.append('key', presignData.key_base);
+      
+      // Затем добавляем все остальные поля из presign response
       Object.entries(presignData.fields).forEach(([key, value]) => {
         formData.append(key, value);
       });
+      
+      // Добавляем файл последним (требование S3)
       formData.append('file', selectedFile);
+
+      console.log('FormData entries:');
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? `File(${value.name})` : value);
+      }
 
       const uploadResponse = await fetch(presignData.url, {
         method: 'POST',
@@ -73,6 +87,8 @@ export function AvatarUploadDialog({ open, onOpenChange, currentAvatarUrl, displ
       });
 
       if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('S3 upload error:', errorText);
         throw new Error('Ошибка при загрузке файла');
       }
 

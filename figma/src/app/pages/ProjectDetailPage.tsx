@@ -27,6 +27,7 @@ import { useProjectQuery, useProjectPositionsQuery, useCreatePositionMutation, u
 import { useProfileQuery } from '../../api/hooks/useProfiles';
 import { useCreateApplicationMutation } from '../../api/hooks/useApplications';
 import { useUpdatePositionMutation, useDeletePositionMutation } from '../../api/hooks/usePositions';
+import { useProjectRoleQuery } from '../../api/hooks/useProjectRoles';
 import { PositionDialog } from '../components/PositionDialog';
 import { InviteMemberDialog } from '../components/InviteMemberDialog';
 import { EditProjectDialog } from '../components/EditProjectDialog';
@@ -34,12 +35,16 @@ import { ApplicationsDialog } from '../components/ApplicationsDialog';
 import type { PositionDTO } from '../../api/types';
 
 // Компонент для отображения участника проекта
-function TeamMember({ userId, role }: { userId: number; role?: string }) {
-  const { data: profile, isLoading } = useProfileQuery(userId, {
+function TeamMember({ userId, roleId, isOwner = false }: { userId: number; roleId?: number | null; isOwner?: boolean }) {
+  const { data: profile, isLoading: profileLoading } = useProfileQuery(userId, {
     enabled: !!userId,
   });
+  
+  const { data: role, isLoading: roleLoading } = useProjectRoleQuery(roleId, {
+    enabled: !!roleId,
+  });
 
-  if (isLoading) {
+  if (profileLoading || roleLoading) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -61,6 +66,7 @@ function TeamMember({ userId, role }: { userId: number; role?: string }) {
 
   const displayName = profile.display_name || `User ${userId}`;
   const avatarUrl = profile.avatars?.['medium'] || profile.avatars?.['small'] || profile.avatars?.['original'];
+  const roleName = isOwner ? 'Владелец проекта' : (role?.name || 'Участник');
 
   return (
     <Card>
@@ -73,7 +79,7 @@ function TeamMember({ userId, role }: { userId: number; role?: string }) {
             </Avatar>
             <div className="flex-1">
               <div className="font-semibold">{displayName}</div>
-              <div className="text-sm text-muted-foreground">{role || 'Участник'}</div>
+              <div className="text-sm text-muted-foreground">{roleName}</div>
               {profile.specialization && (
                 <p className="text-sm text-muted-foreground mt-1">{profile.specialization}</p>
               )}
@@ -384,7 +390,7 @@ export function ProjectDetailPage() {
                 <TabsContent value="team" className="space-y-4 mt-6">
                   <div className="space-y-3">
                     {/* Владелец проекта */}
-                    <TeamMember userId={project.owner_id} role="Владелец проекта" />
+                    <TeamMember userId={project.owner_id} roleId={null} isOwner={true} />
 
                     {/* Остальные участники */}
                     {project.memberships && project.memberships.length > 0 ? (
@@ -392,7 +398,7 @@ export function ProjectDetailPage() {
                         <TeamMember 
                           key={member.id} 
                           userId={member.user_id} 
-                          role={member.status === 'active' ? 'Участник' : member.status}
+                          roleId={member.role_id}
                         />
                       ))
                     ) : (
@@ -445,25 +451,25 @@ export function ProjectDetailPage() {
             </CardContent>
           </Card>
 
-          {isOwner && (
-            <Card className="bg-blue-50 border-blue-200">
-              <CardHeader>
-                <CardTitle className="text-lg">Управление</CardTitle>
-                <CardDescription>Вы владелец этого проекта</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button className="w-full" variant="outline" onClick={handleEditProject}>
-                  Редактировать проект
-                </Button>
-                <Button className="w-full" variant="outline" onClick={handleCreatePosition}>
-                  Добавить вакансию
-                </Button>
-                <Button className="w-full" variant="outline" onClick={handleInviteMember}>
-                  Пригласить участника
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-lg">Управление</CardTitle>
+              <CardDescription>
+                {isOwner ? 'Вы владелец этого проекта' : 'Управление проектом'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button className="w-full" variant="outline" onClick={handleEditProject}>
+                Редактировать проект
+              </Button>
+              <Button className="w-full" variant="outline" onClick={handleCreatePosition}>
+                Добавить вакансию
+              </Button>
+              <Button className="w-full" variant="outline" onClick={handleInviteMember}>
+                Пригласить участника
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
