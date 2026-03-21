@@ -6,7 +6,7 @@ class ChatConfig(BaseConfig):
     MAX_PAGE_SIZE: int = 200
 
     MAX_MESSAGE_LENGTH: int = 4096
-    MAX_MEMEBRS: int = 100
+    MAX_MEMEBERS: int = 100
 
     WS_HEARTBEAT_INTERVAL: int = 30
     WS_MAX_CONNECTIONS_PER_USER: int = 5

@@ -202,7 +202,8 @@ class CacheRepository:
     async def invadate_cache(self, *keys: str) -> None:
         if keys:
             await self.redis.delete(*keys)
-        await self.redis.incrby(self._LIST_VERSION_KEY)
+        else:
+            await self.redis.incrby(self._LIST_VERSION_KEY)
 
     async def _get_list_version(self) -> int:
         v = await self.redis.get(self._LIST_VERSION_KEY)
