@@ -1,20 +1,25 @@
-import { Link, useParams } from 'react-router';
+import { useParams, Link } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Mail, Calendar, Briefcase, Loader2, ArrowLeft } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { Mail, Briefcase, Loader2, ArrowLeft } from 'lucide-react';
 import { useProfileQuery } from '../../api/hooks/useProfiles';
+import { useProjectsQuery } from '../../api/hooks/useProjects';
 import { ContactsManager } from '../components/ContactsManager';
+import { getAvatarUrl } from '../utils/avatar';
 
 export function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
   const profileId = parseInt(id || '0');
 
   const { data: profile, isLoading } = useProfileQuery(profileId, {
+    enabled: !!profileId,
+  });
+
+  const { data: projects } = useProjectsQuery({
+    userId: profileId,
     enabled: !!profileId,
   });
 
@@ -45,8 +50,7 @@ export function UserProfilePage() {
   }
 
   const displayName = profile.display_name || `User ${profileId}`;
-  // Исправлено: avatars теперь Record<string, string>, где значение - это уже URL
-  const avatarUrl = profile.avatars?.['medium'] || profile.avatars?.['small'] || profile.avatars?.['original'];
+  const avatarUrl = getAvatarUrl(profile.avatars, '256');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -71,12 +75,6 @@ export function UserProfilePage() {
                 <h2 className="text-2xl font-bold mb-1">{displayName}</h2>
                 {profile.specialization && (
                   <p className="text-sm text-muted-foreground mb-2">{profile.specialization}</p>
-                )}
-                {profile.date_birthday && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>День рождения: {new Date(profile.date_birthday).toLocaleDateString('ru-RU')}</span>
-                  </div>
                 )}
               </div>
             </CardContent>

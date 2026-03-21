@@ -33,6 +33,6 @@ class UploadedAvatarsEventHandler(BaseEventHandler[UploadedAvatarsEvent, None]):
 
         logger.info(
             "Avatars resize complated", extra={
-                "user_id": event.profile_id, "avatars": event.versions
+                "user_id": event.profile_id,
             }
         )

@@ -1,19 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Textarea } from '../components/ui/textarea';
-import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Separator } from '../components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { X, Plus, Loader2 } from 'lucide-react';
+import { Separator } from '../components/ui/separator';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Bell, Shield, User as UserIcon, Camera, Loader2, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfileQuery, useUpdateProfileMutation } from '../../api/hooks/useProfiles';
-import { COMMON_SKILLS } from '../constants/skills';
 import { AvatarUploadDialog } from '../components/AvatarUploadDialog';
+import { getAvatarUrl } from '../utils/avatar';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+
+const COMMON_SKILLS = [
+  'React', 'TypeScript', 'JavaScript', 'Python', 'Java', 'C++', 'C#',
+  'Node.js', 'Django', 'FastAPI', 'Flask', 'Spring Boot',
+  'PostgreSQL', 'MongoDB', 'MySQL', 'Redis',
+  'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP',
+  'Git', 'CI/CD', 'Agile', 'Scrum',
+  'UI/UX Design', 'Figma', 'Adobe XD',
+  'Machine Learning', 'Data Science', 'AI',
+  'Mobile Development', 'iOS', 'Android', 'React Native', 'Flutter',
+  'GraphQL', 'REST API', 'Microservices',
+  'Testing', 'Jest', 'Pytest', 'Selenium'
+];
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -21,15 +34,16 @@ export function SettingsPage() {
     user?.id || 0,
     { enabled: !!user?.id }
   );
-  const updateProfileMutation = useUpdateProfileMutation();
 
   const [displayName, setDisplayName] = useState('');
   const [specialization, setSpecialization] = useState('');
   const [bio, setBio] = useState('');
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [showAllSkills, setShowAllSkills] = useState(false);
-  const [customSkillInput, setCustomSkillInput] = useState('');
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [customSkillInput, setCustomSkillInput] = useState('');
+  const [showAllSkills, setShowAllSkills] = useState(false);
+
+  const updateProfileMutation = useUpdateProfileMutation();
 
   useEffect(() => {
     if (profile) {
@@ -39,6 +53,47 @@ export function SettingsPage() {
       setSelectedSkills(profile.skills || []);
     }
   }, [profile]);
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill)
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+  };
+
+  const handleAddCustomSkill = () => {
+    const trimmed = customSkillInput.trim();
+    if (trimmed && !selectedSkills.includes(trimmed)) {
+      setSelectedSkills(prev => [...prev, trimmed]);
+      setCustomSkillInput('');
+    }
+  };
+
+  const handleSaveSkills = () => {
+    if (!user) return;
+
+    updateProfileMutation.mutate(
+      {
+        profileId: user.id,
+        data: {
+          skills: selectedSkills,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success('Навыки обновлены!');
+        },
+        onError: (error: any) => {
+          toast.error('Ошибка при обновлении навыков', {
+            description: error?.error?.message || 'Попробуйте позже',
+          });
+        },
+      }
+    );
+  };
+
+  const displayedSkills = showAllSkills ? COMMON_SKILLS : COMMON_SKILLS.slice(0, 15);
 
   const handleSaveProfile = () => {
     if (!user || !profile) return;
@@ -65,53 +120,6 @@ export function SettingsPage() {
     );
   };
 
-  const handleSaveSkills = () => {
-    if (!user || !profile) return;
-
-    updateProfileMutation.mutate(
-      {
-        profileId: user.id,
-        data: {
-          skills: selectedSkills,
-        },
-      },
-      {
-        onSuccess: () => {
-          toast.success('Навыки обновлены!');
-        },
-        onError: (error: any) => {
-          toast.error('Ошибка при обновлении навыков', {
-            description: error?.error?.message || 'Попробуйте позже',
-          });
-        },
-      }
-    );
-  };
-
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skill)
-        ? prev.filter(s => s !== skill)
-        : [...prev, skill]
-    );
-  };
-
-  const handleAddCustomSkill = () => {
-    const trimmedSkill = customSkillInput.trim();
-    if (!trimmedSkill) {
-      toast.error('Введите название навыка');
-      return;
-    }
-    if (selectedSkills.includes(trimmedSkill)) {
-      toast.error('Этот навык уже добавлен');
-      return;
-    }
-    setSelectedSkills(prev => [...prev, trimmedSkill]);
-    setCustomSkillInput('');
-  };
-
-  const displayedSkills = showAllSkills ? COMMON_SKILLS : COMMON_SKILLS.slice(0, 15);
-
   if (profileLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[400px]">
@@ -132,7 +140,7 @@ export function SettingsPage() {
     );
   }
 
-  const avatarUrl = profile?.avatars?.['medium'] || profile?.avatars?.['small'] || profile?.avatars?.['original'];
+  const avatarUrl = getAvatarUrl(profile?.avatars);
   const displayNameValue = profile?.display_name || user.username;
 
   return (

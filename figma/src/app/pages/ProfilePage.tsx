@@ -1,20 +1,36 @@
-import { Link } from 'react-router';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Mail, Briefcase, Loader2, Camera, Pencil, Edit } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { 
+  Mail, 
+  MapPin, 
+  Calendar, 
+  Briefcase, 
+  Users, 
+  Settings, 
+  Upload,
+  Github,
+  Linkedin,
+  Globe,
+  Plus,
+  Pencil,
+  Camera,
+  Edit,
+  Loader2
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfileQuery, useUpdateProfileMutation } from '../../api/hooks/useProfiles';
-import { useMyProjectsQuery } from '../../api/hooks/useProjects';
+import { useProjectsQuery } from '../../api/hooks/useProjects';
+import { ProjectCard } from '../components/ProjectCard';
 import { EditProfileDialog } from '../components/EditProfileDialog';
 import { AvatarUploadDialog } from '../components/AvatarUploadDialog';
 import { ContactsManager } from '../components/ContactsManager';
+import { getAvatarUrl } from '../utils/avatar';
 
 export function ProfilePage() {
   const { user } = useAuth();
@@ -22,7 +38,7 @@ export function ProfilePage() {
     user?.id || 0,
     { enabled: !!user?.id }
   );
-  const { data: projectsData, isLoading: projectsLoading } = useMyProjectsQuery();
+  const { data: projectsData, isLoading: projectsLoading } = useProjectsQuery();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
@@ -61,8 +77,7 @@ export function ProfilePage() {
 
   const projects = projectsData?.items || [];
   const displayName = profile?.display_name || user?.username || 'User';
-  // Исправлено: avatars теперь Record<string, string>, где значение - это уже URL
-  const avatarUrl = profile?.avatars?.['medium'] || profile?.avatars?.['small'] || profile?.avatars?.['original'];
+  const avatarUrl = getAvatarUrl(profile?.avatars, '256');
 
   return (
     <div className="container mx-auto px-4 py-8">

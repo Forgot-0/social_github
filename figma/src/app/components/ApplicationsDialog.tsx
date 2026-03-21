@@ -1,19 +1,13 @@
-import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Loader2, CheckCircle, XCircle, Clock, User } from 'lucide-react';
-import { toast } from 'sonner';
+import { Button } from './ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Clock, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { usePositionApplicationsQuery } from '../../api/hooks/usePositions';
 import { useProfileQuery } from '../../api/hooks/useProfiles';
-import { useApproveApplicationMutation, useRejectApplicationMutation } from '../../api/hooks/useApplications';
 import type { ApplicationDTO } from '../../api/types';
-import type { PositionDTO } from '../../api/types';
+import { getAvatarUrl } from '../utils/avatar';
 
 interface ApplicationsDialogProps {
   open: boolean;
@@ -31,7 +25,7 @@ function ApplicationCard({ application, onApprove, onReject, isLoading }: {
   const { data: profile } = useProfileQuery(application.candidate_id);
   
   const displayName = profile?.display_name || `Кандидат ${application.candidate_id}`;
-  const avatarUrl = profile?.avatars?.['medium'] || profile?.avatars?.['small'] || profile?.avatars?.['original'];
+  const avatarUrl = getAvatarUrl(profile?.avatars);
 
   const statusConfig = {
     pending: { label: 'На рассмотрении', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },

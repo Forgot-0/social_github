@@ -4,6 +4,7 @@ import logging
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.queues.service import QueueService
+from app.profiles.repositories.profiles import ProfileRepository
 from app.profiles.tasks import AvatarUploadTask
 
 
@@ -18,6 +19,7 @@ class UpdateProfileAvatrCommand(BaseCommand):
 @dataclass(frozen=True)
 class UpdateProfileAvatrCommandHandler(BaseCommandHandler[UpdateProfileAvatrCommand, None]):
     queue_service: QueueService
+    profile_repository: ProfileRepository
 
     async def handle(self, command: UpdateProfileAvatrCommand) -> None:
         await self.queue_service.push(
@@ -26,6 +28,7 @@ class UpdateProfileAvatrCommandHandler(BaseCommandHandler[UpdateProfileAvatrComm
                 "key_base": command.key_base
             }
         )
+        await self.profile_repository.invadate_cache()
 
         logger.info(
             "Start proccess avatar resize", extra={

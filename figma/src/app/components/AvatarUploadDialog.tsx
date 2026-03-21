@@ -65,13 +65,17 @@ export function AvatarUploadDialog({ open, onOpenChange, currentAvatarUrl, displ
       // Step 2: Upload file to S3
       const formData = new FormData();
       
-      // ВАЖНО: Добавляем поле "key" первым (используя key_base из ответа)
-      formData.append('key', presignData.key_base);
+      // Добавляем все поля из presign response СНАЧАЛА
+      for (const k in presignData.fields) {
+        formData.append(k, presignData.fields[k]);
+      }
       
-      // Затем добавляем все остальные поля из presign response
-      Object.entries(presignData.fields).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
+      // Затем добавляем key с /original (важно для policy!)
+      const key = `${presignData.key_base}/original`;
+      formData.append('key', key);
+      
+      // Добавляем Content-Type
+      formData.append('Content-Type', selectedFile.type);
       
       // Добавляем файл последним (требование S3)
       formData.append('file', selectedFile);

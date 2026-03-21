@@ -12,12 +12,14 @@ import {
 import { Home, Briefcase, PlusCircle, User, Settings, LogOut, FolderOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfileQuery } from '../../api/hooks/useProfiles';
+import { getAvatarUrl } from '../utils/avatar';
 
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   
+  // Загружаем профиль пользователя для аватара (profile_id = user_id)
   const { data: profile } = useProfileQuery(user?.id || 0, {
     enabled: !!user?.id,
   });
@@ -31,7 +33,7 @@ export function Header() {
     navigate('/auth/login');
   };
 
-  const avatarUrl = profile?.avatars?.['small'] || profile?.avatars?.['medium'] || profile?.avatars?.['original'];
+  const avatarUrl = getAvatarUrl(profile?.avatars, '64');
   const displayName = profile?.display_name || user?.username || 'User';
 
   return (
@@ -70,7 +72,7 @@ export function Header() {
                   className="gap-2"
                 >
                   <FolderOpen className="w-4 h-4" />
-                  Мои проекты
+                  Мои проеы
                 </Button>
               </Link>
             )}

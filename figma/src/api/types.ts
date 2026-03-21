@@ -174,9 +174,15 @@ export interface ContactDTO {
   contact: string;
 }
 
+export interface AvatarFormats {
+  jpg: string;
+  avif: string;
+  webp: string;
+}
+
 export interface ProfileDTO {
   id: number;
-  avatars: Record<string, string>;
+  avatars: Record<string, AvatarFormats>;
   specialization: string | null;
   display_name: string | null;
   bio: string | null;
