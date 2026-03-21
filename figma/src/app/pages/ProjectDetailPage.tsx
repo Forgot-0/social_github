@@ -33,6 +33,72 @@ import { EditProjectDialog } from '../components/EditProjectDialog';
 import { ApplicationsDialog } from '../components/ApplicationsDialog';
 import type { PositionDTO } from '../../api/types';
 
+// Компонент для отображения участника проекта
+function TeamMember({ userId, role }: { userId: number; role?: string }) {
+  const { data: profile, isLoading } = useProfileQuery(userId, {
+    enabled: !!userId,
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4 animate-pulse">
+            <div className="w-12 h-12 rounded-full bg-gray-200"></div>
+            <div className="flex-1">
+              <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
+
+  const displayName = profile.display_name || `User ${userId}`;
+  const avatarUrl = profile.avatars?.['medium'] || profile.avatars?.['small'] || profile.avatars?.['original'];
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <Link to={`/users/${userId}`}>
+          <div className="flex items-center gap-4 hover:bg-muted/50 -m-6 p-6 rounded-lg transition-colors cursor-pointer">
+            <Avatar className="w-12 h-12">
+              <AvatarImage src={avatarUrl} alt={displayName} />
+              <AvatarFallback>{displayName[0]?.toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="font-semibold">{displayName}</div>
+              <div className="text-sm text-muted-foreground">{role || 'Участник'}</div>
+              {profile.specialization && (
+                <p className="text-sm text-muted-foreground mt-1">{profile.specialization}</p>
+              )}
+              {profile.skills && profile.skills.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {profile.skills.slice(0, 5).map((skill, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {skill}
+                    </Badge>
+                  ))}
+                  {profile.skills.length > 5 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{profile.skills.length - 5}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProjectDetailPage() {
   const { id } = useParams();
   const projectId = parseInt(id || '0');
@@ -317,36 +383,19 @@ export function ProjectDetailPage() {
 
                 <TabsContent value="team" className="space-y-4 mt-6">
                   <div className="space-y-3">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <Link to={`/users/${project.owner_id}`}>
-                          <div className="flex items-center gap-4 hover:bg-muted/50 -m-6 p-6 rounded-lg transition-colors cursor-pointer">
-                            <Avatar className="w-12 h-12">
-                              <AvatarImage src={ownerAvatarUrl} alt={ownerDisplayName} />
-                              <AvatarFallback>{ownerDisplayName[0]?.toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="font-semibold">{ownerDisplayName}</div>
-                              <div className="text-sm text-muted-foreground">Владелец проекта</div>
-                              {ownerProfile?.bio && (
-                                <p className="text-sm text-muted-foreground mt-1">{ownerProfile.bio}</p>
-                              )}
-                              {ownerProfile?.skills && ownerProfile.skills.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {ownerProfile.skills.map((skill, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs">
-                                      {skill}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </Link>
-                      </CardContent>
-                    </Card>
+                    {/* Владелец проекта */}
+                    <TeamMember userId={project.owner_id} role="Владелец проекта" />
 
-                    {(!project.memberships || project.memberships.length === 0) && (
+                    {/* Остальные участники */}
+                    {project.memberships && project.memberships.length > 0 ? (
+                      project.memberships.map((member) => (
+                        <TeamMember 
+                          key={member.id} 
+                          userId={member.user_id} 
+                          role={member.status === 'active' ? 'Участник' : member.status}
+                        />
+                      ))
+                    ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         Пока нет других участников
                       </div>
@@ -369,7 +418,7 @@ export function ProjectDetailPage() {
                 <div>
                   <div className="font-medium">Создан</div>
                   <div className="text-muted-foreground">
-                    {formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: ru })}
+                    {project.created_at ? formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: ru }) : 'Н/Д'}
                   </div>
                 </div>
               </div>
@@ -428,7 +477,7 @@ export function ProjectDetailPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="message">��опроводительное сообщение</Label>
+              <Label htmlFor="message">опроводительное сообщение</Label>
               <Textarea
                 id="message"
                 placeholder="Опишите свой опыт и мотивацию..."

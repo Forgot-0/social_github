@@ -18,6 +18,7 @@ export function Header() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   
+  // Загружаем профиль пользователя для аватара (profile_id = user_id)
   const { data: profile } = useProfileQuery(user?.id || 0, {
     enabled: !!user?.id,
   });
@@ -31,6 +32,7 @@ export function Header() {
     navigate('/auth/login');
   };
 
+  // Исправлено: avatars теперь Record<string, string>, где значение - это уже URL
   const avatarUrl = profile?.avatars?.['small'] || profile?.avatars?.['medium'] || profile?.avatars?.['original'];
   const displayName = profile?.display_name || user?.username || 'User';
 
@@ -70,7 +72,7 @@ export function Header() {
                   className="gap-2"
                 >
                   <FolderOpen className="w-4 h-4" />
-                  Мои проекты
+                  Мои прое��ты
                 </Button>
               </Link>
             )}
@@ -88,11 +90,13 @@ export function Header() {
               </Link>
 
               <DropdownMenu>
-                <DropdownMenuTrigger className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                  <Avatar className="h-10 w-10 cursor-pointer">
-                    <AvatarImage src={avatarUrl} alt={displayName} />
-                    <AvatarFallback>{displayName[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                  </Avatar>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar>
+                      <AvatarImage src={avatarUrl} alt={displayName} />
+                      <AvatarFallback>{displayName[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
@@ -102,14 +106,18 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    Профиль
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Настройки
-                  </DropdownMenuItem>
+                  <Link to="/profile">
+                    <DropdownMenuItem>
+                      <User className="mr-2 h-4 w-4" />
+                      Профиль
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link to="/settings">
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Настройки
+                    </DropdownMenuItem>
+                  </Link>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />

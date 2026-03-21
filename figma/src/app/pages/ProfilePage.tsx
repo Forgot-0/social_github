@@ -15,7 +15,6 @@ import { useMyProjectsQuery } from '../../api/hooks/useProjects';
 import { EditProfileDialog } from '../components/EditProfileDialog';
 import { AvatarUploadDialog } from '../components/AvatarUploadDialog';
 import { ContactsManager } from '../components/ContactsManager';
-import { PositionsTab } from '../components/PositionsTab';
 
 export function ProfilePage() {
   const { user } = useAuth();
@@ -176,9 +175,8 @@ export function ProfilePage() {
 
         <div className="lg:col-span-2">
           <Tabs defaultValue="projects">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="projects">Проекты ({projects.length})</TabsTrigger>
-              <TabsTrigger value="positions">Позиции</TabsTrigger>
               <TabsTrigger value="activity">Активность</TabsTrigger>
             </TabsList>
 
@@ -230,10 +228,6 @@ export function ProfilePage() {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
-
-            <TabsContent value="positions" className="mt-6">
-              <PositionsTab />
             </TabsContent>
 
             <TabsContent value="activity" className="mt-6">

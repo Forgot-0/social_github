@@ -10,25 +10,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge';
 import { EmptyState } from '../components/EmptyState';
 import { ProjectCardSkeleton } from '../components/ProjectCardSkeleton';
-import { ChevronLeft, ChevronRight, Briefcase, MapPin, Clock, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Briefcase, MapPin, Clock, ExternalLink, Plus, X } from 'lucide-react';
 import type { PositionDTO } from '../../api/types';
+import { COMMON_SKILLS } from '../constants/skills';
 
 export function PositionsPage() {
   const [search, setSearch] = useState('');
   const [locationType, setLocationType] = useState<string | undefined>();
   const [expectedLoad, setExpectedLoad] = useState<string | undefined>();
   const [onlyOpen, setOnlyOpen] = useState(true);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [customSkillInput, setCustomSkillInput] = useState('');
+  const [showAllSkills, setShowAllSkills] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 12;
 
   const { data: positionsData, isLoading } = useQuery({
-    queryKey: ['positions', { search, locationType, expectedLoad, onlyOpen, page, pageSize }],
+    queryKey: ['positions', { search, locationType, expectedLoad, onlyOpen, selectedSkills, page, pageSize }],
     queryFn: () =>
       positionsApi.getPositions({
         title: search || undefined,
         location_type: locationType as any,
         expected_load: expectedLoad as any,
         is_open: onlyOpen,
+        required_skills: selectedSkills.length > 0 ? selectedSkills : undefined,
         page,
         page_size: pageSize,
       }),
@@ -42,8 +47,32 @@ export function PositionsPage() {
     setLocationType(undefined);
     setExpectedLoad(undefined);
     setOnlyOpen(true);
+    setSelectedSkills([]);
     setPage(1);
   };
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill)
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+    setPage(1);
+  };
+
+  const handleAddCustomSkill = () => {
+    const trimmedSkill = customSkillInput.trim();
+    if (!trimmedSkill) return;
+    if (selectedSkills.includes(trimmedSkill)) {
+      setCustomSkillInput('');
+      return;
+    }
+    setSelectedSkills(prev => [...prev, trimmedSkill]);
+    setCustomSkillInput('');
+    setPage(1);
+  };
+
+  const displayedSkills = showAllSkills ? COMMON_SKILLS : COMMON_SKILLS.slice(0, 12);
 
   const getLocationTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -80,7 +109,7 @@ export function PositionsPage() {
             <CardDescription>Настройте параметры поиска вакансий</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <div className="space-y-2">
                 <Label htmlFor="search">Поиск по названию</Label>
                 <Input
@@ -153,6 +182,81 @@ export function PositionsPage() {
                     <SelectItem value="all">Все вакансии</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Фильтр по навыкам */}
+            <div className="space-y-3 pt-4 border-t">
+              <Label>Фильтр по навыкам</Label>
+
+              {/* Выбранные навыки */}
+              {selectedSkills.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedSkills.map((skill) => (
+                    <Badge
+                      key={skill}
+                      variant="default"
+                      className="gap-1 pl-3 pr-2"
+                    >
+                      {skill}
+                      <button
+                        onClick={() => toggleSkill(skill)}
+                        className="ml-1 hover:text-red-300"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Добавить свой навык */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Добавьте свой навык..."
+                  value={customSkillInput}
+                  onChange={(e) => setCustomSkillInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomSkill();
+                    }
+                  }}
+                />
+                <Button onClick={handleAddCustomSkill} variant="outline" size="sm">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Добавить
+                </Button>
+              </div>
+
+              {/* Популярные навыки */}
+              <div>
+                <Label className="text-sm text-muted-foreground mb-2 block">Популярные навыки:</Label>
+                <div className="flex flex-wrap gap-2">
+                  {displayedSkills
+                    .filter(skill => !selectedSkills.includes(skill))
+                    .map((skill) => (
+                      <Badge
+                        key={skill}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-accent"
+                        onClick={() => toggleSkill(skill)}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        {skill}
+                      </Badge>
+                    ))}
+                  {!showAllSkills && COMMON_SKILLS.length > 12 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllSkills(true)}
+                      className="text-xs h-7"
+                    >
+                      Показать все навыки
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -259,7 +363,10 @@ function PositionCardItem({ position }: PositionCardItemProps) {
               {position.description}
             </CardDescription>
           </div>
-          <Badge variant={position.is_open ? 'default' : 'secondary'}>
+          <Badge 
+            variant={position.is_open ? 'default' : 'secondary'}
+            className={position.is_open ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
+          >
             {position.is_open ? 'Открыта' : 'Закрыта'}
           </Badge>
         </div>

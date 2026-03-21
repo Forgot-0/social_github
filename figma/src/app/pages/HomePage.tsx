@@ -8,15 +8,19 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
-import { Search, Filter, Briefcase, Users, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
+import { Label } from '../components/ui/label';
+import { Search, Filter, Briefcase, Users, TrendingUp, Sparkles, Loader2, Plus, X } from 'lucide-react';
 import { useProjectsQuery, usePositionsQuery } from '../../api/hooks';
 import { useAuth } from '../contexts/AuthContext';
+import { COMMON_SKILLS } from '../constants/skills';
 
 export function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customSkillInput, setCustomSkillInput] = useState('');
+  const [showAllSkills, setShowAllSkills] = useState(false);
 
   const { data: projectsData, isLoading } = useProjectsQuery({
     name: searchQuery || undefined,
@@ -52,12 +56,23 @@ export function HomePage() {
     );
   };
 
+  const handleAddCustomSkill = () => {
+    const trimmedSkill = customSkillInput.trim();
+    if (!trimmedSkill) return;
+    if (selectedTags.includes(trimmedSkill)) {
+      setCustomSkillInput('');
+      return;
+    }
+    setSelectedTags(prev => [...prev, trimmedSkill]);
+    setCustomSkillInput('');
+  };
+
   const projects = projectsData?.items || [];
   const newProjects = newProjectsData?.items || [];
   const totalProjects = allProjectsData?.total || projectsData?.total || 0;
   const totalPositions = positionsData?.total || 0;
 
-  const popularTags = ['React', 'TypeScript', 'Python', 'Design', 'Mobile', 'Backend', 'Frontend', 'Стартап'];
+  const displayedSkills = showAllSkills ? COMMON_SKILLS : COMMON_SKILLS.slice(0, 12);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -110,29 +125,89 @@ export function HomePage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Фильтр по навыкам:</span>
-          {popularTags.map((tag) => (
-            <Badge
-              key={tag}
-              variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-              className="cursor-pointer"
-              onClick={() => toggleTag(tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Label className="text-sm text-muted-foreground">Фильтр по навыкам:</Label>
+          </div>
+
+          {/* Выбранные навыки */}
           {selectedTags.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedTags([])}
-              className="text-xs"
-            >
-              Сбросить
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {selectedTags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="default"
+                  className="gap-1 pl-3 pr-2"
+                >
+                  {tag}
+                  <button
+                    onClick={() => toggleTag(tag)}
+                    className="ml-1 hover:text-red-300"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedTags([])}
+                className="text-xs h-7"
+              >
+                Сбросить все
+              </Button>
+            </div>
           )}
+
+          {/* Добавить свой навык */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Добавьте свой навык..."
+              value={customSkillInput}
+              onChange={(e) => setCustomSkillInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddCustomSkill();
+                }
+              }}
+            />
+            <Button onClick={handleAddCustomSkill} variant="outline" size="sm">
+              <Plus className="w-4 h-4 mr-1" />
+              Добавить
+            </Button>
+          </div>
+
+          {/* Популярные навыки */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-2 block">Популярные навыки:</Label>
+            <div className="flex flex-wrap gap-2">
+              {displayedSkills
+                .filter(skill => !selectedTags.includes(skill))
+                .map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="cursor-pointer hover:bg-accent"
+                    onClick={() => toggleTag(tag)}
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    {tag}
+                  </Badge>
+                ))}
+              {!showAllSkills && COMMON_SKILLS.length > 12 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllSkills(true)}
+                  className="text-xs h-7"
+                >
+                  Показать все
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

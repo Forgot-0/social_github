@@ -14,7 +14,7 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const membersCount = project.memberships?.length || 0;
-  const visibilityText = project.visibility === 'public' ? 'Публичный' : 'Приватный';
+  const isPublic = project.visibility === 'public';
   
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -30,8 +30,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
               {project.small_description || project.full_description}
             </CardDescription>
           </div>
-          <Badge variant="default">
-            {visibilityText}
+          <Badge 
+            variant={isPublic ? 'default' : 'secondary'}
+            className={isPublic ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'}
+          >
+            {isPublic ? 'Открыт' : 'Закрыт'}
           </Badge>
         </div>
       </CardHeader>

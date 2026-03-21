@@ -5,7 +5,6 @@ import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
@@ -14,6 +13,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfileQuery, useUpdateProfileMutation } from '../../api/hooks/useProfiles';
 import { COMMON_SKILLS } from '../constants/skills';
+import { AvatarUploadDialog } from '../components/AvatarUploadDialog';
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -28,6 +28,8 @@ export function SettingsPage() {
   const [bio, setBio] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const [customSkillInput, setCustomSkillInput] = useState('');
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -78,7 +80,7 @@ export function SettingsPage() {
           toast.success('Навыки обновлены!');
         },
         onError: (error: any) => {
-          toast.error('Ошибка при обнов��ении навыков', {
+          toast.error('Ошибка при обновлении навыков', {
             description: error?.error?.message || 'Попробуйте позже',
           });
         },
@@ -92,6 +94,20 @@ export function SettingsPage() {
         ? prev.filter(s => s !== skill)
         : [...prev, skill]
     );
+  };
+
+  const handleAddCustomSkill = () => {
+    const trimmedSkill = customSkillInput.trim();
+    if (!trimmedSkill) {
+      toast.error('Введите название навыка');
+      return;
+    }
+    if (selectedSkills.includes(trimmedSkill)) {
+      toast.error('Этот навык уже добавлен');
+      return;
+    }
+    setSelectedSkills(prev => [...prev, trimmedSkill]);
+    setCustomSkillInput('');
   };
 
   const displayedSkills = showAllSkills ? COMMON_SKILLS : COMMON_SKILLS.slice(0, 15);
@@ -132,7 +148,6 @@ export function SettingsPage() {
         <TabsList>
           <TabsTrigger value="profile">Профиль</TabsTrigger>
           <TabsTrigger value="skills">Навыки</TabsTrigger>
-          <TabsTrigger value="subscription">Подписка</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -150,9 +165,15 @@ export function SettingsPage() {
                   <AvatarFallback className="text-xl">{displayNameValue[0]?.toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button variant="outline" size="sm" disabled>Загрузить фото</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setAvatarDialogOpen(true)}
+                  >
+                    Загрузить фото
+                  </Button>
                   <p className="text-xs text-muted-foreground mt-2">
-                    JPG, PNG. Макс. 2MB
+                    JPG, PNG. Макс. 5MB
                   </p>
                 </div>
               </div>
@@ -270,7 +291,30 @@ export function SettingsPage() {
               <Separator />
 
               <div>
-                <Label className="mb-3 block">Доступные навыки</Label>
+                <Label className="mb-3 block">Добавить свой навык</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Введите название навыка..."
+                    value={customSkillInput}
+                    onChange={(e) => setCustomSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomSkill();
+                      }
+                    }}
+                  />
+                  <Button onClick={handleAddCustomSkill} variant="outline">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Добавить
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <Label className="mb-3 block">Популярные навыки</Label>
                 <div className="flex flex-wrap gap-2">
                   {displayedSkills
                     .filter(skill => !selectedSkills.includes(skill))
@@ -316,82 +360,14 @@ export function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="subscription">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="border-2">
-              <CardHeader>
-                <CardTitle>Free</CardTitle>
-                <CardDescription>Для начинающих</CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">$0</span>
-                  <span className="text-muted-foreground">/месяц</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div>✓ 2 проекта</div>
-                  <div>✓ 3 вакансии на проект</div>
-                  <div>✓ 10 просмотров кандидатов</div>
-                  <div>✓ Базовая поддержка</div>
-                </div>
-                <Button variant="outline" className="w-full" disabled>
-                  Текущий план
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-blue-600 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-blue-600">Популярный</Badge>
-              </div>
-              <CardHeader>
-                <CardTitle>Pro</CardTitle>
-                <CardDescription>Для активных пользователей</CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">$9</span>
-                  <span className="text-muted-foreground">/месяц</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div>✓ 10 проектов</div>
-                  <div>✓ 10 вакансий на проект</div>
-                  <div>✓ 100 просмотров кандидатов</div>
-                  <div>✓ Приоритетная поддержка</div>
-                  <div>✓ Аналитика проектов</div>
-                </div>
-                <Button className="w-full">
-                  Перейти на Pro
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2">
-              <CardHeader>
-                <CardTitle>Enterprise</CardTitle>
-                <CardDescription>Для компаний</CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">$29</span>
-                  <span className="text-muted-foreground">/месяц</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div>✓ Неограниченные проекты</div>
-                  <div>✓ Неограниченные вакансии</div>
-                  <div>✓ Неограниченные просмотры</div>
-                  <div>✓ Персональный менежер</div>
-                  <div>✓ API доступ</div>
-                </div>
-                <Button variant="outline" className="w-full">
-                  Связаться с нами
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
+
+      <AvatarUploadDialog
+        open={avatarDialogOpen}
+        onOpenChange={setAvatarDialogOpen}
+        currentAvatarUrl={avatarUrl}
+        displayName={displayNameValue}
+      />
     </div>
   );
 }
