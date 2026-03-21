@@ -15,8 +15,8 @@ from fastapi import WebSocket
 
 @dataclass
 class BaseConnectionManager(ABC):
-    connections_map: dict[str, list[WebSocket]] = field(
-        default_factory=lambda: defaultdict(list),
+    connections_map: dict[str, set[WebSocket]] = field(
+        default_factory=lambda: defaultdict(set),
         kw_only=True,
     )
     heartbeat_interval: int = field(default=30, kw_only=True)
@@ -43,7 +43,7 @@ class BaseConnectionManager(ABC):
         ...
 
     @abstractmethod
-    async def publish(self, connection_id: str, payload: dict) -> None:
+    async def publish(self, key: str, payload: dict) -> None:
         ...
 
     @abstractmethod

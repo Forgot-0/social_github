@@ -1,126 +1,235 @@
-import logging
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from fastapi import APIRouter, Query, status
 
-from dishka import AsyncContainer
-from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
-from fastapi_limiter.depends import WebSocketRateLimiter
+from app.chats.commands.chats.add_member import AddMemberCommand
+from app.chats.commands.chats.ban_member import BanMemberCommand
+from app.chats.commands.chats.create import CreateChatCommand
 
-from app.chats.commands.messages.send_message import SendMessageCommand
-from app.chats.commands.reads.mark_read import MarkReadCommand
-from app.chats.dtos.chats import ChatDTO
-from app.chats.dtos.messages import MessageCursorPage
-from app.chats.queries.messages.get_list_by_chat import GetMessagesQuery
-from app.chats.repositories.chats import ChatRepository
-from app.chats.schemas.messages.requests import GetMessagesRequest, SendMessageRequests
+from app.chats.commands.chats.kick_member import KickMemberCommand
+from app.chats.commands.chats.leave import LeaveChatCommand
+from app.chats.commands.chats.update import UpdateChatCommand
+from app.chats.dtos.chats import ChatListItemDTO, ChatPresenceDTO
+from app.chats.dtos.messages import MessageDeliveryStatusDTO
+from app.chats.queries.chats.get_by_id import ChatDetailDTO, GetChatByIdQuery
+from app.chats.queries.chats.get_my_list import GetChatsQuery
+from app.chats.queries.chats.presence import GetChatPresenceQuery, GetMessageDeliveryQuery
+from app.chats.schemas.chats.request import AddMemberRequest, BanRequest, ChangeRoleRequest, CreateChatRequest, CreateChatResponse, GetChatsRequest, UpdateChatRequest
+from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
-from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.jwt_manager import JWTManager
-from app.core.websockets.base import BaseConnectionManager
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(route_class=DishkaRoute)
 
 
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a chat — direct DM or group/channel",
+)
+async def create_chat(
+    request: CreateChatRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> CreateChatResponse:
+    results = await mediator.handle_command(
+        CreateChatCommand(
+            user_jwt_data=user_jwt_data,
+            chat_type=request.chat_type,
+            member_ids=request.member_ids,
+            name=request.name,
+            description=request.description,
+            is_public=request.is_public,
+        )
+    )
+    result = next(iter(results))
+    return CreateChatResponse(chat_id=result.chat_id)
 
-@router.get("/", status_code=status.HTTP_200_OK)
-async def get_my_chats(
-    user_jwt: CurrentUserJWTData,
-    chat_repository: FromDishka[ChatRepository],
-) -> list[ChatDTO]:
-    chats = await chat_repository.get_user_chats(int(user_jwt.id))
-    return [ChatDTO.model_validate(c.to_dict()) for c in chats]
+
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK,
+    summary="List user's chats with unread counts (bulk Redis fetch)",
+)
+async def get_chats(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+    params: GetChatsRequest = Query(...),
+) -> PageResult[ChatListItemDTO]:
+    return await mediator.handle_query(
+        GetChatsQuery(
+            user_jwt_data=user_jwt_data,
+            page=params.page,
+            page_size=params.page_size,
+        )
+    )
+
+
+@router.get(
+    "/{chat_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get chat details with members list",
+)
+async def get_chat(
+    chat_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> ChatDetailDTO:
+    return await mediator.handle_query(
+        GetChatByIdQuery(user_jwt_data=user_jwt_data, chat_id=chat_id)
+    )
+
 
 @router.post(
-    "/{recipient_id}/messages",
-    status_code=status.HTTP_201_CREATED
+    "/{chat_id}/members",
+    status_code=status.HTTP_200_OK,
+    summary="Add a user to a group/channel chat",
 )
-async def send_message(
-    message_request: SendMessageRequests,
-    mediator: FromDishka[BaseMediator],
-    user_jwt: CurrentUserJWTData,
-) -> dict:
-    message_id, *_ = await mediator.handle_command(
-        SendMessageCommand(
-            sender_jwt=user_jwt,
-            recipient_id=message_request.recipient_id,
-            text=message_request.message,
-        )
-    )
-    return {"message_id": message_id}
-
-
-@router.get("/{chat_id}/messages", status_code=status.HTTP_200_OK)
-async def get_messages(
+async def add_member(
     chat_id: int,
-    message_request: GetMessagesRequest,
+    request: AddMemberRequest,
     mediator: FromDishka[BaseMediator],
-    user_jwt: CurrentUserJWTData,
-) -> MessageCursorPage:
-    return await mediator.handle_query(
-        GetMessagesQuery(
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        AddMemberCommand(
+            user_jwt_data=user_jwt_data,
             chat_id=chat_id,
-            user_jwt=user_jwt,
-            limit=message_request.limit,
-            before_id=message_request.before_id,
+            target_user_id=request.user_id,
+            role=request.role,
         )
     )
 
 
-@router.websocket("/ws/{chat_id}")
-@inject
-async def chat_websocket(
+@router.put(
+    "/{chat_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Update chat name / description / avatar",
+)
+async def update_chat(
     chat_id: int,
-    websocket: WebSocket,
-    container: FromDishka[AsyncContainer],
-)  -> None:
+    request: UpdateChatRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        UpdateChatCommand(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+            name=request.name,
+            description=request.description,
+            avatar_url=request.avatar_url,
+        )
+    )
 
-    connection_manager = await container.get(BaseConnectionManager)
-    jwt_manager = await container.get(JWTManager)
 
-    token = websocket.query_params.get("token")
-    if not token:
-        await websocket.close(code=4001)
-        return
+# @router.put(
+#     "/{chat_id}/members/{user_id}/role",
+#     status_code=status.HTTP_200_OK,
+#     summary="Change member role",
+# )
+# async def change_member_role(
+#     chat_id: int,
+#     user_id: int,
+#     request: ChangeRoleRequest,
+#     mediator: FromDishka[BaseMediator],
+#     user_jwt_data: CurrentUserJWTData,
+# ) -> None:
+#     await mediator.handle_command(
+#         ChangeMemberRoleCommand(
+#             user_jwt_data=user_jwt_data,
+#             chat_id=chat_id,
+#             target_user_id=user_id,
+#             new_role=request.role,
+#         )
+#     )
 
-    try:
-        token_data = await jwt_manager.validate_token(token)
-    except Exception:
-        await websocket.close(code=4003)
-        return
 
-    connection_key = f"chat:{chat_id}"
-    await connection_manager.accept_connection(websocket, connection_key)
-    logger.info("WS connected", extra={"chat_id": chat_id, "user": token_data.sub})
-    ratelimit = WebSocketRateLimiter(times=1, seconds=5)
+@router.delete(
+    "/{chat_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Kick member from chat",
+)
+async def remove_member(
+    chat_id: int,
+    user_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        KickMemberCommand(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+            target_user_id=user_id,
+        )
+    )
 
-    try:
-        while True:
-            data = await websocket.receive_json()
-            await ratelimit(websocket)
 
-            event = data.get("event")
-            async with container() as scope:
-                mediator = await scope.get(BaseMediator)
+@router.post(
+    "/{chat_id}/leave",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Leave chat",
+)
+async def leave_chat(
+    chat_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        LeaveChatCommand(user_jwt_data=user_jwt_data, chat_id=chat_id)
+    )
 
-                # if event == "typing":
-                #     await connection_manager.publish(
-                #         connection_id=connection_key,
-                #         payload={"event": "typing", "user_id": token_data.sub, "chat_id": chat_id},
-                #     )
 
-                if event == "read":
-                    message_id = data.get("message_id")
-                    if isinstance(message_id, int):
-                        await mediator.handle_command(
-                            MarkReadCommand(
-                                user_jwt=UserJWTData.create_from_token(token_data),
-                                chat_id=chat_id,
-                                message_id=message_id,
-                            )
-                        )
+@router.post(
+    "/{chat_id}/members/{user_id}/ban",
+    status_code=status.HTTP_200_OK,
+    summary="Ban or unban member",
+)
+async def ban_member(
+    chat_id: int,
+    user_id: int,
+    request: BanRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        BanMemberCommand(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+            target_user_id=user_id,
+            ban=request.ban,
+        )
+    )
 
-    except WebSocketDisconnect:
-        await connection_manager.remove_connection(websocket, connection_key)
-        logger.info("WS disconnected", extra={"chat_id": chat_id, "user": token_data.sub})
+@router.get(
+    "/{chat_id}/presence",
+    status_code=status.HTTP_200_OK,
+    summary="Online status for all chat members",
+)
+async def get_chat_presence(
+    chat_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> ChatPresenceDTO:
+    return await mediator.handle_query(
+        GetChatPresenceQuery(user_jwt_data=user_jwt_data, chat_id=chat_id)
+    )
+
+
+@router.get(
+    "/{chat_id}/messages/{message_id}/delivery",
+    status_code=status.HTTP_200_OK,
+    summary="Delivery status of a specific message",
+)
+async def get_message_delivery(
+    chat_id: int,
+    message_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> MessageDeliveryStatusDTO:
+    return await mediator.handle_query(
+        GetMessageDeliveryQuery(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+            message_id=message_id,
+        )
+    )

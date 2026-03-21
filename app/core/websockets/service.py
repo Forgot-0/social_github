@@ -47,13 +47,13 @@ class ConnectionManager(BaseConnectionManager):
             self.lock_map[key] = asyncio.Lock()
 
         async with self.lock_map[key]:
-            self.connections_map[key].append(websocket)
-        
+            self.connections_map[key].add(websocket)
+
         self._ensure_heartbeat(key)
 
     async def remove_connection(self, websocket: WebSocket, key: str) -> None:
         async with self.lock_map[key]:
-            self.connections_map[key].remove(websocket)
+            self.connections_map[key].discard(websocket)
             if not self.connections_map[key]:
                 del self.connections_map[key]
                 del self.lock_map[key]
@@ -84,12 +84,12 @@ class ConnectionManager(BaseConnectionManager):
                 })
                 await websocket.close()
 
-    async def publish(self, connection_id: str, payload: dict) -> None:
+    async def publish(self, key: str, payload: dict) -> None:
         if self.redis is None:
             raise RuntimeError("Manager not started")
 
         await self.redis.publish(
-            f"ws:{connection_id}",
+            f"ws:{key}",
             orjson.dumps(payload),
         )
 

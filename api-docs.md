@@ -138,6 +138,23 @@
 
 ---
 
+| Method | Path                             | Description                           |
+| ------ | -------------------------------- | ------------------------------------- |
+| GET    | `/chats/`                        | Список чатов текущего пользователя 🔒 |
+| POST   | `/chats/{recipient_id}/messages` | Отправить сообщение пользователю 🔒   |
+| GET    | `/chats/{chat_id}/messages`      | Получить сообщения чата 🔒            |
+| WS     | `/chats/ws/{chat_id}?token=...`  | WebSocket для чата                    |
+
+GET /chats/{chat_id}/messages — это cursor pagination, а не page/page_size.
+
+POST /chats/{recipient_id}/messages создаёт direct message.
+
+WebSocket сейчас поддерживает только событие read.
+
+typing в коде упоминается, но фактически отключён.
+
+recipient_id в route и body дублируется; для понимания API лучше считать его одним и тем же идентификатором.
+
 ## Pagination (везде где список)
 
 Query params: `page` (default 1), `page_size` (1–100, default 20), `sort` (пример: `created_at:desc,username:asc`)
