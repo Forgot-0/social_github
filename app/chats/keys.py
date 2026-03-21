@@ -15,11 +15,11 @@ class ChatKeys:
 
     @staticmethod
     def chat_channel(chat_id: int) -> str:
-        return f"chat:{chat_id}:chat"
+        return f"chat:{chat_id}:channel"
 
     @staticmethod
     def user_channel(user_id) -> str:
-        return f"user:{user_id}:event"
+        return f"user:{user_id}:channel"
 
     @staticmethod
     def rate_limit(user_id: int, action: str) -> str:
