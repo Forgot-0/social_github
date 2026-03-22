@@ -1,7 +1,8 @@
 import asyncio
 import logging
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
+from dishka import AsyncContainer
+from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from fastapi_limiter.depends import WebSocketRateLimiter
 
@@ -15,18 +16,18 @@ from app.core.websockets.base import BaseConnectionManager
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter()
 
 
-@router.websocket("/ws")
+@router.websocket("/ws/")
 @inject
 async def websocket_endpoint(
     websocket: WebSocket,
+    container: FromDishka[AsyncContainer],
     jwt_manager: FromDishka[JWTManager],
     connection_manager: FromDishka[BaseConnectionManager],
-    ws_client_service: FromDishka[ChatWebSocketClientService],
     presence_service: FromDishka[PresenceService],
-    token: str = Query(..., description="JWT access token"),
+    token: str = Query(...),
 ) -> None:
     try:
         token_data: Token = await jwt_manager.validate_token(token)
@@ -52,12 +53,18 @@ async def websocket_endpoint(
         while True:
             try:
                 data = await asyncio.wait_for(websocket.receive_json(), timeout=45.0)
-                await rate_limit(websocket, context_key=data)
             except asyncio.TimeoutError:
                 await presence_service.refresh(user_id)
                 continue
 
-            await ws_client_service.handle_client_event(data=data, user_id=user_id)
+            await rate_limit(websocket, context_key=data)
+
+            async with container() as request_container:
+                ws_client_service = await request_container.get(ChatWebSocketClientService)
+                await ws_client_service.handle_client_event(
+                    data=data,
+                    user_id=user_id,
+                )
 
     except WebSocketDisconnect:
         logger.info("WS disconnected", extra={"user_id": user_id})
