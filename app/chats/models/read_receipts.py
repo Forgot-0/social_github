@@ -16,5 +16,6 @@ class ReadReceipt(BaseModel, DateMixin):
         nullable=False, index=True
     )
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-    last_read_message_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    last_read_message_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+
 

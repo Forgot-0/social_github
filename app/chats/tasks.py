@@ -11,3 +11,4 @@ logger = logging.getLogger(__name__)
 
 def register_chat_tasks(broker: AsyncBroker) -> None:
     ...
+

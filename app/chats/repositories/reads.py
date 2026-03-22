@@ -48,7 +48,7 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
     async def increment_unread_bulk(self, user_ids: list[int], chat_id: int) -> None:
         pipe = self.redis.pipeline()
         for uid in user_ids:
-            pipe.incr(ChatKeys.unread_count(uid, chat_id))
+            pipe.incrby(ChatKeys.unread_count(uid, chat_id))
         await pipe.execute()
 
     async def get_unread_count(self, user_id: int, chat_id: int) -> int:

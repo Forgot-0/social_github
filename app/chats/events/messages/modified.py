@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 
 from app.chats.keys import ChatKeys
-from app.chats.models.message import ModifyMessageEvent
+from app.chats.models.message import ModifiedMessageEvent
 from app.chats.repositories.chat import ChatRepository
 from app.chats.schemas.ws import WSEventType
 from app.core.events.event import BaseEventHandler
@@ -10,11 +10,11 @@ from app.core.websockets.base import BaseConnectionManager
 
 
 @dataclass(frozen=True)
-class ModifiedMessageEventHandler(BaseEventHandler[ModifyMessageEvent, None]):
+class ModifiedMessageEventHandler(BaseEventHandler[ModifiedMessageEvent, None]):
     connection_manager: BaseConnectionManager
     chat_repository: ChatRepository
 
-    async def __call__(self, event: ModifyMessageEvent) -> None:
+    async def __call__(self, event: ModifiedMessageEvent) -> None:
         member_ids = await self.chat_repository.get_member_user_ids(event.chat_id)
         payload = {
             "type": WSEventType.MESSAGE_EDITED,

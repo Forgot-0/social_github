@@ -35,7 +35,7 @@ class MessageType(str, PyEnum):
 
 
 @dataclass(frozen=True)
-class ModifyMessageEvent(BaseEvent):
+class ModifiedMessageEvent(BaseEvent):
     message_id: int
     new_content: str
     chat_id: int
@@ -98,7 +98,7 @@ class Message(BaseModel, DateMixin):
         self.content = new_content
         self.validate_content()
         self.register_event(
-            ModifyMessageEvent(
+            ModifiedMessageEvent(
                 self.id, new_content, self.chat_id
             )
         )

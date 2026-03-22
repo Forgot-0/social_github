@@ -9,7 +9,8 @@ class ChatConfig(BaseConfig):
     MAX_MEMEBERS: int = 100
 
     WS_HEARTBEAT_INTERVAL: int = 30
-    WS_MAX_CONNECTIONS_PER_USER: int = 10
+    WS_MAX_CONNECTIONS_PER_USER: int = 2
+    RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
 
 
 chat_config = ChatConfig()

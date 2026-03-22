@@ -44,11 +44,14 @@ async def websocket_endpoint(
         return
 
     channel_key = ChatKeys.user_channel(user_id)
+    if len(connection_manager.connections_map.get(channel_key, set())) > chat_config.WS_MAX_CONNECTIONS_PER_USER:
+        raise
+
     await connection_manager.accept_connection(websocket, channel_key)
     await presence_service.set_online(user_id)
     logger.info("WS connected", extra={"user_id": user_id})
 
-    rate_limit = WebSocketRateLimiter(chat_config.WS_MAX_CONNECTIONS_PER_USER)
+    rate_limit = WebSocketRateLimiter(chat_config.RATE_LIMIT_MESSAGES_PER_SECOND)
 
     try:
         while True:
