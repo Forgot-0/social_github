@@ -60,7 +60,7 @@ class RegisterCommandHandler(BaseCommandHandler[RegisterCommand, UserDTO]):
 
         await self.session.commit()
         await self.event_bus.publish(user.pull_events())
-        await self.user_repository.invadate_cache()
+        await self.user_repository.invalidate_cache()
 
         user_dto = UserDTO.model_validate(user.to_dict())
         logger.info("Register user", extra={"user": user_dto.model_dump()})

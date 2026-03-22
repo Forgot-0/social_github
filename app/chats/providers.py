@@ -34,6 +34,8 @@ from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.services.delivery import DeliveryTrackingService
 from app.chats.services.presence import PresenceService
+from app.chats.services.ws_client_events import ChatWebSocketClientService
+from app.core.websockets.base import BaseConnectionManager
 from app.core.events.event import EventRegisty
 from app.core.mediators.base import CommandRegisty, QueryRegistry
 
@@ -61,6 +63,19 @@ class ChatModuleProvider(Provider):
     @provide(scope=Scope.APP)
     def delivery_tracking_service(self, redis: Redis) -> DeliveryTrackingService:
         return DeliveryTrackingService(redis=redis)
+
+    @provide
+    def chat_websocket_client_service(
+        self,
+        chat_repository: ChatRepository,
+        connection_manager: BaseConnectionManager,
+        delivery_tracking_service: DeliveryTrackingService,
+    ) -> ChatWebSocketClientService:
+        return ChatWebSocketClientService(
+            chat_repository=chat_repository,
+            connection_manager=connection_manager,
+            delivery_service=delivery_tracking_service,
+        )
 
     chat_handlers = provide_all(
         CreateChatCommandHandler,
@@ -113,7 +128,7 @@ class ChatModuleProvider(Provider):
         return registry
 
     @decorate
-    def register_profile_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
+    def register_chat_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
         event_registry.subscribe(KickedChatMemberEvent, [KickedChatMemberEventHandler])
         event_registry.subscribe(LeavedChatMemberEvent, [LeavedChatMemberEventHandler])
         event_registry.subscribe(DeletedMessageEvent, [DeletedMessageEventHandler])

@@ -44,7 +44,7 @@ class AddContactToProfileCommandHandler(BaseCommandHandler[AddContactToProfileCo
 
         profile.add_contact(command.provider, command.contact)
         await self.session.commit()
-        await self.profile_repository.invadate_cache()
+        await self.profile_repository.invalidate_cache()
 
         logger.info(
             "Add contact profile", extra={

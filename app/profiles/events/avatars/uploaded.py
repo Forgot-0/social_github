@@ -29,7 +29,7 @@ class UploadedAvatarsEventHandler(BaseEventHandler[UploadedAvatarsEvent, None]):
 
         profile.avatars = event.versions # type: ignore
         await self.session.commit()
-        await self.profile_repository.invadate_cache()
+        await self.profile_repository.invalidate_cache()
 
         logger.info(
             "Avatars resize complated", extra={

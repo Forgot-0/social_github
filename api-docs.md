@@ -1,213 +1,1655 @@
-# API Documentation (Frontend Reference)
+# API Documentation — Full Frontend Reference
 
-## Base URL
+## Оглавление
+1. [Общее](#общее)
+2. [Аутентификация](#аутентификация)
+3. [Пользователи](#пользователи)
+4. [Профили](#профили)
+5. [Проекты](#проекты)
+6. [Позиции](#позиции)
+7. [Заявки](#заявки)
+8. [Роли и права](#роли-и-права)
+9. [Сессии](#сессии)
+10. [Чаты](#чаты)
+11. [WebSocket](#websocket)
+12. [Пагинация](#пагинация)
+13. [Формат ошибок](#формат-ошибок)
+14. [Типы и перечисления](#типы-и-перечисления)
+
+---
+
+## Общее
+
+### Base URL
 ```
 /api/v1
 ```
 
-## Auth
+### Аутентификация запросов
+Все защищённые эндпоинты (помечены 🔒) требуют заголовок:
+```
+Authorization: Bearer <access_token>
+```
 
-### Tokens
-- **Access token** — передаётся в заголовке: `Authorization: Bearer <token>`
-- **Refresh token** — хранится в cookie `refresh_token`
-
-### Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/login` | Логин (form-data: `username`, `password`) → `{ access_token }` |
-| POST | `/auth/refresh` | Обновить access token (берёт refresh из cookie) |
-| POST | `/auth/logout` | Выход (инвалидирует refresh token) |
-| POST | `/auth/verifications/email` | Отправить код верификации email (лимит 3/час) |
-| POST | `/auth/verifications/email/verify` | Подтвердить email по токену `{ token }` |
-| POST | `/auth/password-resets` | Отправить код сброса пароля (лимит 3/час) |
-| POST | `/auth/password-resets/confirm` | Сбросить пароль `{ password, password_repeat, token }` |
-| GET | `/auth/oauth/{provider}/authorize` | Получить URL для OAuth (редирект 307) |
-| GET | `/auth/oauth/{provider}/authorize/connect` | Привязать OAuth к существующему юзеру 🔒 |
-| GET | `/auth/oauth/{provider}/callback` | OAuth callback → `{ access_token }` |
+### Форматы ID
+| Сущность | Тип ID |
+|----------|--------|
+| User | integer |
+| Project | integer |
+| Session | integer |
+| Profile | integer |
+| Chat | integer |
+| Message | integer |
+| Position | UUID (string) |
+| Application | UUID (string) |
 
 ---
 
-## Users
+## Аутентификация
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/users/register` | Регистрация `{ username, email, password, password_repeat }` → `UserResponse` |
-| GET | `/users/me` | Текущий юзер 🔒 → `UserResponse` |
-| GET | `/users/` | Список юзеров 🔒 (фильтры: email, username, is_active, is_verified, role_names, ...) |
-| GET | `/users/sessions` | Активные сессии текущего юзера 🔒 |
-| POST | `/users/{user_id}/roles` | Назначить роль юзеру 🔒 `{ role_name }` |
-| DELETE | `/users/{user_id}/roles/{role_name}` | Снять роль 🔒 |
-| POST | `/users/{user_id}/permissions` | Добавить permissions юзеру 🔒 `{ permissions: [str] }` |
-| DELETE | `/users/{user_id}/permissions` | Удалить permissions 🔒 |
+### POST `/auth/login`
+Логин по логину/паролю.
 
-**UserResponse:** `{ id, username, email }`  
-**UserDTO:** `{ id, username, email, is_active, is_verified, roles[], permissions[], sessions[] }`
+**Request** (form-data):
+```
+username: string
+password: string
+```
 
----
+**Response 200:**
+```json
+{
+  "access_token": "eyJ..."
+}
+```
+Refresh token устанавливается в cookie `refresh_token` (httpOnly).
 
-## Profiles
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/profiles/` | Создать профиль 🔒 `{ display_name, bio, skills[], date_birthday }` |
-| GET | `/profiles/` | Список профилей (фильтры: display_name, skills[]) |
-| GET | `/profiles/{id}` | Один профиль → `ProfileDTO` |
-| PUT | `/profiles/{id}` | Обновить профиль 🔒 `{ specialization, display_name, bio, skills[], date_birthday }` |
-| POST | `/profiles/avatar/presign` | Получить presigned URL для загрузки аватара 🔒 |
-| POST | `/profiles/avatar/upload_complete` | Подтвердить загрузку аватара 🔒 |
-| POST | `/profiles/{id}/contacts` | Добавить контакт 🔒 `{ provider, contact }` |
-| DELETE | `/profiles/{id}/{provide_contact}/delete` | Удалить контакт 🔒 |
-
-**ProfileDTO:** `{ id, avatars{}, specialization, display_name, bio, date_birthday, skills[], contacts[] }`
+**Ошибки:** `WRONG_LOGIN_DATA` 400
 
 ---
 
-## Projects
+### POST `/auth/refresh`
+Обновить access token. Берёт refresh token из cookie `refresh_token`.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/projects/` | Создать проект 🔒 `{ name, slug, small_description, description, visibility, tags[], meta_data }` |
-| GET | `/projects/` | Список проектов 🔒 (фильтры: name, slug, tags[]) |
-| GET | `/projects/my` | Мои проекты 🔒 |
-| GET | `/projects/{id}` | Один проект → `ProjectDTO` |
-| PUT | `/projects/{id}` | Обновить проект 🔒 |
-| DELETE | `/projects/{id}` | Удалить (если owner или admin) 🔒 |
-| GET | `/projects/{id}/positions` | Позиции проекта |
-| POST | `/projects/{id}/positions` | Создать позицию 🔒 |
-| POST | `/projects/{id}/invite` | Пригласить участника 🔒 `{ user_id, role_id, permissions_overrides }` |
-| POST | `/projects/{id}/members/accept` | Принять приглашение 🔒 |
-| PUT | `/projects/{id}/members/{user_id}/permissions` | Обновить права участника 🔒 |
+**Response 200:**
+```json
+{
+  "access_token": "eyJ..."
+}
+```
 
-**ProjectDTO:** `{ id, owner_id, name, slug, small_description, full_description, visibility, tags[], meta_data{}, created_at, updated_at, memberships[] }`
+**Ошибки:** `INVALID_TOKEN` 403, `EXPIRED_TOKEN` 400
 
 ---
 
-## Positions
+### POST `/auth/logout`
+Выход — инвалидирует текущий refresh token.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/positions/` | Список позиций (фильтры: project_id, title, required_skills[], is_open, location_type, expected_load) |
-| GET | `/positions/{uuid}` | Одна позиция → `PositionDTO` |
-| PUT | `/positions/{uuid}` | Обновить 🔒 |
-| DELETE | `/positions/{uuid}` | Удалить 🔒 |
-| GET | `/positions/{uuid}/applications` | Заявки на позицию |
-| POST | `/positions/{uuid}/applications` | Подать заявку 🔒 `{ message? }` |
-
-**PositionDTO:** `{ id(uuid), project_id, title, description, responsibilities, required_skills[], is_open, location_type, expected_load }`  
-**location_type:** `remote | onsite | hybrid`  
-**expected_load:** `low | medium | high`
+**Response 200:** `{}`
 
 ---
 
-## Applications
+### POST `/auth/verifications/email`
+Отправить письмо с кодом верификации на email текущего пользователя. 🔒  
+Лимит: 3 запроса в час.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/applications/` | Все заявки (фильтры: project_id, position_id, candidate_id, status) |
-| GET | `/applications/me` | Мои заявки 🔒 |
-| POST | `/applications/{uuid}/approve` | Одобрить 🔒 |
-| POST | `/applications/{uuid}/reject` | Отклонить 🔒 |
-
-**ApplicationDTO:** `{ id(uuid), project_id, position_id, candidate_id, status, message, decided_by, decided_at }`  
-**status:** `pending | accepted | rejected`
+**Response 200:** `{}`
 
 ---
 
-## Roles & Permissions
+### POST `/auth/verifications/email/verify`
+Подтвердить email по токену из письма.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/roles/` | Создать роль 🔒 `{ name, description, security_level, permissions[] }` |
-| GET | `/roles/` | Список ролей 🔒 |
-| POST | `/roles/{name}/permissions` | Добавить permissions к роли 🔒 |
-| DELETE | `/roles/{name}/permissions` | Удалить permissions из роли 🔒 |
-| GET | `/project_roles/` | Список ролей для проектов |
-| POST | `/permissions/` | Создать permission 🔒 `{ name }` |
-| GET | `/permissions/` | Список permissions 🔒 |
-| DELETE | `/permissions/{name}` | Удалить 🔒 |
+**Request:**
+```json
+{
+  "token": "string"
+}
+```
 
----
+**Response 200:** `{}`
 
-## Sessions
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/sessions/` | Список сессий 🔒 (фильтры: user_id, is_active, ...) |
-| DELETE | `/sessions/{id}` | Завершить сессию 🔒 |
+**Ошибки:** `INVALID_TOKEN` 403
 
 ---
 
-| Method | Path                             | Description                           |
-| ------ | -------------------------------- | ------------------------------------- |
-| GET    | `/chats/`                        | Список чатов текущего пользователя 🔒 |
-| POST   | `/chats/{recipient_id}/messages` | Отправить сообщение пользователю 🔒   |
-| GET    | `/chats/{chat_id}/messages`      | Получить сообщения чата 🔒            |
-| WS     | `/chats/ws/{chat_id}?token=...`  | WebSocket для чата                    |
+### POST `/auth/password-resets`
+Отправить письмо со ссылкой сброса пароля.  
+Лимит: 3 запроса в час.
 
-GET /chats/{chat_id}/messages — это cursor pagination, а не page/page_size.
+**Request:**
+```json
+{
+  "email": "string"
+}
+```
 
-POST /chats/{recipient_id}/messages создаёт direct message.
-
-WebSocket сейчас поддерживает только событие read.
-
-typing в коде упоминается, но фактически отключён.
-
-recipient_id в route и body дублируется; для понимания API лучше считать его одним и тем же идентификатором.
-
-## Pagination (везде где список)
-
-Query params: `page` (default 1), `page_size` (1–100, default 20), `sort` (пример: `created_at:desc,username:asc`)
-
-Response: `{ items[], total, page, page_size }`
+**Response 200:** `{}`
 
 ---
 
-## Error Format
+### POST `/auth/password-resets/confirm`
+Установить новый пароль.
+
+**Request:**
+```json
+{
+  "token": "string",
+  "password": "string",
+  "password_repeat": "string"
+}
+```
+
+**Response 200:** `{}`
+
+**Ошибки:** `INVALID_TOKEN` 403, `PASSWORD_MISMATCH` 400
+
+---
+
+### GET `/auth/oauth/{provider}/authorize`
+Получить URL для редиректа на OAuth-провайдера (Google, GitHub и т.п.).
+
+**Response 307:** редирект на страницу авторизации провайдера.
+
+**Ошибки:** `NOT_EXIST_PROVIDER_OAUTH` 400
+
+---
+
+### GET `/auth/oauth/{provider}/authorize/connect` 🔒
+Привязать OAuth-аккаунт к текущему пользователю.
+
+**Response 307:** редирект на страницу авторизации провайдера.
+
+**Ошибки:** `NOT_EXIST_PROVIDER_OAUTH` 400
+
+---
+
+### GET `/auth/oauth/{provider}/callback`
+Callback от OAuth-провайдера (обрабатывается автоматически).
+
+**Response 200:**
+```json
+{
+  "access_token": "eyJ..."
+}
+```
+
+**Ошибки:** `LINKED_ANOTHER_USER_OAUTH` 409, `OAUTH_STATE_NOT_FOUND` 404
+
+---
+
+## Пользователи
+
+### POST `/users/register`
+Регистрация нового пользователя.
+
+**Request:**
+```json
+{
+  "username": "string",
+  "email": "user@example.com",
+  "password": "string",
+  "password_repeat": "string"
+}
+```
+- `username`: 4–100 символов, только `a-zA-Z0-9 ,.'- `
+- `password`: 8–128 символов
+
+**Response 201 — UserResponse:**
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "email": "user@example.com"
+}
+```
+
+**Ошибки:** `DUPLICATE_USER` 409, `PASSWORD_MISMATCH` 400, `VALIDATION_EXCEPTION` 422
+
+---
+
+### GET `/users/me` 🔒
+Данные текущего пользователя.
+
+**Response 200 — UserDTO:**
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "email": "user@example.com",
+  "is_active": true,
+  "is_verified": false,
+  "roles": ["member"],
+  "permissions": ["read:profile"],
+  "sessions": []
+}
+```
+
+---
+
+### GET `/users/` 🔒
+Список пользователей с фильтрами.
+
+**Query params:**
+```
+email: string (partial match)
+username: string (partial match)
+is_active: boolean
+is_verified: boolean
+role_names: string[] (повторяющийся параметр: role_names=admin&role_names=member)
+page: integer (default 1)
+page_size: integer (1–100, default 20)
+sort: string (пример: created_at:desc)
+```
+
+**Response 200 — PageResult\<UserDTO\>:**
+```json
+{
+  "items": [{ ...UserDTO }],
+  "total": 100,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+---
+
+### GET `/users/sessions` 🔒
+Активные сессии текущего пользователя.
+
+**Response 200:**
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "is_active": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+---
+
+### POST `/users/{user_id}/roles` 🔒
+Назначить роль пользователю. Требует права администратора.
+
+**Request:**
+```json
+{
+  "role_name": "admin"
+}
+```
+
+**Response 200:** `{}`
+
+**Ошибки:** `NOT_FOUND_USER` 404, `NOT_FOUND_ROLE` 404
+
+---
+
+### DELETE `/users/{user_id}/roles/{role_name}` 🔒
+Снять роль с пользователя.
+
+**Response 204**
+
+**Ошибки:** `NOT_FOUND_USER` 404, `NOT_FOUND_ROLE` 404
+
+---
+
+### POST `/users/{user_id}/permissions` 🔒
+Добавить permissions пользователю напрямую (override).
+
+**Request:**
+```json
+{
+  "permissions": ["read:chat", "write:message"]
+}
+```
+
+**Response 200:** `{}`
+
+**Ошибки:** `NOT_FOUND_USER` 404, `NOT_FOUND_PERMISSIONS` 404
+
+---
+
+### DELETE `/users/{user_id}/permissions` 🔒
+Удалить permissions у пользователя.
+
+**Request:**
+```json
+{
+  "permissions": ["read:chat"]
+}
+```
+
+**Response 200:** `{}`
+
+---
+
+## Профили
+
+### POST `/profiles/` 🔒
+Создать профиль для текущего пользователя.
+
+**Request:**
+```json
+{
+  "display_name": "John Doe",
+  "bio": "Backend developer",
+  "skills": ["Python", "FastAPI"],
+  "date_birthday": "1990-01-15"
+}
+```
+
+**Response 201 — ProfileDTO:**
+```json
+{
+  "id": 1,
+  "avatars": {
+    "small": "https://...",
+    "medium": "https://..."
+  },
+  "specialization": null,
+  "display_name": "John Doe",
+  "bio": "Backend developer",
+  "date_birthday": "1990-01-15",
+  "skills": ["Python", "FastAPI"],
+  "contacts": []
+}
+```
+
+---
+
+### GET `/profiles/`
+Список профилей.
+
+**Query params:**
+```
+display_name: string (partial match)
+skills: string[] (повторяющийся параметр)
+page: integer
+page_size: integer
+sort: string
+```
+
+**Response 200 — PageResult\<ProfileDTO\>**
+
+---
+
+### GET `/profiles/{id}`
+Один профиль.
+
+**Response 200 — ProfileDTO**
+
+**Ошибки:** `NOT_FOUND_PROFILE` 404
+
+---
+
+### PUT `/profiles/{id}` 🔒
+Обновить профиль. Только владелец.
+
+**Request:**
+```json
+{
+  "specialization": "Backend Engineer",
+  "display_name": "John Doe",
+  "bio": "string",
+  "skills": ["Python"],
+  "date_birthday": "1990-01-15"
+}
+```
+Все поля опциональны.
+
+**Response 200 — ProfileDTO**
+
+**Ошибки:** `NOT_FOUND_PROFILE` 404, `ACCESS_DENIED` 403
+
+---
+
+### POST `/profiles/avatar/presign` 🔒
+Получить presigned URL для загрузки аватара напрямую в S3/MinIO.
+
+**Response 200:**
+```json
+{
+  "url": "https://storage.example.com/bucket",
+  "fields": {
+    "key": "avatars/user_1/avatar.jpg",
+    "Content-Type": "image/jpeg",
+    "policy": "...",
+    "x-amz-signature": "..."
+  }
+}
+```
+
+**Использование:** отправить multipart/form-data POST на `url`, включив все `fields` + файл под ключом `file`.
+
+---
+
+### POST `/profiles/avatar/upload_complete` 🔒
+Уведомить сервер об успешной загрузке аватара.
+
+**Response 200:** `{}`
+
+---
+
+### POST `/profiles/{id}/contacts` 🔒
+Добавить контакт к профилю.
+
+**Request:**
+```json
+{
+  "provider": "github",
+  "contact": "https://github.com/username"
+}
+```
+
+**Response 201:** `{}`
+
+---
+
+### DELETE `/profiles/{id}/{provide_contact}/delete` 🔒
+Удалить контакт из профиля.
+
+**Response 204**
+
+---
+
+## Проекты
+
+### POST `/projects/` 🔒
+Создать проект.
+
+**Request:**
+```json
+{
+  "name": "My Project",
+  "slug": "my-project",
+  "small_description": "Short description",
+  "description": "Full description in markdown",
+  "visibility": "public",
+  "tags": ["python", "web"],
+  "meta_data": {}
+}
+```
+- `visibility`: `public | private`
+
+**Response 201 — ProjectDTO:**
+```json
+{
+  "id": 1,
+  "owner_id": 1,
+  "name": "My Project",
+  "slug": "my-project",
+  "small_description": "Short description",
+  "full_description": "Full description in markdown",
+  "visibility": "public",
+  "tags": ["python", "web"],
+  "meta_data": {},
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z",
+  "memberships": []
+}
+```
+
+---
+
+### GET `/projects/` 🔒
+Список проектов.
+
+**Query params:**
+```
+name: string
+slug: string
+tags: string[] (повторяющийся параметр)
+page: integer
+page_size: integer
+sort: string
+```
+
+**Response 200 — PageResult\<ProjectDTO\>**
+
+---
+
+### GET `/projects/my` 🔒
+Проекты, в которых текущий пользователь является участником.
+
+**Response 200 — PageResult\<ProjectDTO\>**
+
+---
+
+### GET `/projects/{id}`
+Один проект.
+
+**Response 200 — ProjectDTO**
+
+**Ошибки:** `NOT_FOUND_PROJECT` 404
+
+---
+
+### PUT `/projects/{id}` 🔒
+Обновить проект. Требует роль owner или admin в проекте.
+
+**Request:** те же поля, что и при создании; все опциональны.
+
+**Response 200 — ProjectDTO**
+
+---
+
+### DELETE `/projects/{id}` 🔒
+Удалить проект. Только owner или admin.
+
+**Response 204**
+
+**Ошибки:** `NOT_FOUND_PROJECT` 404, `ACCESS_DENIED` 403
+
+---
+
+### GET `/projects/{id}/positions`
+Позиции проекта.
+
+**Response 200 — PageResult\<PositionDTO\>**
+
+---
+
+### POST `/projects/{id}/positions` 🔒
+Создать позицию в проекте.
+
+**Request:** см. [Позиции → POST `/positions/`](#позиции)
+
+**Response 201 — PositionDTO**
+
+---
+
+### POST `/projects/{id}/invite` 🔒
+Пригласить участника в проект.
+
+**Request:**
+```json
+{
+  "user_id": 5,
+  "role_id": 2,
+  "permissions_overrides": ["write:positions"]
+}
+```
+
+**Response 200:** `{}`
+
+---
+
+### POST `/projects/{id}/members/accept` 🔒
+Принять приглашение в проект (текущий пользователь).
+
+**Response 200:** `{}`
+
+---
+
+### PUT `/projects/{id}/members/{user_id}/permissions` 🔒
+Обновить права конкретного участника.
+
+**Request:**
+```json
+{
+  "permissions_overrides": ["write:positions", "read:applications"]
+}
+```
+
+**Response 200:** `{}`
+
+---
+
+## Позиции
+
+### GET `/positions/`
+Список позиций с фильтрами.
+
+**Query params:**
+```
+project_id: integer
+title: string (partial match)
+required_skills: string[] (повторяющийся параметр)
+is_open: boolean
+location_type: remote | onsite | hybrid
+expected_load: low | medium | high
+page: integer
+page_size: integer
+sort: string
+```
+
+**Response 200 — PageResult\<PositionDTO\>:**
+```json
+{
+  "items": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "project_id": 1,
+      "title": "Backend Developer",
+      "description": "We're looking for...",
+      "responsibilities": "You will...",
+      "required_skills": ["Python", "PostgreSQL"],
+      "is_open": true,
+      "location_type": "remote",
+      "expected_load": "high"
+    }
+  ],
+  "total": 10,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+---
+
+### GET `/positions/{uuid}`
+Одна позиция.
+
+**Response 200 — PositionDTO**
+
+---
+
+### PUT `/positions/{uuid}` 🔒
+Обновить позицию.
+
+**Request:** те же поля, что и PositionDTO (все опциональны).
+
+**Response 200 — PositionDTO**
+
+---
+
+### DELETE `/positions/{uuid}` 🔒
+Удалить позицию.
+
+**Response 204**
+
+---
+
+### GET `/positions/{uuid}/applications`
+Заявки на позицию.
+
+**Response 200 — PageResult\<ApplicationDTO\>**
+
+---
+
+### POST `/positions/{uuid}/applications` 🔒
+Подать заявку на позицию.
+
+**Request:**
+```json
+{
+  "message": "I'd like to join because..."
+}
+```
+Поле `message` опционально.
+
+**Response 201 — ApplicationDTO**
+
+---
+
+## Заявки
+
+### GET `/applications/`
+Все заявки (для администраторов проектов).
+
+**Query params:**
+```
+project_id: integer
+position_id: UUID
+candidate_id: integer
+status: pending | accepted | rejected
+page: integer
+page_size: integer
+```
+
+**Response 200 — PageResult\<ApplicationDTO\>:**
+```json
+{
+  "items": [
+    {
+      "id": "550e8400-...",
+      "project_id": 1,
+      "position_id": "550e8400-...",
+      "candidate_id": 5,
+      "status": "pending",
+      "message": "I'd like to join...",
+      "decided_by": null,
+      "decided_at": null
+    }
+  ],
+  "total": 3,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+---
+
+### GET `/applications/me` 🔒
+Заявки текущего пользователя.
+
+**Response 200 — PageResult\<ApplicationDTO\>**
+
+---
+
+### POST `/applications/{uuid}/approve` 🔒
+Одобрить заявку. Требует права в проекте.
+
+**Response 200 — ApplicationDTO**
+
+---
+
+### POST `/applications/{uuid}/reject` 🔒
+Отклонить заявку.
+
+**Response 200 — ApplicationDTO**
+
+---
+
+## Роли и права
+
+### POST `/roles/` 🔒
+Создать роль.
+
+**Request:**
+```json
+{
+  "name": "moderator",
+  "description": "Can moderate content",
+  "security_level": 2,
+  "permissions": ["read:chat", "delete:message"]
+}
+```
+
+**Response 201:** `{}`
+
+**Ошибки:** `DUPLICATE_ROLE` 409, `INVALID_ROLE_NAME` 400
+
+---
+
+### GET `/roles/` 🔒
+Список ролей.
+
+**Response 200:**
+```json
+[
+  {
+    "name": "admin",
+    "description": "Administrator",
+    "security_level": 5,
+    "permissions": ["read:all", "write:all"]
+  }
+]
+```
+
+---
+
+### POST `/roles/{name}/permissions` 🔒
+Добавить permissions к роли.
+
+**Request:**
+```json
+{
+  "permissions": ["delete:message"]
+}
+```
+
+**Response 200:** `{}`
+
+---
+
+### DELETE `/roles/{name}/permissions` 🔒
+Удалить permissions из роли.
+
+**Request:**
+```json
+{
+  "permissions": ["delete:message"]
+}
+```
+
+**Response 200:** `{}`
+
+---
+
+### GET `/project_roles/`
+Список ролей для проектов.
+
+**Response 200:**
+```json
+[
+  {
+    "id": 1,
+    "name": "owner",
+    "permissions": ["write:all"]
+  }
+]
+```
+
+---
+
+### POST `/permissions/` 🔒
+Создать permission.
+
+**Request:**
+```json
+{
+  "name": "delete:message"
+}
+```
+
+**Response 201:** `{}`
+
+---
+
+### GET `/permissions/` 🔒
+Список всех permissions.
+
+**Response 200:**
+```json
+[
+  { "name": "read:chat" },
+  { "name": "write:message" }
+]
+```
+
+---
+
+### DELETE `/permissions/{name}` 🔒
+Удалить permission.
+
+**Response 204**
+
+**Ошибки:** `PROTECTED_PERMISSION` 409
+
+---
+
+## Сессии
+
+### GET `/sessions/` 🔒
+Список сессий (администраторский эндпоинт).
+
+**Query params:**
+```
+user_id: integer
+is_active: boolean
+page: integer
+page_size: integer
+```
+
+**Response 200 — PageResult\<SessionDTO\>:**
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+---
+
+### DELETE `/sessions/{id}` 🔒
+Завершить сессию (logout конкретного устройства).
+
+**Response 204**
+
+**Ошибки:** `NOT_FOUND_OR_INACTIVE_SESSION` 400
+
+---
+
+## Чаты
+
+### POST `/chats/` 🔒
+Создать чат — direct (1:1) или группу.
+
+**Request:**
+```json
+{
+  "chat_type": "direct",
+  "member_ids": [5],
+  "name": null,
+  "description": null,
+  "is_public": false
+}
+```
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `chat_type` | `direct \| group \| channel` | Тип чата |
+| `member_ids` | `integer[]` | Для `direct` — ровно 1 ID; для `group` — до 99 ID |
+| `name` | `string \| null` | Название (обязательно для group/channel) |
+| `description` | `string \| null` | Описание |
+| `is_public` | `boolean` | Публичная группа (можно найти) |
+
+**Response 201:**
+```json
+{
+  "chat_id": 42
+}
+```
+
+**Ошибки:** `DIRECT_CHAT_EXISTS` 409, `MEMBER_LIMIT_EXCEEDED` 400
+
+---
+
+### GET `/chats/` 🔒
+Список чатов текущего пользователя, отсортированных по активности.
+
+**Query params:**
+```
+page: integer (default 1)
+page_size: integer (1–100, default 20)
+```
+
+**Response 200 — PageResult\<ChatListItemDTO\>:**
+```json
+{
+  "items": [
+    {
+      "id": 42,
+      "type": "direct",
+      "name": null,
+      "description": null,
+      "avatar_url": null,
+      "is_public": false,
+      "created_by": 1,
+      "last_activity_at": "2024-01-15T10:30:00Z",
+      "unread_count": 3,
+      "member_count": 2
+    }
+  ],
+  "total": 5,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+---
+
+### GET `/chats/{chat_id}` 🔒
+Детальная информация о чате со списком участников.
+
+**Response 200 — ChatDetailDTO:**
+```json
+{
+  "id": 42,
+  "type": "group",
+  "name": "Team Chat",
+  "description": "Our team channel",
+  "avatar_url": "https://...",
+  "is_public": false,
+  "created_by": 1,
+  "members": [
+    {
+      "user_id": 1,
+      "role": "owner",
+      "is_muted": false
+    },
+    {
+      "user_id": 5,
+      "role": "member",
+      "is_muted": false
+    }
+  ],
+  "unread_count": 0
+}
+```
+
+**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403
+
+---
+
+### PUT `/chats/{chat_id}` 🔒
+Обновить название, описание или аватар чата. Требует роль `admin` или `owner`.
+
+**Request:**
+```json
+{
+  "name": "New Name",
+  "description": "New description",
+  "avatar_url": "https://..."
+}
+```
+Все поля опциональны. `null` не меняет значение, поле просто не передаётся.
+
+**Response 200:** `{}`
+
+**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### POST `/chats/{chat_id}/members` 🔒
+Добавить пользователя в чат. Требует роль `admin` или `owner`.
+
+**Request:**
+```json
+{
+  "user_id": 7,
+  "role": "member"
+}
+```
+- `role`: `owner | admin | member | viewer` (default `member`)
+
+**Response 200:** `{}`
+
+**Ошибки:** `NOT_FOUND_CHAT` 404, `ALREADY_CHAT_MEMBER` 409, `MEMBER_LIMIT_EXCEEDED` 400, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### DELETE `/chats/{chat_id}/members/{user_id}` 🔒
+Выгнать участника из чата. Требует роль `admin` или `owner`; нельзя кикнуть пользователя с более высокой ролью.
+
+**Response 204**
+
+**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### POST `/chats/{chat_id}/leave` 🔒
+Покинуть чат. Owner может покинуть чат только если он единственный участник.
+
+**Response 204**
+
+**Ошибки:** `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### POST `/chats/{chat_id}/members/{user_id}/ban` 🔒
+Забанить или разбанить участника. Требует роль `admin` или `owner`.
+
+**Request:**
+```json
+{
+  "ban": true
+}
+```
+- `ban: true` — заблокировать; `ban: false` — разблокировать
+
+**Response 200:** `{}`
+
+**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### GET `/chats/{chat_id}/presence` 🔒
+Онлайн-статус всех участников чата.
+
+**Response 200 — ChatPresenceDTO:**
+```json
+{
+  "chat_id": 42,
+  "members": [
+    { "user_id": 1, "is_online": true },
+    { "user_id": 5, "is_online": false }
+  ],
+  "online_count": 1
+}
+```
+
+**Ошибки:** `NOT_CHAT_MEMBER` 403
+
+---
+
+### GET `/chats/{chat_id}/messages` 🔒
+Сообщения чата — cursor-based пагинация (от новых к старым).
+
+**Query params:**
+```
+limit: integer (default 30, max 100)
+before_id: integer | null — загрузить сообщения старше этого ID
+```
+
+**Response 200 — MessageCursorPage:**
+```json
+{
+  "items": [
+    {
+      "id": 101,
+      "chat_id": 42,
+      "author_id": 1,
+      "type": "text",
+      "content": "Hello!",
+      "reply_to_id": null,
+      "media_url": null,
+      "is_deleted": false,
+      "is_edited": false,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "next_cursor": 95,
+  "has_more": true,
+  "read_cursors": {
+    "1": 101,
+    "5": 98
+  }
+}
+```
+
+| Поле | Описание |
+|------|----------|
+| `next_cursor` | ID последнего сообщения для следующего запроса (`before_id=next_cursor`) |
+| `has_more` | Есть ли ещё сообщения |
+| `read_cursors` | Словарь `{ user_id: last_read_message_id }` — кто до какого сообщения прочитал |
+
+**Паттерн загрузки истории:**
+```
+// Первая загрузка
+GET /chats/42/messages?limit=30
+
+// Подгрузка следующей страницы
+GET /chats/42/messages?limit=30&before_id={next_cursor из предыдущего ответа}
+```
+
+**Ошибки:** `NOT_CHAT_MEMBER` 403
+
+---
+
+### POST `/chats/{chat_id}/messages` 🔒
+Отправить сообщение в чат.
+
+**Request:**
+```json
+{
+  "content": "Hello, world!",
+  "reply_to_id": null,
+  "message_type": "text"
+}
+```
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `content` | `string` | Текст сообщения (max 4096 символов) |
+| `reply_to_id` | `integer \| null` | ID сообщения, на которое отвечаем |
+| `message_type` | `text \| image \| file \| reply` | Тип (default `text`) |
+
+**Response 201:**
+```json
+{
+  "message_id": 102,
+  "chat_id": 42,
+  "created_at": "2024-01-15T10:31:00Z"
+}
+```
+
+**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403, `MESSAGE_TOO_LONG` 400
+
+---
+
+### PUT `/chats/{chat_id}/messages/{message_id}` 🔒
+Редактировать сообщение. Только автор сообщения.
+
+**Request:**
+```json
+{
+  "new_content": "Edited text"
+}
+```
+
+**Response 200:** `{}`
+
+**Ошибки:** `NOT_FOUND_MESSAGE` 404, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### DELETE `/chats/{chat_id}/messages/{message_id}` 🔒
+Удалить сообщение. Автор может удалить своё; `admin`/`owner` — любое.
+
+**Response 204**
+
+**Ошибки:** `NOT_FOUND_MESSAGE` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### POST `/chats/{chat_id}/messages/{message_id}/read` 🔒
+Отметить сообщения прочитанными вплоть до указанного ID.
+
+**Request:** тело пустое, `message_id` в URL.
+
+**Response 200:** `{}`
+
+---
+
+### GET `/chats/{chat_id}/messages/{message_id}/delivery` 🔒
+Статус доставки сообщения (доставлено ли на устройства участников).
+
+**Response 200 — MessageDeliveryStatusDTO:**
+```json
+{
+  "message_id": 102,
+  "delivered_to": {
+    "1": true,
+    "5": false
+  }
+}
+```
+
+**Ошибки:** `NOT_CHAT_MEMBER` 403
+
+---
+
+## WebSocket
+
+### Подключение
+
+```
+WS /api/v1/chats/ws?token=<access_token>
+```
+
+Одно соединение на пользователя получает **все** события по всем его чатам.  
+При невалидном токене сервер закрывает соединение с кодом `4001`.
+
+---
+
+### Формат всех серверных событий
+
+```json
+{
+  "type": "event_type",
+  "chat_id": 42,
+  "payload": { ... }
+}
+```
+
+---
+
+### События от сервера к клиенту
+
+#### `new_message`
+Новое сообщение в чате.
+
+```json
+{
+  "type": "new_message",
+  "chat_id": 42,
+  "payload": {
+    "id": 103,
+    "chat_id": 42,
+    "author_id": 5,
+    "content": "Hey!",
+    "created_at": "2024-01-15T10:35:00Z",
+    "is_edited": false,
+    "reply_to_id": null
+  }
+}
+```
+
+#### `message_deleted`
+Сообщение удалено.
+
+```json
+{
+  "type": "message_deleted",
+  "chat_id": 42,
+  "payload": {
+    "message_id": 101
+  }
+}
+```
+
+#### `message_edited`
+Сообщение отредактировано.
+
+```json
+{
+  "type": "message_edited",
+  "chat_id": 42,
+  "payload": {
+    "message_id": 101,
+    "content": "Updated text"
+  }
+}
+```
+
+#### `messages_read`
+Участник прочитал сообщения.
+
+```json
+{
+  "type": "messages_read",
+  "chat_id": 42,
+  "payload": {
+    "user_id": 5,
+    "last_read_message_id": 103
+  }
+}
+```
+
+#### `member_joined`
+Новый участник вошёл в чат.
+
+```json
+{
+  "type": "member_joined",
+  "chat_id": 42,
+  "payload": {
+    "user_id": 7
+  }
+}
+```
+
+#### `member_left`
+Участник покинул чат.
+
+```json
+{
+  "type": "member_left",
+  "chat_id": 42,
+  "payload": {
+    "user_id": 5
+  }
+}
+```
+
+#### `member_kick`
+Участник выгнан из чата.
+
+```json
+{
+  "type": "member_kick",
+  "chat_id": 42,
+  "payload": {
+    "user_id": 5,
+    "kicked_by": 1
+  }
+}
+```
+
+#### `typing_start`
+Участник начал печатать.
+
+```json
+{
+  "type": "typing_start",
+  "chat_id": 42,
+  "payload": {
+    "user_id": 5,
+    "ts": "2024-01-15T10:35:00Z"
+  }
+}
+```
+
+#### `typing_stop`
+Участник перестал печатать.
+
+```json
+{
+  "type": "typing_stop",
+  "chat_id": 42,
+  "payload": {
+    "user_id": 5,
+    "ts": "2024-01-15T10:35:00Z"
+  }
+}
+```
+
+#### `ping`
+Heartbeat от сервера (каждые ~30 секунд). Отвечать не нужно.
+
+```json
+{
+  "type": "ping",
+  "ts": "2024-01-15T10:35:00Z"
+}
+```
+
+---
+
+### События от клиента к серверу
+
+Клиент отправляет JSON через WebSocket-соединение:
+
+```json
+{
+  "type": "event_type",
+  "chat_id": 42,
+  "payload": { ... }
+}
+```
+
+#### Отправить индикатор набора текста
+```json
+{
+  "type": "typing_start",
+  "chat_id": 42,
+  "payload": {}
+}
+```
+
+#### Остановить индикатор набора текста
+```json
+{
+  "type": "typing_stop",
+  "chat_id": 42,
+  "payload": {}
+}
+```
+
+#### Подтвердить доставку сообщения
+```json
+{
+  "type": "new_message",
+  "chat_id": 42,
+  "payload": {
+    "message_id": 103
+  }
+}
+```
+
+---
+
+### WS коды закрытия
+
+| Код | Причина |
+|-----|---------|
+| `4001` | Невалидный или истёкший токен |
+| `4029` | Слишком много соединений от пользователя |
+
+---
+
+### Типичная WS-логика на клиенте
+
+```javascript
+// 1. Подключение
+const ws = new WebSocket(`wss://api.example.com/api/v1/chats/ws?token=${accessToken}`);
+
+// 2. Получение событий
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  switch (data.type) {
+    case 'new_message':
+      addMessage(data.chat_id, data.payload);
+      // подтвердить доставку
+      ws.send(JSON.stringify({
+        type: 'new_message',
+        chat_id: data.chat_id,
+        payload: { message_id: data.payload.id }
+      }));
+      break;
+    case 'message_deleted':
+      removeMessage(data.chat_id, data.payload.message_id);
+      break;
+    case 'message_edited':
+      updateMessage(data.chat_id, data.payload.message_id, data.payload.content);
+      break;
+    case 'messages_read':
+      updateReadCursor(data.chat_id, data.payload.user_id, data.payload.last_read_message_id);
+      break;
+    case 'typing_start':
+      showTypingIndicator(data.chat_id, data.payload.user_id);
+      break;
+    case 'typing_stop':
+      hideTypingIndicator(data.chat_id, data.payload.user_id);
+      break;
+    case 'ping':
+      // ничего не делать
+      break;
+  }
+};
+
+// 3. Переподключение при разрыве
+ws.onclose = (event) => {
+  if (event.code !== 4001) {
+    // переподключиться через 2 секунды
+    setTimeout(connect, 2000);
+  }
+};
+```
+
+---
+
+## Пагинация
+
+Все эндпоинты, возвращающие списки, поддерживают:
+
+**Query params:**
+```
+page: integer (default 1, min 1)
+page_size: integer (default 20, min 1, max 100)
+sort: string (формат: field:direction, например created_at:desc,username:asc)
+```
+
+**Response envelope:**
+```json
+{
+  "items": [],
+  "total": 100,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+> **Исключение:** `GET /chats/{chat_id}/messages` использует cursor-based пагинацию — параметры `before_id` и `limit` вместо `page`/`page_size`.
+
+---
+
+## Формат ошибок
 
 ```json
 {
   "error": {
     "code": "ERROR_CODE",
-    "message": "Human readable",
+    "message": "Human-readable description",
     "detail": {}
   },
   "status": 400,
-  "request_id": "<uuid>",
-  "timestamp": "<timestamp>"
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": 1705315800.123
 }
 ```
 
-### Коды ошибок
+### Полный список кодов ошибок
 
-| Code | Status | Когда |
-|------|--------|-------|
-| `WRONG_LOGIN_DATA` | 400 | Неверный логин/пароль |
-| `INVALID_TOKEN` | 403 | Токен невалиден |
+| Code | HTTP Status | Когда возникает |
+|------|-------------|-----------------|
+| `WRONG_LOGIN_DATA` | 400 | Неверный логин или пароль |
+| `INVALID_TOKEN` | 403 | Токен невалиден (подделан или не существует) |
 | `EXPIRED_TOKEN` | 400 | Токен истёк |
-| `PASSWORD_MISMATCH` | 400 | Пароли не совпадают |
-| `DUPLICATE_USER` | 409 | Юзер уже существует |
-| `DUPLICATE_ROLE` | 409 | Роль уже существует |
-| `NOT_FOUND_USER` | 404 | Юзер не найден |
+| `PASSWORD_MISMATCH` | 400 | `password` и `password_repeat` не совпадают |
+| `DUPLICATE_USER` | 409 | Пользователь с таким email/username уже существует |
+| `DUPLICATE_ROLE` | 409 | Роль с таким именем уже существует |
+| `NOT_FOUND_USER` | 404 | Пользователь не найден |
 | `NOT_FOUND_ROLE` | 404 | Роль не найдена |
-| `NOT_FOUND_PERMISSIONS` | 404 | Permissions не найдены |
+| `NOT_FOUND_PERMISSIONS` | 404 | Один или несколько permissions не найдены |
 | `NOT_FOUND_PROFILE` | 404 | Профиль не найден |
 | `NOT_FOUND_PROJECT` | 404 | Проект не найден |
-| `NOT_FOUND_OR_INACTIVE_SESSION` | 400/404 | Сессия не найдена или неактивна |
-| `ACCESS_DENIED` | 403 | Нет прав (detail содержит нужные permissions) |
-| `PROTECTED_PERMISSION` | 409 | Permission защищён от изменений |
-| `LINKED_ANOTHER_USER_OAUTH` | 409 | OAuth уже привязан к другому юзеру |
-| `OAUTH_STATE_NOT_FOUND` | 404 | OAuth state не найден |
-| `NOT_EXIST_PROVIDER_OAUTH` | 400 | Провайдер OAuth не существует |
-| `INVALID_ROLE_NAME` | 400 | Недопустимое имя роли |
-| `VALIDATION_EXCEPTION` | 422 | Ошибка валидации (detail — массив с loc/msg/type) |
+| `NOT_FOUND_OR_INACTIVE_SESSION` | 400 | Сессия не найдена или уже завершена |
+| `NOT_FOUND_CHAT` | 404 | Чат не найден |
+| `NOT_FOUND_MESSAGE` | 404 | Сообщение не найдено |
+| `NOT_CHAT_MEMBER` | 403 | Пользователь не является участником чата |
+| `CHAT_ACCESS_DENIED` | 403 | Недостаточно прав в чате (нужна роль выше) |
+| `ALREADY_CHAT_MEMBER` | 409 | Пользователь уже состоит в этом чате |
+| `DIRECT_CHAT_EXISTS` | 409 | Direct-чат с этим пользователем уже существует |
+| `MEMBER_LIMIT_EXCEEDED` | 400 | Достигнут лимит участников чата (100) |
+| `MESSAGE_TOO_LONG` | 400 | Сообщение превышает 4096 символов |
+| `ACCESS_DENIED` | 403 | Нет системных прав (detail содержит нужные permissions) |
+| `PROTECTED_PERMISSION` | 409 | Permission защищён от изменения или удаления |
+| `LINKED_ANOTHER_USER_OAUTH` | 409 | OAuth-аккаунт уже привязан к другому пользователю |
+| `OAUTH_STATE_NOT_FOUND` | 404 | OAuth state устарел или не существует |
+| `NOT_EXIST_PROVIDER_OAUTH` | 400 | Провайдер OAuth не поддерживается |
+| `INVALID_ROLE_NAME` | 400 | Имя роли содержит недопустимые символы |
+| `VALIDATION_EXCEPTION` | 422 | Ошибка валидации входных данных |
+| `INTERNAL_EXCEPTION` | 500 / 503 | Внутренняя ошибка сервера |
+
+> При ошибке `VALIDATION_EXCEPTION` поле `detail` содержит массив:
+> ```json
+> [{ "loc": ["body", "email"], "msg": "value is not a valid email address", "type": "value_error.email" }]
+> ```
 
 ---
 
-## Notes
+## Типы и перечисления
 
-- 🔒 = требует `Authorization: Bearer <access_token>`
-- Username: 4–100 символов, только `a-zA-Z0-9 ,.'- `
-- Password: 8–128 символов
-- Position ID и Application ID — **UUID**, User/Project/Session ID — **integer**
-- Avatar upload: сначала `/presign` → загрузка на S3 → `/upload_complete`
+### ChatType
+```
+direct   — личный чат (2 участника, создаётся один раз)
+group    — групповой чат (до 100 участников)
+channel  — канал (только владелец/admin пишут) НЕРЕАЛИЗОВАНО
+```
+
+### MemberRole (роли в чате)
+```
+owner   — создатель, все права
+admin   — управление участниками, редактирование чата
+member  — чтение и отправка сообщений
+viewer  — только чтение
+```
+
+**Матрица прав участников чата:**
+
+| Действие | viewer | member | admin | owner |
+|----------|--------|--------|-------|-------|
+| Читать сообщения | ✓ | ✓ | ✓ | ✓ |
+| Отправлять сообщения | — | ✓ | ✓ | ✓ |
+| Редактировать своё сообщение | — | ✓ | ✓ | ✓ |
+| Удалять своё сообщение | — | ✓ | ✓ | ✓ |
+| Удалять любое сообщение | — | — | ✓ | ✓ |
+| Закреплять сообщения | — | — | ✓ | ✓ |
+| Добавлять участников | — | — | ✓ | ✓ |
+| Удалять участников | — | — | ✓ | ✓ |
+| Банить участников | — | — | ✓ | ✓ |
+| Редактировать чат (название/описание) | — | — | ✓ | ✓ |
+| Удалить чат | — | — | — | ✓ |
+| Менять роли участников | — | — | — | ✓ |
+
+### MessageType
+```
+text    — обычное текстовое сообщение
+image   — изображение (content = подпись, media_url = ссылка) НЕРЕАЛИЗОВАНО
+file    — файл (content = имя файла, media_url = ссылка) НЕРЕАЛИЗОВАНО
+reply   — ответ на сообщение (reply_to_id обязателен)
+system  — системное сообщение (автоматическое, не от пользователя)
+```
+
+### LocationType (для позиций)
+```
+remote   — удалённая работа
+onsite   — в офисе
+hybrid   — гибридный формат
+```
+
+### ExpectedLoad (для позиций)
+```
+low      — частичная занятость
+medium   — средняя нагрузка
+high     — полная занятость
+```
+
+### ApplicationStatus
+```
+pending   — ожидает рассмотрения
+accepted  — принята
+rejected  — отклонена
+```
+
+### ProjectVisibility
+```
+public   — виден всем
+private  — только участникам
+```

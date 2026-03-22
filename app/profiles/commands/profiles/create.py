@@ -45,7 +45,7 @@ class CreateProfileCommandHanler(BaseCommandHandler[CreateProfileCommand, None])
         )
         await self.profile_repository.create(profile)
         await self.session.commit()
-        await self.profile_repository.invadate_cache()
+        await self.profile_repository.invalidate_cache()
 
         logger.info(
             "Profile create", extra={

@@ -28,7 +28,7 @@ class UpdateProfileAvatrCommandHandler(BaseCommandHandler[UpdateProfileAvatrComm
                 "key_base": command.key_base
             }
         )
-        await self.profile_repository.invadate_cache()
+        await self.profile_repository.invalidate_cache()
 
         logger.info(
             "Start proccess avatar resize", extra={

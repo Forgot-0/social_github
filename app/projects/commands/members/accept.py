@@ -34,6 +34,6 @@ class AcceptInviteCommandHandler(BaseCommandHandler[AcceptInviteCommand, None]):
 
         await self.session.commit()
         await self.event_bus.publish(membership.pull_events())
-        await self.project_repository.invadate_cache()
+        await self.project_repository.invalidate_cache()
 
         logger.info("Invite accepted", extra={"project_id": command.project_id, "user_id": user_id})

@@ -70,8 +70,8 @@ class UpdatePositionCommandHandler(BaseCommandHandler[UpdatePositionCommand, Non
         await self.session.commit()
         await self.event_bus.publish(project.pull_events())
 
-        await self.position_repository.invadate_cache()
-        await self.project_repository.invadate_cache()
+        await self.position_repository.invalidate_cache()
+        await self.project_repository.invalidate_cache()
 
         logger.info(
             "Position updated",

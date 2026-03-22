@@ -66,8 +66,8 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
 
         await self.event_bus.publish(project.pull_events())
 
-        await self.position_repository.invadate_cache()
-        await self.project_repository.invadate_cache()
+        await self.position_repository.invalidate_cache()
+        await self.project_repository.invalidate_cache()
 
         logger.info(
             "Create new position", extra={

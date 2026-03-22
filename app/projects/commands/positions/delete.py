@@ -47,8 +47,8 @@ class DeletePositionCommandHandler(BaseCommandHandler[DeletePositionCommand, Non
         position.soft_delete()
         await self.session.commit()
 
-        await self.position_repository.invadate_cache()
-        await self.project_repository.invadate_cache()
+        await self.position_repository.invalidate_cache()
+        await self.project_repository.invalidate_cache()
 
         logger.info(
             "Position deleted",

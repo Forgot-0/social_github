@@ -199,7 +199,7 @@ class CacheRepository:
             ttl=ttl, *args, **kwargs
         )
 
-    async def invadate_cache(self, *keys: str) -> None:
+    async def invalidate_cache(self, *keys: str) -> None:
         if keys:
             await self.redis.delete(*keys)
         else:

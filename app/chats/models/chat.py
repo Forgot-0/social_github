@@ -85,8 +85,8 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             instance.add_member(members_ids[0])
         
         elif chat_type == ChatType.GROUP:
-            if len(members_ids) > chat_config.MAX_MEMEBERS:
-                raise MemberLimitExceededException(limit=chat_config.MAX_MEMEBERS)
+            if len(members_ids) > chat_config.MAX_MEMBERS:
+                raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
             instance.add_member(created_by, role=MemberRole.OWNER)
             for m_id in members_ids:

@@ -44,7 +44,7 @@ class DeleteProjectCommandHandler(BaseCommandHandler[DeleteProjectCommand, None]
         await self.session.commit()
         await self.event_bus.publish(project.pull_events())
 
-        await self.project_repository.invadate_cache()
+        await self.project_repository.invalidate_cache()
         logger.info(
             "Project deleted",
             extra={"project_id": project.id, "deleted_by": command.user_jwt_data.id}

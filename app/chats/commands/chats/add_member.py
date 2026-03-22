@@ -52,8 +52,8 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
             raise AlreadyMemberException(user_id=command.target_user_id, chat_id=command.chat_id)
 
         count = await self.chat_repository.get_member_count(command.chat_id)
-        if count >= chat_config.MAX_MEMEBERS:
-            raise MemberLimitExceededException(limit=chat_config.MAX_MEMEBERS)
+        if count >= chat_config.MAX_MEMBERS:
+            raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
         await self.chat_repository.add_member(
             chat_id=command.chat_id,

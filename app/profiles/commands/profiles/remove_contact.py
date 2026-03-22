@@ -43,7 +43,7 @@ class RemoveContactToProfileCommandHandler(BaseCommandHandler[RemoveContactToPro
 
         profile.remove_contact(command.provider)
         await self.session.commit()
-        await self.profile_repository.invadate_cache()
+        await self.profile_repository.invalidate_cache()
 
         logger.info(
             "Remove contact profile", extra={

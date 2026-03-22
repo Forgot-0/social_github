@@ -4,20 +4,16 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.config import chat_config
 from app.chats.events.messages.sended import SendedMessageEvent
 from app.chats.exceptions import (
     AccessDeniedChatException,
-    MessageTooLongException,
     NotChatMemberException,
     NotFoundChatException,
 )
-from app.chats.keys import ChatKeys
 from app.chats.models.message import Message, MessageType
 from app.chats.models.permission import ROLE_PERMISSIONS, Permission
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
-from app.chats.schemas.ws import WSEventType, WSNewMessagePayload
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData

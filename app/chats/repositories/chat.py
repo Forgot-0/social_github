@@ -108,7 +108,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             role=role,
         )
         self.session.add(member)
-        await self.invadate_cache(ChatKeys.chat_member_count(chat_id))
+        await self.invalidate_cache(ChatKeys.chat_member_count(chat_id))
 
     async def get_member_count(self, chat_id: int) -> int:
         key = ChatKeys.chat_member_count(chat_id)

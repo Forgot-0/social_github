@@ -60,5 +60,5 @@ class UpdateProjectCommandHandler(BaseCommandHandler[UpdateProjectCommand, None]
         await self.session.commit()
         await self.event_bus.publish(project.pull_events())
 
-        await self.project_repository.invadate_cache()
+        await self.project_repository.invalidate_cache()
         logger.info("Project updated", extra={"project_id": project.id})
