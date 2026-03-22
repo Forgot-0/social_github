@@ -38,7 +38,7 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
         pipe = self.redis.pipeline(transaction=True)
         pipe.set(ChatKeys.last_read(user_id, chat_id), str(message_id))
         pipe.set(ChatKeys.unread_count(user_id, chat_id), "0")
-        pipe.zadd("pending:read_receipts", {f"{user_id}:{chat_id}:{message_id}": now_utc().timestamp()})
+        pipe.zadd(ChatKeys.pending_read_receipts(), {f"{user_id}:{chat_id}:{message_id}": now_utc().timestamp()})
         await pipe.execute()
 
     async def increment_unread(self, user_id: int, chat_id: int) -> int:

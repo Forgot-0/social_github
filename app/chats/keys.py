@@ -26,5 +26,13 @@ class ChatKeys:
         return f"chat:{chat_id}:member_count"
 
     @staticmethod
+    def chat_members_ids(chat_id: int) -> str:
+        return f"member_ids:{chat_id}"
+
+    @staticmethod
     def chat_cache(chat_id: int) -> str:
         return f"cache:chat:{chat_id}"
+
+    @staticmethod
+    def pending_read_receipts() -> str:
+        return "pending:read_receipts"
