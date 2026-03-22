@@ -54,7 +54,7 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
         if not target:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=command.target_user_id)
 
-        if len(perms) < len(ROLE_PERMISSIONS.get(target.role, set())):
+        if len(perms) <= len(ROLE_PERMISSIONS.get(target.role, set())):
             raise AccessDeniedChatException()
 
         await self.session.delete(target)

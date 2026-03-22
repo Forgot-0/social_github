@@ -11,7 +11,6 @@ from app.chats.exceptions import (
     NotFoundChatException,
     NotChatMemberException,
 )
-from app.chats.keys import ChatKeys
 from app.chats.models.chat_members import MemberRole
 from app.chats.models.permission import ROLE_PERMISSIONS, Permission
 from app.chats.repositories.chat import ChatRepository
@@ -62,7 +61,6 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
             role=command.role,
         )
         await self.session.commit()
-        await self.chat_repository.invadate_cache(ChatKeys.chat_member_count(chat.id))
 
         logger.info(
             "Member added to chat",

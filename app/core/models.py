@@ -16,7 +16,7 @@ from app.projects.models.role import ProjectRole
 from app.projects.models.position import Position
 from app.projects.models.application import Application
 
-from chats.models.chat import Chat
-from chats.models.message import Message
-from chats.models.chat_members import ChatMember
-from chats.models.read_receipts import ReadReceipt
+from app.chats.models.chat import Chat
+from app.chats.models.message import Message
+from app.chats.models.chat_members import ChatMember
+from app.chats.models.read_receipts import ReadReceipt

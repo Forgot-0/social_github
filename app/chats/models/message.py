@@ -85,7 +85,7 @@ class Message(BaseModel, DateMixin):
         message_type: MessageType = MessageType.TEXT,
     ) -> Self:
         instance = cls(
-            sender_id=sender_id,
+            author_id=sender_id,
             chat_id=chat_id,
             content=content,
             reply_to_id=reply_to_id,
