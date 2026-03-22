@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import orjson
 from redis.asyncio import Redis
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import selectinload
@@ -13,8 +14,7 @@ from app.core.filters.base import BaseFilter
 
 @dataclass
 class ChatRepository(IRepository[Chat], CacheRepository):
-    redis: Redis
-    _LIST_VERSION_KEY: str = "chats:list"
+    _LIST_VERSION_KEY = "chats:list"
 
     async def get_by_id(
         self, chat_id: int, with_members: bool = False
@@ -125,7 +125,43 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         await self.redis.setex(key, 300, str(count))
         return count
 
-    async def get_member_user_ids(self, chat_id: int, without_member: int | None=None) -> list[int]:
+    async def get_member_counts_bulk(self, chat_ids: list[int]) -> dict[int, int]:
+        keys = [ChatKeys.chat_member_count(cid) for cid in chat_ids]
+        cached = await self.redis.mget(*keys)
+
+        result: dict[int, int] = {}
+        missing: list[int] = []
+
+        for cid, val in zip(chat_ids, cached):
+            if val is not None:
+                result[cid] = int(val)
+            else:
+                missing.append(cid)
+
+        if missing:
+            rows = await self.session.execute(
+                select(ChatMember.chat_id, func.count().label("cnt"))
+                .where(ChatMember.chat_id.in_(missing))
+                .group_by(ChatMember.chat_id)
+            )
+            pipe = self.redis.pipeline()
+            for row in rows:
+                result[row.chat_id] = row.cnt
+                pipe.setex(ChatKeys.chat_member_count(row.chat_id), 300, str(row.cnt))
+            await pipe.execute()
+
+        return result
+
+    async def get_member_user_ids(self, chat_id: int, ) -> list[int]:
+        key = f"member_ids:{chat_id}"
+        cached = await self.redis.get(key)
+        if cached:
+            return orjson.loads(cached)
+        ids = await self._get_member_user_ids(chat_id)
+        await self.redis.setex(key, 30, orjson.dumps(ids))
+        return ids
+
+    async def _get_member_user_ids(self, chat_id: int, without_member: int | None=None) -> list[int]:
         stmt = select(ChatMember.user_id).where(ChatMember.chat_id == chat_id)
 
         if without_member is not None:

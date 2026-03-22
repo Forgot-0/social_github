@@ -52,9 +52,8 @@ class MarkAsReadCommandHandler(BaseCommandHandler[MarkAsReadCommand, None]):
                 "last_read_message_id": command.message_id,
             },
         }
-        for uid in member_ids:
-            if uid != user_id:
-                await self.connection_manager.publish(ChatKeys.user_channel(uid), event)
+        keys = [ChatKeys.user_channel(uid) for uid in member_ids if uid != user_id]
+        await self.connection_manager.publish_bulk(keys, event)
 
         logger.debug(
             "Messages marked as read",

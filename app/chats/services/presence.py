@@ -1,15 +1,3 @@
-"""
-Presence service — tracks online/offline status.
-
-Strategy:
-  • SET presence:user:{user_id} "1" EX 90   on WS connect / heartbeat
-  • DEL presence:user:{user_id}              on WS disconnect
-  • MGET presence:user:{uid} ...             for bulk lookup
-
-TTL of 90 s means user appears offline within 1–2 missed heartbeat cycles
-(WS_HEARTBEAT_INTERVAL = 30 s → 3 cycles).
-"""
-
 from dataclasses import dataclass
 
 from redis.asyncio import Redis

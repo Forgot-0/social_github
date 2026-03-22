@@ -93,6 +93,12 @@ class ConnectionManager(BaseConnectionManager):
             orjson.dumps(payload),
         )
 
+    async def publish_bulk(self, keys: list[str], payload: dict) -> None:
+        pipe = self.redis.pipeline(transaction=False)
+        for key in keys:
+            pipe.publish(f"ws:{key}", orjson.dumps(payload))
+        await pipe.execute()
+
     async def startup(self) -> None:
         pubsub = self.redis.pubsub()
         await pubsub.psubscribe("ws:*")
@@ -103,6 +109,8 @@ class ConnectionManager(BaseConnectionManager):
                     continue
 
                 asyncio.create_task(self._dispatch(message))
+        except:
+            raise
         finally:
             await pubsub.unsubscribe()
             await self.redis.aclose()

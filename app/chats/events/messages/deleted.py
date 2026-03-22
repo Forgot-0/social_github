@@ -17,10 +17,10 @@ class DeletedMessageEventHandler(BaseEventHandler[DeletedMessageEvent, None]):
     async def __call__(self, event: DeletedMessageEvent) -> None:
         member_ids = await self.chat_repository.get_member_user_ids(event.chat_id)
 
-        playload = {
+        payload = {
             "type": WSEventType.MESSAGE_DELETED,
             "chat_id": event.chat_id,
             "payload": {"message_id": event.message_id},
         }
-        for uid in member_ids:
-            await self.connection_manager.publish(ChatKeys.user_channel(uid), playload)
+        keys = [ChatKeys.user_channel(uid) for uid in member_ids]
+        await self.connection_manager.publish_bulk(keys, payload)

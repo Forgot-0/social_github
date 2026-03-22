@@ -47,6 +47,10 @@ class BaseConnectionManager(ABC):
         ...
 
     @abstractmethod
+    async def publish_bulk(self, keys: list[str], payload: dict) -> None:
+        ...
+
+    @abstractmethod
     async def startup(self) -> None:
         ...
 

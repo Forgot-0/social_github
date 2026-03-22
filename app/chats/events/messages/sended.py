@@ -47,12 +47,12 @@ class SendedMessageEventHandler(BaseEventHandler[SendedMessageEvent, None]):
             "payload": payload.model_dump(),
         }
 
-        member_ids = await self.chat_repository.get_member_user_ids(event.chat_id, without_member=event.sender_id)
+        member_ids = await self.chat_repository.get_member_user_ids(event.chat_id)
+        member_ids.remove(event.sender_id)
         await self.read_receipt_repository.increment_unread_bulk(
             user_ids=member_ids, chat_id=event.chat_id
         )
 
-        for uid in member_ids:
-            channel_key = ChatKeys.user_channel(uid)
-            await self.connection_manager.publish(channel_key, data)
+        keys = [ChatKeys.user_channel(uid) for uid in member_ids]
+        await self.connection_manager.publish_bulk(keys, data)
 

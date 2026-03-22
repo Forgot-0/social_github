@@ -34,6 +34,8 @@ class GetChatsQueryHandler(BaseQueryHandler[GetChatsQuery, PageResult[ChatListIt
             return PageResult(items=[], total=page.total, page=page.page, page_size=page.page_size)
 
         chat_ids = [c.id for c in page.items]
+        member_count_map = await self.chat_repository.get_member_counts_bulk(chat_ids)
+
         keys = [ChatKeys.unread_count(user_id, cid) for cid in chat_ids]
         raw_counts = await self.chat_repository.redis.mget(*keys)
         unread_map = {
@@ -52,7 +54,7 @@ class GetChatsQueryHandler(BaseQueryHandler[GetChatsQuery, PageResult[ChatListIt
                 created_by=chat.created_by,
                 last_activity_at=chat.last_activity_at,
                 unread_count=unread_map.get(chat.id, 0),
-                member_count=await self.chat_repository.get_member_count(chat.id),
+                member_count=member_count_map[chat.id],
             )
             for chat in page.items
         ]

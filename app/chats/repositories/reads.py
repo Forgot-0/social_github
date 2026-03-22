@@ -7,6 +7,7 @@ from app.chats.keys import ChatKeys
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
+from app.core.utils import now_utc
 
 
 @dataclass
@@ -37,9 +38,8 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
         pipe = self.redis.pipeline(transaction=True)
         pipe.set(ChatKeys.last_read(user_id, chat_id), str(message_id))
         pipe.set(ChatKeys.unread_count(user_id, chat_id), "0")
+        pipe.zadd("pending:read_receipts", {f"{user_id}:{chat_id}:{message_id}": now_utc().timestamp()})
         await pipe.execute()
-
-        await self._upsert_read_receipt(user_id, chat_id, message_id)
 
     async def increment_unread(self, user_id: int, chat_id: int) -> int:
         key = ChatKeys.unread_count(user_id, chat_id)
@@ -50,7 +50,6 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
         for uid in user_ids:
             pipe.incr(ChatKeys.unread_count(uid, chat_id))
         await pipe.execute()
-
 
     async def get_unread_count(self, user_id: int, chat_id: int) -> int:
         key = ChatKeys.unread_count(user_id, chat_id)

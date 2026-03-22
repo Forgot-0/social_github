@@ -123,6 +123,8 @@ async def _broadcast_typing(
         "chat_id": chat_id,
         "payload": {"user_id": user_id, "ts": now_utc().isoformat()},
     }
-    for uid in member_ids:
-        if uid != user_id:
-            await connection_manager.publish(ChatKeys.user_channel(uid), payload)
+
+    keys = [ChatKeys.user_channel(uid) for uid in member_ids if uid != user_id]
+
+    await connection_manager.publish_bulk(keys, payload=payload)
+
