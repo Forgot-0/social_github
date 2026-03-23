@@ -33,6 +33,7 @@ from app.chats.queries.messages.get_list import GetMessagesQuery, GetMessagesQue
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
+from app.chats.services.access import ChatAccessService
 from app.chats.services.delivery import DeliveryTrackingService
 from app.chats.services.presence import PresenceService
 from app.chats.services.ws_client_events import ChatWebSocketClientService
@@ -65,6 +66,11 @@ class ChatModuleProvider(Provider):
     def delivery_tracking_service(self, redis: Redis) -> DeliveryTrackingService:
         return DeliveryTrackingService(redis=redis)
 
+    caht_access_service = provide(
+        ChatAccessService, scope=Scope.APP
+    )
+
+
     @provide
     def chat_websocket_client_service(
         self,
@@ -77,6 +83,7 @@ class ChatModuleProvider(Provider):
             connection_manager=connection_manager,
             delivery_service=delivery_tracking_service,
         )
+
 
     chat_handlers = provide_all(
         CreateChatCommandHandler,

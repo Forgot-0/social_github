@@ -51,7 +51,7 @@ async def create_chat(
         )
     )
     result = next(iter(results))
-    return CreateChatResponse(chat_id=result.chat_id)
+    return CreateChatResponse(chat_id=result)
 
 
 @router.get(

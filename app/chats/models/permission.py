@@ -4,7 +4,7 @@ from app.chats.models.chat_roles import ChatRole
 
 
 
-class ProjectRolesEnum(Enum):
+class ChatRolesEnum(Enum):
     OWNER = ChatRole(
         id=1,
         name="owner",

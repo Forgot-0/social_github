@@ -9,11 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.chats.config import chat_config
 from app.chats.exceptions import MemberLimitExceededException
 from app.chats.models.chat_members import ChatMember
+from app.chats.models.message import Message
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 
-if TYPE_CHECKING:
-    from app.chats.models.message import Message
 
 
 
@@ -29,11 +28,15 @@ class KickedChatMemberEvent(BaseEvent):
     requester_id: int
     target_user_id: int
 
+    __event_name__ = ""
+
 
 @dataclass(frozen=True)
 class LeavedChatMemberEvent(BaseEvent):
     chat_id: int
     user_id: int
+
+    __event_name__ = ""
 
 
 class Chat(BaseModel, DateMixin, SoftDeleteMixin):
