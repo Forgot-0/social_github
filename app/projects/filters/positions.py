@@ -22,6 +22,9 @@ class PositionFilter(BaseFilter):
         self.add_condition("project_id", FilterOperator.EQ, self.project_id)
         self.add_condition("title", FilterOperator.CONTAINS, self.title)
 
+        if self.required_skills:
+            self.required_skills = {skill.lower() for skill in self.required_skills}
+
         self.add_condition("required_skills", FilterOperator.ALL, self.required_skills)
         self.add_condition("is_open", FilterOperator.EQ, self.is_open)
         self.add_condition("location_type", FilterOperator.EQ, self.location_type.value)

@@ -15,6 +15,9 @@ class ProfileFilter(BaseFilter):
     def _build_conditions(self) -> None:
         self.add_condition("display_name", FilterOperator.CONTAINS, self.display_name)
 
+        if self.skills:
+            self.skills = [skill.lower() for skill in self.skills]
+
         self.add_condition("skills", FilterOperator.ALL, self.skills)
 
         self.add_relation("contacts")

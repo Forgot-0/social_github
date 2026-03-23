@@ -7,6 +7,7 @@ from app.chats.services.delivery import DeliveryTrackingService
 from app.core.utils import now_utc
 from app.core.websockets.base import BaseConnectionManager
 
+
 _TYPING_EVENTS = frozenset({WSEventType.TYPING_START, WSEventType.TYPING_STOP})
 
 

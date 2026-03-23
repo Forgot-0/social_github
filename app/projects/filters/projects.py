@@ -17,6 +17,10 @@ class ProjectFilter(BaseFilter):
     def _build_conditions(self) -> None:
         self.add_condition("name", FilterOperator.CONTAINS, self.name)
 
+
+        if self.tags:
+            self.tags = [tag.lower() for tag in self.tags]
+
         self.add_condition("tags", FilterOperator.ALL, self.tags)
         self.add_condition("visibility", FilterOperator.EQ, "public")
         self.add_relation("memberships", LoadingStrategyType.SELECTIN, "role")
