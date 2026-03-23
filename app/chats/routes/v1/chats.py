@@ -3,6 +3,7 @@ from fastapi import APIRouter, Query, status
 
 from app.chats.commands.chats.add_member import AddMemberCommand
 from app.chats.commands.chats.ban_member import BanMemberCommand
+from app.chats.commands.chats.change_role import ChangeMemberRoleCommand
 from app.chats.commands.chats.create import CreateChatCommand
 
 from app.chats.commands.chats.kick_member import KickMemberCommand
@@ -13,7 +14,15 @@ from app.chats.dtos.messages import MessageDeliveryStatusDTO
 from app.chats.queries.chats.get_by_id import ChatDetailDTO, GetChatByIdQuery
 from app.chats.queries.chats.get_my_list import GetChatsQuery
 from app.chats.queries.chats.presence import GetChatPresenceQuery, GetMessageDeliveryQuery
-from app.chats.schemas.chats.request import AddMemberRequest, BanRequest, ChangeRoleRequest, CreateChatRequest, CreateChatResponse, GetChatsRequest, UpdateChatRequest
+from app.chats.schemas.chats.request import (
+    AddMemberRequest,
+    BanRequest,
+    ChangeRoleRequest,
+    CreateChatRequest,
+    CreateChatResponse,
+    GetChatsRequest,
+    UpdateChatRequest
+)
 from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
@@ -46,7 +55,7 @@ async def create_chat(
 
 
 @router.get(
-    "/",
+    "/my",
     status_code=status.HTTP_200_OK,
     summary="List user's chats with unread counts (bulk Redis fetch)",
 )
@@ -122,26 +131,26 @@ async def update_chat(
     )
 
 
-# @router.put(
-#     "/{chat_id}/members/{user_id}/role",
-#     status_code=status.HTTP_200_OK,
-#     summary="Change member role",
-# )
-# async def change_member_role(
-#     chat_id: int,
-#     user_id: int,
-#     request: ChangeRoleRequest,
-#     mediator: FromDishka[BaseMediator],
-#     user_jwt_data: CurrentUserJWTData,
-# ) -> None:
-#     await mediator.handle_command(
-#         ChangeMemberRoleCommand(
-#             user_jwt_data=user_jwt_data,
-#             chat_id=chat_id,
-#             target_user_id=user_id,
-#             new_role=request.role,
-#         )
-#     )
+@router.put(
+    "/{chat_id}/members/{user_id}/role",
+    status_code=status.HTTP_200_OK,
+    summary="Change member role",
+)
+async def change_member_role(
+    chat_id: int,
+    user_id: int,
+    request: ChangeRoleRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        ChangeMemberRoleCommand(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+            target_user_id=user_id,
+            new_role=request.role,
+        )
+    )
 
 
 @router.delete(

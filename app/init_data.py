@@ -26,7 +26,4 @@ async def create_first_data(db: AsyncSession) -> None:
 
 
 async def init_data(db: AsyncSession) -> None:
-    try:
-        await create_first_data(db)
-    except:
-        pass
+    await create_first_data(db)

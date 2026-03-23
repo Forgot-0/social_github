@@ -57,7 +57,7 @@ async def websocket_endpoint(
                 await presence_service.refresh(user_id)
                 continue
 
-            await rate_limit(websocket, context_key=data)
+            await rate_limit(websocket, context_key=str(user_id))
 
             async with container() as request_container:
                 ws_client_service = await request_container.get(ChatWebSocketClientService)

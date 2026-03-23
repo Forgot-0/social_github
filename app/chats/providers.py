@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.add_member import AddMemberCommand, AddMemberCommandHandler
 from app.chats.commands.chats.ban_member import BanMemberCommand, BanMemberCommandHandler
+from app.chats.commands.chats.change_role import ChangeMemberRoleCommand, ChangeMemberRoleCommandHandler
 from app.chats.commands.chats.create import CreateChatCommand, CreateChatCommandHandler
 
 from app.chats.commands.chats.kick_member import KickMemberCommand, KickMemberCommandHandler
@@ -83,7 +84,7 @@ class ChatModuleProvider(Provider):
         KickMemberCommandHandler,
         LeaveChatCommandHandler,
         BanMemberCommandHandler,
-        # ChangeMemberRoleCommandHandler,
+        ChangeMemberRoleCommandHandler,
         UpdateChatCommandHandler,
         SendMessageCommandHandler,
         DeleteMessageCommandHandler,
@@ -110,7 +111,7 @@ class ChatModuleProvider(Provider):
         registry.register_command(KickMemberCommand, [KickMemberCommandHandler])
         registry.register_command(LeaveChatCommand, [LeaveChatCommandHandler])
         registry.register_command(BanMemberCommand, [BanMemberCommandHandler])
-        # registry.register_command(ChangeMemberRoleCommand, [ChangeMemberRoleCommandHandler])
+        registry.register_command(ChangeMemberRoleCommand, [ChangeMemberRoleCommandHandler])
         registry.register_command(UpdateChatCommand, [UpdateChatCommandHandler])
         registry.register_command(SendMessageCommand, [SendMessageCommandHandler])
         registry.register_command(DeleteMessageCommand, [DeleteMessageCommandHandler])

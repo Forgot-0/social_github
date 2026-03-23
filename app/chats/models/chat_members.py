@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin
@@ -32,13 +32,28 @@ class ChatMember(BaseModel, DateMixin):
     is_muted:  Mapped[bool] = mapped_column(Boolean, default=False)
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    last_read_message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-
     chat: Mapped["Chat"] = relationship(back_populates="members", lazy="noload")
 
     __table_args__ = (
         UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),
         Index("ix_chat_members_user_chat", "user_id", "chat_id"),
         Index("ix_chat_members_chat_user", "chat_id", "user_id"),
+    )
+
+
+class MemberBan(BaseModel, DateMixin):
+    __tablename__ = "ban_members"
+
+    chat_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    banned_by: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+
+    reason: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),
+        Index("ix_ban_members_user_chat", "user_id", "chat_id"),
+        Index("ix_ban_members_chat_user", "chat_id", "user_id"),
     )
 
