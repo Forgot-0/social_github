@@ -84,13 +84,13 @@
                 alert('Please enter token, chat ID, and message');
                 return;
             }
-            fetch(`http://localhost:8000/api/v1/chats/${chatId}/messages`, {
+            fetch(`http://localhost:8000/api/v1/chats/${chatId}/messages/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ content: message })
+                body: JSON.stringify({ content: message, reply_to_id: null, message_type: "text" })
             })
             .then(response => response.json())
             .then(data => log('Message sent: ' + JSON.stringify(data)))

@@ -54,7 +54,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
         if chat is None:
             raise NotFoundChatException(chat_id=command.chat_id)
 
-        member = await self.chat_repository.get_member(command.chat_id, user_id)
+        member = await self.chat_repository.get_member(command.chat_id, user_id, with_role=True)
         if not member:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 

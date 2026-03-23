@@ -47,7 +47,7 @@ async def websocket_endpoint(
     await presence_service.set_online(user_id)
     logger.info("WS connected", extra={"user_id": user_id})
 
-    rate_limit = WebSocketRateLimiter(chat_config.RATE_LIMIT_MESSAGES_PER_SECOND)
+    rate_limit = WebSocketRateLimiter(chat_config.RATE_LIMIT_MESSAGES_PER_SECOND, seconds=1)
 
     try:
         while True:

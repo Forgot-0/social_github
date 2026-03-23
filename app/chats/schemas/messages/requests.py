@@ -1,9 +1,20 @@
 from pydantic import BaseModel, Field
 
+from app.chats.models.message import MessageType
 
-class SendMessageRequests(BaseModel):
-    recipient_id: int
-    message: str
+
+class SendMessageRequest(BaseModel):
+    content: str = Field(..., max_length=4096)
+    reply_to_id: int | None = Field(default=None)
+    message_type: MessageType = MessageType.TEXT
+
+
+class EditMessageRequest(BaseModel):
+    content: str = Field(..., max_length=4096)
+
+
+class MarkAsReadRequest(BaseModel):
+    message_id: int
 
 
 class GetMessagesRequest(BaseModel):

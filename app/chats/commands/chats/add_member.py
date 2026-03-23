@@ -37,7 +37,7 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
     async def handle(self, command: AddMemberCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
 
-        requester = await self.chat_repository.get_member(command.chat_id, requester_id)
+        requester = await self.chat_repository.get_member(command.chat_id, requester_id, with_role=True)
         if not requester:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=requester_id)
 
