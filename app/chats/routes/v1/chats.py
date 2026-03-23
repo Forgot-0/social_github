@@ -104,7 +104,7 @@ async def add_member(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
             target_user_id=request.user_id,
-            role=request.role,
+            role_id=request.role_id,
         )
     )
 
@@ -148,7 +148,7 @@ async def change_member_role(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
             target_user_id=user_id,
-            new_role=request.role,
+            role_id=request.role_id,
         )
     )
 

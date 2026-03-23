@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.chats.keys import ChatKeys
 from app.chats.models.chat import Chat, ChatType
-from app.chats.models.chat_members import ChatMember, MemberRole
+from app.chats.models.chat_members import ChatMember
 from app.core.db.repository import CacheRepository, IRepository, PageResult
 from app.core.filters.base import BaseFilter
 
@@ -100,12 +100,12 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         self,
         chat_id: int,
         user_id: int,
-        role: MemberRole = MemberRole.MEMBER,
+        role_id: int,
     ) -> None:
         member = ChatMember(
             chat_id=chat_id,
             user_id=user_id,
-            role=role,
+            role_id=role_id,
         )
         self.session.add(member)
         await self.invalidate_cache(ChatKeys.chat_member_count(chat_id))

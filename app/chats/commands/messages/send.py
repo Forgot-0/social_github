@@ -11,9 +11,9 @@ from app.chats.exceptions import (
     NotFoundChatException,
 )
 from app.chats.models.message import Message, MessageType
-from app.chats.models.permission import ROLE_PERMISSIONS, Permission
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
+from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
@@ -44,6 +44,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
     session: AsyncSession
     chat_repository: ChatRepository
     message_repository: MessageRepository
+    chat_access_servise: ChatAccessService
     event_bus: BaseEventBus
 
     async def handle(self, command: SendMessageCommand) -> SendMessageResult:
@@ -57,8 +58,11 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
         if not member:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
-        if Permission.SEND_MESSAGES not in ROLE_PERMISSIONS.get(member.role, set()):
-            raise AccessDeniedChatException()
+        if not self.chat_access_servise.can_update(
+            user_jwt_data=command.user_jwt_data,
+            memeber=member,
+            must_permissions={"message:send", }
+        ): raise AccessDeniedChatException()
 
         msg = Message.create(
             chat_id=command.chat_id,

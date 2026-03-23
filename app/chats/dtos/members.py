@@ -1,12 +1,10 @@
 
 from pydantic import BaseModel
 
-from app.chats.models.chat_members import MemberRole
-
 
 class MemberInfoDTO(BaseModel):
     user_id: int
-    role: MemberRole
+    role_id: int
     is_muted: bool
 
 

@@ -8,10 +8,11 @@ from app.chats.exceptions import (
     NotChatMemberException,
     NotFoundChatException,
 )
-from app.chats.models.permission import ROLE_PERMISSIONS, Permission
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,28 +29,25 @@ class BanMemberCommand(BaseCommand):
 class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
+    chat_access_servise: ChatAccessService
 
     async def handle(self, command: BanMemberCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
-
-        chat = await self.chat_repository.get_by_id(command.chat_id)
-        if not chat:
-            raise NotFoundChatException(chat_id=command.chat_id)
 
         requester = await self.chat_repository.get_member(command.chat_id, requester_id)
         if not requester:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=requester_id)
 
-        perms = ROLE_PERMISSIONS.get(requester.role, set())
-        if Permission.BAN_MEMBERS not in perms:
-            raise AccessDeniedChatException()
-
         target = await self.chat_repository.get_member(command.chat_id, command.target_user_id)
         if not target:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=command.target_user_id)
 
-        if len(perms) <= len(ROLE_PERMISSIONS.get(target.role, set())):
-            raise AccessDeniedChatException()
+        if not self.chat_access_servise.update_member(
+            user_jwt_data=command.user_jwt_data,
+            requester=requester,
+            target=target,
+            must_permissions={"member:ban"}
+        ): raise AccessDeniedChatException()
 
         target.is_banned = command.ban
         await self.session.commit()

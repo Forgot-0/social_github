@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 
 from app.chats.models.chat import ChatType
-from app.chats.models.chat_members import MemberRole
 
 
 class CreateChatRequest(BaseModel):
@@ -18,11 +17,11 @@ class CreateChatResponse(BaseModel):
 
 class AddMemberRequest(BaseModel):
     user_id: int
-    role: MemberRole = MemberRole.MEMBER
+    role_id: int
 
 
 class ChangeMemberRoleRequest(BaseModel):
-    role: MemberRole
+    role_id: int
 
 
 class GetChatsRequest(BaseModel):
@@ -37,7 +36,7 @@ class UpdateChatRequest(BaseModel):
 
 
 class ChangeRoleRequest(BaseModel):
-    role: MemberRole
+    role_id: int
 
 
 class BanRequest(BaseModel):

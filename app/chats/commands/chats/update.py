@@ -8,8 +8,8 @@ from app.chats.exceptions import (
     NotChatMemberException,
     NotFoundChatException,
 )
-from app.chats.models.permission import ROLE_PERMISSIONS, Permission
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 
@@ -29,6 +29,7 @@ class UpdateChatCommand(BaseCommand):
 class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
+    chat_access_servise: ChatAccessService
 
     async def handle(self, command: UpdateChatCommand) -> None:
         user_id = int(command.user_jwt_data.id)
@@ -41,9 +42,11 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, None]):
         if not member:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
-        perms = ROLE_PERMISSIONS.get(member.role, set())
-        if Permission.EDIT_CHAT_INFO not in perms:
-            raise AccessDeniedChatException()
+        if not self.chat_access_servise.can_update(
+            user_jwt_data=command.user_jwt_data,
+            memeber=member,
+            must_permissions={"chat:update"}
+        ): raise AccessDeniedChatException()
 
         if command.name is not None:
             chat.name = command.name

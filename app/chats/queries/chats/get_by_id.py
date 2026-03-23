@@ -44,7 +44,7 @@ class GetChatByIdQueryHandler(BaseQueryHandler[GetChatByIdQuery, ChatDetailDTO])
             members=[
                 MemberInfoDTO(
                     user_id=m.user_id,
-                    role=m.role,
+                    role_id=m.role_id,
                     is_muted=m.is_muted,
                 )
                 for m in chat.members

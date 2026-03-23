@@ -8,9 +8,9 @@ from app.chats.exceptions import (
     NotChatMemberException,
     NotFoundMessageException,
 )
-from app.chats.models.permission import ROLE_PERMISSIONS, Permission
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
+from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
@@ -30,6 +30,7 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
     session: AsyncSession
     chat_repository: ChatRepository
     message_repository: MessageRepository
+    chat_access_servise: ChatAccessService
     event_bus: BaseEventBus
 
     async def handle(self, command: DeleteMessageCommand) -> None:
@@ -43,14 +44,14 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
         if not member:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
-        perms = ROLE_PERMISSIONS.get(member.role, set())
-
-        can_delete = (
-            (message.author_id == user_id) or
-            (Permission.DELETE_ANY_MSG in perms)
-        )
-        if not can_delete:
-            raise AccessDeniedChatException()
+        if (
+            not message.author_id != user_id and
+            not self.chat_access_servise.can_update(
+                user_jwt_data=command.user_jwt_data,
+                memeber=member,
+                must_permissions={"message:delete"}
+            )
+        ): raise AccessDeniedChatException()
 
         message.delete(deleted_by=user_id)
         await self.session.commit()

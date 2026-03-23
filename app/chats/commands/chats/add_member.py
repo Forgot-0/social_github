@@ -11,11 +11,11 @@ from app.chats.exceptions import (
     NotFoundChatException,
     NotChatMemberException,
 )
-from app.chats.models.chat_members import MemberRole
-from app.chats.models.permission import ROLE_PERMISSIONS, Permission
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,27 +25,27 @@ class AddMemberCommand(BaseCommand):
     user_jwt_data: UserJWTData
     chat_id: int
     target_user_id: int
-    role: MemberRole = MemberRole.MEMBER
+    role_id: int
 
 
 @dataclass(frozen=True)
 class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
+    chat_access_servise: ChatAccessService
 
     async def handle(self, command: AddMemberCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
-
-        chat = await self.chat_repository.get_by_id(command.chat_id, with_members=True)
-        if not chat:
-            raise NotFoundChatException(chat_id=command.chat_id)
 
         requester = await self.chat_repository.get_member(command.chat_id, requester_id)
         if not requester:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=requester_id)
 
-        if Permission.ADD_MEMBERS not in ROLE_PERMISSIONS.get(requester.role, set()):
-            raise AccessDeniedChatException()
+        if not self.chat_access_servise.can_update(
+            user_jwt_data=command.user_jwt_data,
+            memeber=requester,
+            must_permissions={"member:invite",}
+        ): raise AccessDeniedChatException()
 
         existing = await self.chat_repository.get_member(command.chat_id, command.target_user_id)
         if existing:
@@ -58,7 +58,7 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         await self.chat_repository.add_member(
             chat_id=command.chat_id,
             user_id=command.target_user_id,
-            role=command.role,
+            role_id=command.role_id,
         )
         await self.session.commit()
 

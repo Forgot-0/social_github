@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -13,12 +12,6 @@ from app.core.db.base_model import BaseModel, DateMixin
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
 
-
-class MemberRole(str, PyEnum):
-    OWNER = "owner"
-    ADMIN = "admin"
-    MEMBER = "member"
-    VIEWER = "viewer"
 
 
 class ChatMember(BaseModel, DateMixin):
@@ -47,11 +40,21 @@ class ChatMember(BaseModel, DateMixin):
     )
 
     def effective_permissions(self) -> dict[str, bool]:
-        perms = self.role.permissions.copy()
+        perms = self.role.permissions.copy() if self.role is not None else {}
         if self.permissions_overrides:
             perms.update(self.permissions_overrides)
         return perms
 
+    def has_permission(self, permission_key: str) -> bool:
+        if self.role is None:
+            return False
+        if self.permissions_overrides and permission_key in self.permissions_overrides:
+            return bool(self.permissions_overrides[permission_key])
+        return self.role.has_permission(permission_key)
+
+    @property
+    def role_name(self) -> str | None:
+        return self.role.name if self.role is not None else None
 
 
 class MemberBan(BaseModel, DateMixin):

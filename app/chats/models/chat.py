@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
 from app.chats.exceptions import MemberLimitExceededException
-from app.chats.models.chat_members import ChatMember, MemberRole
+from app.chats.models.chat_members import ChatMember
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 
@@ -81,26 +81,26 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             if len(members_ids) != 1:
                 raise MemberLimitExceededException(limit=2)
 
-            instance.add_member(created_by)
-            instance.add_member(members_ids[0])
+            instance.add_member(created_by, 4)
+            instance.add_member(members_ids[0], 4)
         
         elif chat_type == ChatType.GROUP:
             if len(members_ids) > chat_config.MAX_MEMBERS:
                 raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
-            instance.add_member(created_by, role=MemberRole.OWNER)
+            instance.add_member(created_by, role_id=1)
             for m_id in members_ids:
-                instance.add_member(m_id)
+                instance.add_member(m_id, role_id=5)
 
 
         return instance
 
 
-    def add_member(self, member_id: int, role: MemberRole=MemberRole.MEMBER) -> None:
+    def add_member(self, member_id: int, role_id: int) -> None:
         self.members.append(
             ChatMember(
                 user_id=member_id,
-                role=role,
+                role_id=role_id,
             )
         )
 
