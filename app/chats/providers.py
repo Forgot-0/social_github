@@ -24,11 +24,13 @@ from app.chats.events.messages.sended import SendedMessageEvent, SendedMessageEv
 from app.chats.models.chat import KickedChatMemberEvent, LeavedChatMemberEvent
 from app.chats.models.message import DeletedMessageEvent, ModifiedMessageEvent
 from app.chats.queries.chats.get_by_id import GetChatByIdQuery, GetChatByIdQueryHandler
+from app.chats.queries.chats.get_cursor import GetChatsCursorQuery, GetChatsCursorQueryHandler
 from app.chats.queries.chats.get_my_list import GetChatsQuery, GetChatsQueryHandler
 from app.chats.queries.chats.presence import (
     GetChatPresenceQuery, GetChatPresenceQueryHandler,
     GetMessageDeliveryQuery, GetMessageDeliveryQueryHandler,
 )
+from app.chats.queries.messages.get_detail import GetMessageReadDetailsQuery, GetMessageReadDetailsQueryHandler
 from app.chats.queries.messages.get_list import GetMessagesQuery, GetMessagesQueryHandler
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
@@ -99,8 +101,10 @@ class ChatModuleProvider(Provider):
         MarkAsReadCommandHandler,
 
         GetChatsQueryHandler,
+        GetChatsCursorQueryHandler,
         GetChatByIdQueryHandler,
         GetMessagesQueryHandler,
+        GetMessageReadDetailsQueryHandler,
         GetChatPresenceQueryHandler,
         GetMessageDeliveryQueryHandler,
 
@@ -129,8 +133,10 @@ class ChatModuleProvider(Provider):
     @decorate
     def register_chat_queries(self, registry: QueryRegistry) -> QueryRegistry:
         registry.register_query(GetChatsQuery, GetChatsQueryHandler)
+        registry.register_query(GetChatsCursorQuery, GetChatsCursorQueryHandler)
         registry.register_query(GetChatByIdQuery, GetChatByIdQueryHandler)
         registry.register_query(GetMessagesQuery, GetMessagesQueryHandler)
+        registry.register_query(GetMessageReadDetailsQuery, GetMessageReadDetailsQueryHandler)
         registry.register_query(GetChatPresenceQuery, GetChatPresenceQueryHandler)
         registry.register_query(GetMessageDeliveryQuery, GetMessageDeliveryQueryHandler)
         return registry

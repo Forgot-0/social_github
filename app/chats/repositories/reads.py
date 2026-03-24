@@ -10,6 +10,9 @@ from app.core.filters.base import BaseFilter
 from app.core.utils import now_utc
 
 
+_UNREAD_INCR_BATCH_SIZE = 1000
+
+
 @dataclass
 class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
 
@@ -45,16 +48,40 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
         key = ChatKeys.unread_count(user_id, chat_id)
         return await self.redis.incrby(key)
 
-    async def increment_unread_bulk(self, user_ids: list[int], chat_id: int) -> None:
-        pipe = self.redis.pipeline()
-        for uid in user_ids:
-            pipe.incrby(ChatKeys.unread_count(uid, chat_id))
-        await pipe.execute()
+    async def increment_unread_bulk(self, user_ids: list[int], chat_id: int, without_user: int=0) -> None:
+        if not user_ids:
+            return
+
+        unique_ids = tuple(dict.fromkeys(user_ids))
+        for idx in range(0, len(unique_ids), _UNREAD_INCR_BATCH_SIZE):
+            batch = unique_ids[idx:idx + _UNREAD_INCR_BATCH_SIZE]
+            pipe = self.redis.pipeline()
+            for uid in batch:
+                if uid != without_user:
+                    pipe.incrby(ChatKeys.unread_count(uid, chat_id))
+            await pipe.execute()
 
     async def get_unread_count(self, user_id: int, chat_id: int) -> int:
         key = ChatKeys.unread_count(user_id, chat_id)
         val = await self.redis.get(key)
         return int(val) if val is not None else 0
+
+    async def get_read_cursors_page(
+        self,
+        chat_id: int,
+        limit: int = 50,
+        after_user_id: int | None = None,
+    ) -> list[tuple[int, int]]:
+        stmt = (
+            select(ReadReceipt.user_id, ReadReceipt.last_read_message_id)
+            .where(ReadReceipt.chat_id == chat_id)
+            .order_by(ReadReceipt.user_id.asc())
+            .limit(limit + 1)
+        )
+        if after_user_id is not None:
+            stmt = stmt.where(ReadReceipt.user_id > after_user_id)
+        rows = await self.session.execute(stmt)
+        return [(row.user_id, row.last_read_message_id) for row in rows]
 
     async def get_read_cursors(self, chat_id: int, user_ids: list[int]) -> dict[int, int]:
         if not user_ids:

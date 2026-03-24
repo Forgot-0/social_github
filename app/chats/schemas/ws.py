@@ -35,6 +35,13 @@ class WSNewMessagePayload(BaseModel):
     reply_to_id: int | None = None
 
 
+class WSModifyMessagePayload(BaseModel):
+    id: int
+    chat_id: int
+    author_id: int
+    content: str | None
+
+
 class WSMessagesReadPayload(BaseModel):
     chat_id: int
     user_id: int

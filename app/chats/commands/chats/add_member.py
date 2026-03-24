@@ -11,10 +11,12 @@ from app.chats.exceptions import (
     NotFoundChatException,
     NotChatMemberException,
 )
+from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.websockets.base import BaseConnectionManager
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
     chat_access_servise: ChatAccessService
+    connection_manager: BaseConnectionManager
 
     async def handle(self, command: AddMemberCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
@@ -61,6 +64,10 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
             role_id=command.role_id,
         )
         await self.session.commit()
+        await self.connection_manager.bind_key_connections(
+            source_key=ChatKeys.user_channel(command.target_user_id),
+            target_key=ChatKeys.chat_channel(command.chat_id),
+        )
 
         logger.info(
             "Member added to chat",

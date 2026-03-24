@@ -1,5 +1,8 @@
 
 class ChatKeys:
+    @staticmethod
+    def presence_last_seen_zset() -> str:
+        return "presence:last_seen"
 
     @staticmethod
     def user_online(user_id: int) -> str:

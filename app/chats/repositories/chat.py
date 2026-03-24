@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 import orjson
 from redis.asyncio import Redis
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.chats.keys import ChatKeys
@@ -53,6 +54,51 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         items = list(result.scalars().all())
 
         return PageResult(items=items, total=total, page=page, page_size=page_size)
+
+    async def get_user_chat_ids(self, user_id: int) -> list[int]:
+        rows = await self.session.execute(
+            select(ChatMember.chat_id)
+            .join(Chat, Chat.id == ChatMember.chat_id)
+            .where(
+                ChatMember.user_id == user_id,
+                ChatMember.is_banned.is_(False),
+                Chat.deleted_at.is_(None),
+            )
+        )
+        return list(rows.scalars().all())
+
+    async def get_user_chats_cursor(
+        self,
+        user_id: int,
+        limit: int = 20,
+        cursor_activity_at: datetime | None = None,
+        cursor_chat_id: int | None = None,
+    ) -> list[Chat]:
+        stmt = (
+            select(Chat)
+            .join(ChatMember, ChatMember.chat_id == Chat.id)
+            .where(
+                ChatMember.user_id == user_id,
+                ChatMember.is_banned.is_(False),
+                Chat.deleted_at.is_(None),
+            )
+            .order_by(Chat.last_activity_at.desc().nullslast(), Chat.id.desc())
+            .limit(limit + 1)
+        )
+
+        if cursor_activity_at is not None and cursor_chat_id is not None:
+            stmt = stmt.where(
+                or_(
+                    Chat.last_activity_at < cursor_activity_at,
+                    and_(
+                        Chat.last_activity_at == cursor_activity_at,
+                        Chat.id < cursor_chat_id,
+                    ),
+                )
+            )
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_direct_chat(
         self, user_id_1: int, user_id_2: int

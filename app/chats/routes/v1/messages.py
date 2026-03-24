@@ -5,10 +5,12 @@ from app.chats.commands.messages.delete import DeleteMessageCommand
 from app.chats.commands.messages.mark_read import MarkAsReadCommand
 from app.chats.commands.messages.modify import EditMessageCommand
 from app.chats.commands.messages.send import SendMessageCommand, SendMessageResult
-from app.chats.dtos.messages import MessageCursorPage
+from app.chats.dtos.messages import MessageCursorPage, MessageReadDetailsPageDTO
+from app.chats.queries.messages.get_detail import GetMessageReadDetailsQuery
 from app.chats.queries.messages.get_list import GetMessagesQuery
 from app.chats.schemas.messages.requests import (
     EditMessageRequest,
+    GetMessageReadDetailsRequest,
     GetMessagesRequest,
     MarkAsReadRequest,
     SendMessageRequest
@@ -63,6 +65,25 @@ async def get_messages(
         )
     )
 
+@router.get(
+    "/read-details",
+    status_code=status.HTTP_200_OK,
+    summary="Get read-cursor details page for chat members",
+)
+async def get_message_read_details(
+    chat_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+    params: GetMessageReadDetailsRequest = Query(...),
+) -> MessageReadDetailsPageDTO:
+    return await mediator.handle_query(
+        GetMessageReadDetailsQuery(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+            limit=params.limit,
+            after_user_id=params.after_user_id,
+        )
+    )
 
 @router.put(
     "/{message_id}",

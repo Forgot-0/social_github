@@ -31,3 +31,13 @@ class MessageDeliveryStatusDTO(BaseModel):
     message_id: int
     delivered_to: dict[int, bool]
 
+
+class MemberReadCursorDTO(BaseModel):
+    user_id: int
+    last_read_message_id: int
+
+
+class MessageReadDetailsPageDTO(BaseModel):
+    items: list[MemberReadCursorDTO]
+    next_cursor: int | None = None
+    has_more: bool = False

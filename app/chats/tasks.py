@@ -22,7 +22,7 @@ def register_chat_tasks(broker: AsyncBroker) -> None:
         FlushReadReceiptsTask.run,
         FlushReadReceiptsTask.get_name(),
         labels={
-            "schedule": [{"cron": "*/5 * * * * *"}]
+            "schedule": [{"cron": "*/5 * * * *  "}]
         },
     )
 
@@ -41,7 +41,7 @@ class FlushReadReceiptsTask(BaseTask):
         if not pending_keys:
             return
 
-        records = []
+        records_map: dict[tuple[int, int], int] = {}
         keys_to_remove = []
 
         for key_bytes in pending_keys:
@@ -55,20 +55,31 @@ class FlushReadReceiptsTask(BaseTask):
                 await redis.zrem(ChatKeys.pending_read_receipts(), key)
                 continue
 
-            records.append({
-                "user_id": user_id,
-                "chat_id": chat_id,
-                "last_read_message_id": message_id,
-            })
+            key_pair = (user_id, chat_id)
+            current_max = records_map.get(key_pair)
+            if current_max is None or message_id > current_max:
+                records_map[key_pair] = message_id
             keys_to_remove.append(key)
 
-        if records:
+        if records_map:
+            records = [
+                {
+                    "user_id": user_id,
+                    "chat_id": chat_id,
+                    "last_read_message_id": message_id,
+                }
+                for (user_id, chat_id), message_id in records_map.items()
+            ]
             stmt = insert(ReadReceipt).values(records)
             stmt = stmt.on_conflict_do_update(
-                index_elements=["user_id", "chat_id"],
+                constraint="uq_read_receipt",
                 set_={
                     "last_read_message_id": stmt.excluded.last_read_message_id,
-                }
+                },
+                where=(
+                    ReadReceipt.last_read_message_id
+                    < stmt.excluded.last_read_message_id
+                ),
             )
             await session.execute(stmt)
             await session.commit()

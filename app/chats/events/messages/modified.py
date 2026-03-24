@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from app.chats.keys import ChatKeys
 from app.chats.models.message import ModifiedMessageEvent
 from app.chats.repositories.chat import ChatRepository
-from app.chats.schemas.ws import WSEventType
+from app.chats.schemas.ws import WSEventType, WSModifyMessagePayload
 from app.core.events.event import BaseEventHandler
 from app.core.websockets.base import BaseConnectionManager
 
@@ -15,12 +15,21 @@ class ModifiedMessageEventHandler(BaseEventHandler[ModifiedMessageEvent, None]):
     chat_repository: ChatRepository
 
     async def __call__(self, event: ModifiedMessageEvent) -> None:
-        member_ids = await self.chat_repository.get_member_user_ids(event.chat_id)
-        payload = {
+        payload = WSModifyMessagePayload(
+            id=event.message_id,
+            chat_id=event.chat_id,
+            author_id=event.modefied_by,
+            content=event.new_content
+        )
+
+        data = {
             "type": WSEventType.MESSAGE_EDITED,
             "chat_id": event.chat_id,
-            "payload": {"message_id": event.message_id, "content": event.new_content},
+            "payload": payload.model_dump(),
         }
-        keys = [ChatKeys.user_channel(uid) for uid in member_ids]
-        await self.connection_manager.publish_bulk(keys, payload)
+        await self.connection_manager.publish(
+            ChatKeys.chat_channel(event.chat_id),
+            data,
+        )
+
 

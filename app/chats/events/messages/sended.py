@@ -48,11 +48,12 @@ class SendedMessageEventHandler(BaseEventHandler[SendedMessageEvent, None]):
         }
 
         member_ids = await self.chat_repository.get_member_user_ids(event.chat_id)
-        recipient_ids = [uid for uid in member_ids if uid != event.sender_id]
         await self.read_receipt_repository.increment_unread_bulk(
-            user_ids=recipient_ids, chat_id=event.chat_id
+            user_ids=member_ids, chat_id=event.chat_id, without_user=event.sender_id
         )
 
-        keys = [ChatKeys.user_channel(uid) for uid in recipient_ids]
-        await self.connection_manager.publish_bulk(keys, data)
+        await self.connection_manager.publish(
+            ChatKeys.chat_channel(event.chat_id),
+            data,
+        )
 

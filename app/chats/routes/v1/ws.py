@@ -8,6 +8,7 @@ from fastapi_limiter.depends import WebSocketRateLimiter
 
 from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
+from app.chats.repositories.chat import ChatRepository
 from app.chats.services.ws_client_events import ChatWebSocketClientService
 from app.chats.services.presence import PresenceService
 from app.core.services.auth.jwt_manager import JWTManager
@@ -44,6 +45,13 @@ async def websocket_endpoint(
         return
 
     await connection_manager.accept_connection(websocket, channel_key)
+    async with container() as request_container:
+        chat_repository = await request_container.get(ChatRepository)
+        chat_ids = await chat_repository.get_user_chat_ids(user_id)
+        for chat_id in chat_ids:
+            chat_key = ChatKeys.chat_channel(chat_id)
+            await connection_manager.bind_connection(websocket, chat_key)
+
     await presence_service.set_online(user_id)
     logger.info("WS connected", extra={"user_id": user_id})
 

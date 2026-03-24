@@ -20,10 +20,22 @@ class BaseConnectionManager(ABC):
         kw_only=True,
     )
     heartbeat_interval: int = field(default=30, kw_only=True)
-    heartbeat_tasks: dict[str, asyncio.Task] = field(default_factory=dict, kw_only=True)
+    heartbeat_task: asyncio.Task | None = field(default=None, kw_only=True)
 
     @abstractmethod
     async def accept_connection(self, websocket: WebSocket, key: str, subprotocol: str | None=None) -> None:
+        ...
+
+    @abstractmethod
+    async def bind_connection(self, websocket: WebSocket, key: str) -> None:
+        ...
+
+    @abstractmethod
+    async def bind_key_connections(self, source_key: str, target_key: str) -> None:
+        ...
+
+    @abstractmethod
+    async def unbind_key_connections(self, source_key: str, target_key: str) -> None:
         ...
 
     @abstractmethod

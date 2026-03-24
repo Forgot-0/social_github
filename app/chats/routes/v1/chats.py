@@ -9,9 +9,10 @@ from app.chats.commands.chats.create import CreateChatCommand
 from app.chats.commands.chats.kick_member import KickMemberCommand
 from app.chats.commands.chats.leave import LeaveChatCommand
 from app.chats.commands.chats.update import UpdateChatCommand
-from app.chats.dtos.chats import ChatListItemDTO, ChatPresenceDTO
+from app.chats.dtos.chats import ChatListCursorPageDTO, ChatListItemDTO, ChatPresenceDTO
 from app.chats.dtos.messages import MessageDeliveryStatusDTO
 from app.chats.queries.chats.get_by_id import ChatDetailDTO, GetChatByIdQuery
+from app.chats.queries.chats.get_cursor import GetChatsCursorQuery
 from app.chats.queries.chats.get_my_list import GetChatsQuery
 from app.chats.queries.chats.presence import GetChatPresenceQuery, GetMessageDeliveryQuery
 from app.chats.schemas.chats.request import (
@@ -20,6 +21,7 @@ from app.chats.schemas.chats.request import (
     ChangeRoleRequest,
     CreateChatRequest,
     CreateChatResponse,
+    GetChatsCursorRequest,
     GetChatsRequest,
     UpdateChatRequest
 )
@@ -72,6 +74,23 @@ async def get_chats(
         )
     )
 
+@router.get(
+    "/my/cursor",
+    status_code=status.HTTP_200_OK,
+    summary="List user's chats with keyset pagination",
+)
+async def get_chats_cursor(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+    params: GetChatsCursorRequest = Query(...),
+) -> ChatListCursorPageDTO:
+    return await mediator.handle_query(
+        GetChatsCursorQuery(
+            user_jwt_data=user_jwt_data,
+            limit=params.limit,
+            cursor=params.cursor,
+        )
+    )
 
 @router.get(
     "/{chat_id}",

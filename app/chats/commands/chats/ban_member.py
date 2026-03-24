@@ -8,10 +8,12 @@ from app.chats.exceptions import (
     NotChatMemberException,
     NotFoundChatException,
 )
+from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.websockets.base import BaseConnectionManager
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +32,7 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
     chat_access_servise: ChatAccessService
+    connection_manager: BaseConnectionManager
 
     async def handle(self, command: BanMemberCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
@@ -51,6 +54,19 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
 
         target.is_banned = command.ban
         await self.session.commit()
+
+        source_key = ChatKeys.user_channel(command.target_user_id)
+        target_key = ChatKeys.chat_channel(command.chat_id)
+        if command.ban:
+            await self.connection_manager.unbind_key_connections(
+                source_key=source_key,
+                target_key=target_key,
+            )
+        else:
+            await self.connection_manager.bind_key_connections(
+                source_key=source_key,
+                target_key=target_key,
+            )
 
         action = "banned" if command.ban else "unbanned"
         logger.info(

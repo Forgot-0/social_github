@@ -29,6 +29,11 @@ class GetChatsRequest(BaseModel):
     page_size: int = Field(20, ge=1, le=100)
 
 
+class GetChatsCursorRequest(BaseModel):
+    limit: int = Field(20, ge=1, le=100)
+    cursor: str | None = None
+
+
 class UpdateChatRequest(BaseModel):
     name: str | None = Field(default=None, max_length=256)
     description: str | None = Field(default=None, max_length=1024)

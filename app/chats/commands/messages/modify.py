@@ -41,7 +41,7 @@ class EditMessageCommandHandler(BaseCommandHandler[EditMessageCommand, None]):
         if message.author_id != user_id:
             raise AccessDeniedChatException()
 
-        message.update_content(command.new_content)
+        message.update_content(command.new_content, modefied_by=user_id)
         await self.session.commit()
         await self.event_bus.publish(message.pull_events())
 

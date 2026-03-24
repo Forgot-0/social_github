@@ -20,3 +20,8 @@ class MarkAsReadRequest(BaseModel):
 class GetMessagesRequest(BaseModel):
     limit: int = Field(default=30, ge=30, le=100)
     before_id: int | None = Field(default=None)
+
+
+class GetMessageReadDetailsRequest(BaseModel):
+    limit: int = Field(default=50, ge=1, le=200)
+    after_user_id: int | None = None

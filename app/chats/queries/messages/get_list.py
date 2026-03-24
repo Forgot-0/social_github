@@ -15,6 +15,7 @@ class GetMessagesQuery(BaseQuery):
     chat_id: int
     limit: int = 30
     before_id: int | None = None
+    include_read_details: bool = False
 
 
 @dataclass(frozen=True)
@@ -43,11 +44,13 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPa
 
         next_cursor = rows[-1].id if (has_more and rows) else None
 
-        member_ids = await self.chat_repository.get_member_user_ids(query.chat_id)
-        read_cursors = await self.read_receipt_repository.get_read_cursors(
-            chat_id=query.chat_id,
-            user_ids=member_ids,
-        )
+        read_cursors: dict[int, int] = {}
+        if query.include_read_details:
+            member_ids = await self.chat_repository.get_member_user_ids(query.chat_id)
+            read_cursors = await self.read_receipt_repository.get_read_cursors(
+                chat_id=query.chat_id,
+                user_ids=member_ids,
+            )
 
         items = [
             MessageDTO(

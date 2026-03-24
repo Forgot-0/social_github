@@ -43,3 +43,9 @@ class ChatPresenceDTO(BaseModel):
     chat_id: int
     members: list[MemberPresenceDTO]
     online_count: int
+
+
+class ChatListCursorPageDTO(BaseModel):
+    items: list[ChatListItemDTO]
+    next_cursor: str | None = None
+    has_more: bool = False
