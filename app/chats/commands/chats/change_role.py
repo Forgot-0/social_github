@@ -6,9 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.chats.exceptions import (
     AccessDeniedChatException,
     NotChatMemberException,
-    NotFoundChatException,
 )
-from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -51,7 +49,6 @@ class ChangeMemberRoleCommandHandler(BaseCommandHandler[ChangeMemberRoleCommand,
         ): raise AccessDeniedChatException()
 
         target.role_id = command.role_id
-        await self.chat_repository.invalidate_cache(ChatKeys.chat_member_count(command.chat_id))
         await self.session.commit()
 
         logger.info(

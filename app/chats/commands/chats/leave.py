@@ -13,7 +13,6 @@ from app.chats.repositories.chat import ChatRepository
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.core.websockets.base import BaseConnectionManager
 from app.projects.models.role_permissions import ProjectRolesEnum
 
 

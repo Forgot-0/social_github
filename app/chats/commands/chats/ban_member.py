@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.chats.exceptions import (
     AccessDeniedChatException,
     NotChatMemberException,
-    NotFoundChatException,
 )
 from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository

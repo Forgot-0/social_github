@@ -8,7 +8,6 @@ from app.chats.exceptions import (
     AccessDeniedChatException,
     AlreadyMemberException,
     MemberLimitExceededException,
-    NotFoundChatException,
     NotChatMemberException,
 )
 from app.chats.keys import ChatKeys

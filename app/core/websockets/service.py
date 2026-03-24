@@ -137,7 +137,6 @@ class ConnectionManager(BaseConnectionManager):
             raise
         finally:
             await pubsub.unsubscribe()
-            await self.redis.aclose()
 
     async def _dispatch(self, message: dict) -> None:
         channel = message["channel"].decode().removeprefix("ws:")

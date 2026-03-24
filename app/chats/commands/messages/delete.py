@@ -45,7 +45,7 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
         if (
-            not message.author_id != user_id and
+            message.author_id != user_id and
             not self.chat_access_servise.can_update(
                 user_jwt_data=command.user_jwt_data,
                 memeber=member,

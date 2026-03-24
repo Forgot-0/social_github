@@ -108,7 +108,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         )
 
     def update_last_activity(self,  message_id: int, message_date: datetime) -> None:
-        if self.last_activity_at is not None and self.last_activity_at >= message_date:
+        if self.last_activity_at is not None and self.last_activity_at > message_date:
             raise
 
         self.last_message_id = message_id

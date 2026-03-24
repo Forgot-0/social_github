@@ -31,30 +31,6 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         result = await self.session.execute(stmt)
         return result.scalar()
 
-    async def get_user_chats(
-        self, user_id: int, page: int = 1, page_size: int = 20
-    ) -> PageResult[Chat]:
-        stmt = (
-            select(Chat)
-            .join(ChatMember, ChatMember.chat_id == Chat.id)
-            .where(
-                ChatMember.user_id == user_id,
-                ChatMember.is_banned.is_(False),
-                Chat.deleted_at.is_(None),
-            )
-            .order_by(Chat.last_activity_at.desc().nullslast())
-            .distinct()
-        )
-
-        count_stmt = select(func.count()).select_from(stmt.subquery())
-        total = (await self.session.execute(count_stmt)).scalar_one()
-
-        offset = (page - 1) * page_size
-        result = await self.session.execute(stmt.offset(offset).limit(page_size))
-        items = list(result.scalars().all())
-
-        return PageResult(items=items, total=total, page=page, page_size=page_size)
-
     async def get_user_chat_ids(self, user_id: int) -> list[int]:
         rows = await self.session.execute(
             select(ChatMember.chat_id)
@@ -99,26 +75,6 @@ class ChatRepository(IRepository[Chat], CacheRepository):
 
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
-
-    async def get_direct_chat(
-        self, user_id_1: int, user_id_2: int
-    ) -> Chat | None:
-        sub = (
-            select(ChatMember.chat_id)
-            .where(ChatMember.user_id.in_([user_id_1, user_id_2]))
-            .group_by(ChatMember.chat_id)
-            .having(func.count(ChatMember.user_id) == 2)
-            .subquery()
-        )
-
-        stmt = select(Chat).where(
-            Chat.id.in_(select(sub)),
-            Chat.type == ChatType.DIRECT,
-            Chat.deleted_at.is_(None),
-        )
-
-        result = await self.session.execute(stmt)
-        return result.scalar()
 
     async def create(self, chat: Chat) -> Chat:
         self.session.add(chat)

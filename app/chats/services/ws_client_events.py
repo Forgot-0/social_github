@@ -44,16 +44,13 @@ class ChatWebSocketClientService:
         user_id: int,
         event_type: WSEventType,
     ) -> None:
-        member = await self.chat_repository.get_member(chat_id, user_id)
-        if not member or member.is_muted:
-            return
-
-        member_ids = await self.chat_repository.get_member_user_ids(chat_id)
         payload = {
             "type": event_type,
             "chat_id": chat_id,
             "payload": {"user_id": user_id, "ts": now_utc().isoformat()},
         }
 
-        keys = [ChatKeys.user_channel(uid) for uid in member_ids if uid != user_id]
-        await self.connection_manager.publish_bulk(keys, payload=payload)
+        await self.connection_manager.publish(
+            ChatKeys.chat_channel(chat_id),
+            payload,
+        )

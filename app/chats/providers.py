@@ -25,7 +25,6 @@ from app.chats.models.chat import KickedChatMemberEvent, LeavedChatMemberEvent
 from app.chats.models.message import DeletedMessageEvent, ModifiedMessageEvent
 from app.chats.queries.chats.get_by_id import GetChatByIdQuery, GetChatByIdQueryHandler
 from app.chats.queries.chats.get_cursor import GetChatsCursorQuery, GetChatsCursorQueryHandler
-from app.chats.queries.chats.get_my_list import GetChatsQuery, GetChatsQueryHandler
 from app.chats.queries.chats.presence import (
     GetChatPresenceQuery, GetChatPresenceQueryHandler,
     GetMessageDeliveryQuery, GetMessageDeliveryQueryHandler,
@@ -100,7 +99,6 @@ class ChatModuleProvider(Provider):
         EditMessageCommandHandler,
         MarkAsReadCommandHandler,
 
-        GetChatsQueryHandler,
         GetChatsCursorQueryHandler,
         GetChatByIdQueryHandler,
         GetMessagesQueryHandler,
@@ -132,7 +130,6 @@ class ChatModuleProvider(Provider):
 
     @decorate
     def register_chat_queries(self, registry: QueryRegistry) -> QueryRegistry:
-        registry.register_query(GetChatsQuery, GetChatsQueryHandler)
         registry.register_query(GetChatsCursorQuery, GetChatsCursorQueryHandler)
         registry.register_query(GetChatByIdQuery, GetChatByIdQueryHandler)
         registry.register_query(GetMessagesQuery, GetMessagesQueryHandler)

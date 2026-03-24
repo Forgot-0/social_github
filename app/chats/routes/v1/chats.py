@@ -13,7 +13,6 @@ from app.chats.dtos.chats import ChatListCursorPageDTO, ChatListItemDTO, ChatPre
 from app.chats.dtos.messages import MessageDeliveryStatusDTO
 from app.chats.queries.chats.get_by_id import ChatDetailDTO, GetChatByIdQuery
 from app.chats.queries.chats.get_cursor import GetChatsCursorQuery
-from app.chats.queries.chats.get_my_list import GetChatsQuery
 from app.chats.queries.chats.presence import GetChatPresenceQuery, GetMessageDeliveryQuery
 from app.chats.schemas.chats.request import (
     AddMemberRequest,
@@ -55,27 +54,8 @@ async def create_chat(
     result = next(iter(results))
     return CreateChatResponse(chat_id=result)
 
-
 @router.get(
     "/my",
-    status_code=status.HTTP_200_OK,
-    summary="List user's chats with unread counts (bulk Redis fetch)",
-)
-async def get_chats(
-    mediator: FromDishka[BaseMediator],
-    user_jwt_data: CurrentUserJWTData,
-    params: GetChatsRequest = Query(...),
-) -> PageResult[ChatListItemDTO]:
-    return await mediator.handle_query(
-        GetChatsQuery(
-            user_jwt_data=user_jwt_data,
-            page=params.page,
-            page_size=params.page_size,
-        )
-    )
-
-@router.get(
-    "/my/cursor",
     status_code=status.HTTP_200_OK,
     summary="List user's chats with keyset pagination",
 )

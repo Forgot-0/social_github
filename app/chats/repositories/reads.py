@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import timedelta
 
 from sqlalchemy import Select, select
 from sqlalchemy.dialects.postgresql import insert
@@ -40,7 +41,7 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
 
         pipe = self.redis.pipeline(transaction=True)
         pipe.set(ChatKeys.last_read(user_id, chat_id), str(message_id))
-        pipe.set(ChatKeys.unread_count(user_id, chat_id), "0")
+        pipe.set(ChatKeys.unread_count(user_id, chat_id), "0", ex=timedelta(days=1))
         pipe.zadd(ChatKeys.pending_read_receipts(), {f"{user_id}:{chat_id}:{message_id}": now_utc().timestamp()})
         await pipe.execute()
 
@@ -49,9 +50,6 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
         return await self.redis.incrby(key)
 
     async def increment_unread_bulk(self, user_ids: list[int], chat_id: int, without_user: int=0) -> None:
-        if not user_ids:
-            return
-
         unique_ids = tuple(dict.fromkeys(user_ids))
         for idx in range(0, len(unique_ids), _UNREAD_INCR_BATCH_SIZE):
             batch = unique_ids[idx:idx + _UNREAD_INCR_BATCH_SIZE]
