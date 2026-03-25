@@ -39,8 +39,6 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, None]):
             raise NotFoundChatException(chat_id=command.chat_id)
 
         member = await self.chat_repository.get_member(command.chat_id, user_id, with_role=True)
-        if not member:
-            raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
         if not self.chat_access_servise.can_update(
             user_jwt_data=command.user_jwt_data,

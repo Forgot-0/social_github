@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from app.chats.exceptions import NotChatMemberException
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.rbac import RBACManager
 from app.chats.models.chat_members import ChatMember
@@ -12,12 +13,15 @@ class ChatAccessService:
     def can_update(
         self,
         user_jwt_data: UserJWTData,
-        memeber: ChatMember,
+        memeber: ChatMember | None,
         must_permissions: set[str]
     ) -> bool:
         if self.rbac_manager.check_permission(
             user_jwt_data, {"chat:update"}
         ): return True
+
+        if memeber is None:
+            raise NotChatMemberException(chat_id=0, user_id=int(user_jwt_data.id))
 
         if memeber.is_banned:
             return False
@@ -32,13 +36,16 @@ class ChatAccessService:
     def update_member(
         self,
         user_jwt_data: UserJWTData,
-        requester: ChatMember,
+        requester: ChatMember | None,
         target: ChatMember,
         must_permissions: set[str] 
     ) -> bool:
         if self.rbac_manager.check_permission(
             user_jwt_data, {"chat:update"}
         ): return True
+
+        if requester is None:
+            return False
 
         if requester.is_banned:
             return False

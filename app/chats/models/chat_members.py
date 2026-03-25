@@ -36,7 +36,6 @@ class ChatMember(BaseModel, DateMixin):
     __table_args__ = (
         UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),
         Index("ix_chat_members_user_chat", "user_id", "chat_id"),
-        Index("ix_chat_members_chat_user", "chat_id", "user_id"),
     )
 
     def effective_permissions(self) -> dict[str, bool]:

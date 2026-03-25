@@ -24,13 +24,18 @@ class ConnectionManager(BaseConnectionManager):
     async def _heartbeat_loop(self) -> None:
         while True:
             await asyncio.sleep(self.heartbeat_interval)
-            keys = tuple(self.connections_map.keys())
-            if not keys:
+
+            all_sockets = set()
+            for conns in self.connections_map.values():
+                all_sockets.update(conns)
+
+            if not all_sockets:
                 continue
 
             payload = {"type": "ping", "ts": now_utc().isoformat()}
+
             await asyncio.gather(
-                *(self.send_json_all(key, payload) for key in keys),
+                *(ws.send_json(payload) for ws in all_sockets),
                 return_exceptions=True,
             )
 
@@ -55,8 +60,6 @@ class ConnectionManager(BaseConnectionManager):
 
         async with self.lock_map[key]:
             self.connections_map[key].add(websocket)
-
-        self._ensure_heartbeat()
 
     async def bind_key_connections(self, source_key: str, target_key: str) -> None:
         sockets = tuple(self.connections_map.get(source_key, ()))
@@ -124,6 +127,7 @@ class ConnectionManager(BaseConnectionManager):
             await pipe.execute()
 
     async def startup(self) -> None:
+        self._ensure_heartbeat()
         pubsub = self.redis.pubsub()
         await pubsub.psubscribe("ws:*")
 

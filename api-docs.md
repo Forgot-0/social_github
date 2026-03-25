@@ -938,16 +938,16 @@ page_size: integer
 
 ---
 
-### GET `/chats/` 🔒
-Список чатов текущего пользователя, отсортированных по активности.
+### GET `/chats/my` 🔒
+Список чатов текущего пользователя, отсортированных по активности. Использует keyset-пагинацию.
 
 **Query params:**
 ```
-page: integer (default 1)
-page_size: integer (1–100, default 20)
+limit: integer (1–100, default 20)
+cursor: string | null — курсор для следующей страницы (из поля next_cursor предыдущего ответа)
 ```
 
-**Response 200 — PageResult\<ChatListItemDTO\>:**
+**Response 200 — ChatListCursorPageDTO:**
 ```json
 {
   "items": [
@@ -964,10 +964,18 @@ page_size: integer (1–100, default 20)
       "member_count": 2
     }
   ],
-  "total": 5,
-  "page": 1,
-  "page_size": 20
+  "next_cursor": "base64encodedstring",
+  "has_more": true
 }
+```
+
+**Паттерн загрузки:**
+```
+// Первая загрузка
+GET /chats/my?limit=20
+
+// Следующая страница
+GET /chats/my?limit=20&cursor={next_cursor из предыдущего ответа}
 ```
 
 ---
@@ -988,18 +996,20 @@ page_size: integer (1–100, default 20)
   "members": [
     {
       "user_id": 1,
-      "role": "owner",
+      "role_id": 1,
       "is_muted": false
     },
     {
       "user_id": 5,
-      "role": "member",
+      "role_id": 5,
       "is_muted": false
     }
   ],
   "unread_count": 0
 }
 ```
+
+> `role_id` соответствует ID роли из системы чат-ролей: 1 — owner, 2 — admin, 4 — direct, 5 — member, 6 — viewer.
 
 **Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403
 
@@ -1031,10 +1041,10 @@ page_size: integer (1–100, default 20)
 ```json
 {
   "user_id": 7,
-  "role": "member"
+  "role_id": 5
 }
 ```
-- `role`: `owner | admin | member | viewer` (default `member`)
+- `role_id`: ID роли (1 — owner, 2 — admin, 5 — member, 6 — viewer)
 
 **Response 200:** `{}`
 
@@ -1046,6 +1056,22 @@ page_size: integer (1–100, default 20)
 Выгнать участника из чата. Требует роль `admin` или `owner`; нельзя кикнуть пользователя с более высокой ролью.
 
 **Response 204**
+
+**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+
+---
+
+### PUT `/chats/{chat_id}/members/{user_id}/role` 🔒
+Изменить роль участника. Только `owner`.
+
+**Request:**
+```json
+{
+  "role_id": 2
+}
+```
+
+**Response 200:** `{}`
 
 **Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
 
@@ -1101,7 +1127,7 @@ page_size: integer (1–100, default 20)
 
 **Query params:**
 ```
-limit: integer (default 30, max 100)
+limit: integer (default 30, min 30, max 100)
 before_id: integer | null — загрузить сообщения старше этого ID
 ```
 
@@ -1125,10 +1151,7 @@ before_id: integer | null — загрузить сообщения старше
   ],
   "next_cursor": 95,
   "has_more": true,
-  "read_cursors": {
-    "1": 101,
-    "5": 98
-  }
+  "read_cursors": {}
 }
 ```
 
@@ -1136,7 +1159,7 @@ before_id: integer | null — загрузить сообщения старше
 |------|----------|
 | `next_cursor` | ID последнего сообщения для следующего запроса (`before_id=next_cursor`) |
 | `has_more` | Есть ли ещё сообщения |
-| `read_cursors` | Словарь `{ user_id: last_read_message_id }` — кто до какого сообщения прочитал |
+| `read_cursors` | Всегда пустой объект `{}` в этом эндпоинте; детальные курсоры доступны через `/read-details` |
 
 **Паттерн загрузки истории:**
 ```
@@ -1145,6 +1168,31 @@ GET /chats/42/messages?limit=30
 
 // Подгрузка следующей страницы
 GET /chats/42/messages?limit=30&before_id={next_cursor из предыдущего ответа}
+```
+
+**Ошибки:** `NOT_CHAT_MEMBER` 403
+
+---
+
+### GET `/chats/{chat_id}/messages/read-details` 🔒
+Курсоры прочтения по каждому участнику чата. Cursor-based пагинация по `user_id`.
+
+**Query params:**
+```
+limit: integer (1–200, default 50)
+after_user_id: integer | null — загрузить записи с user_id строго больше указанного
+```
+
+**Response 200 — MessageReadDetailsPageDTO:**
+```json
+{
+  "items": [
+    { "user_id": 1, "last_read_message_id": 101 },
+    { "user_id": 5, "last_read_message_id": 98 }
+  ],
+  "next_cursor": 5,
+  "has_more": false
+}
 ```
 
 **Ошибки:** `NOT_CHAT_MEMBER` 403
@@ -1188,7 +1236,7 @@ GET /chats/42/messages?limit=30&before_id={next_cursor из предыдущег
 **Request:**
 ```json
 {
-  "new_content": "Edited text"
+  "content": "Edited text"
 }
 ```
 
@@ -1207,12 +1255,19 @@ GET /chats/42/messages?limit=30&before_id={next_cursor из предыдущег
 
 ---
 
-### POST `/chats/{chat_id}/messages/{message_id}/read` 🔒
+### POST `/chats/{chat_id}/messages/read` 🔒
 Отметить сообщения прочитанными вплоть до указанного ID.
 
-**Request:** тело пустое, `message_id` в URL.
+**Request:**
+```json
+{
+  "message_id": 101
+}
+```
 
-**Response 200:** `{}`
+**Response 204**
+
+**Ошибки:** `NOT_CHAT_MEMBER` 403
 
 ---
 
@@ -1239,7 +1294,7 @@ GET /chats/42/messages?limit=30&before_id={next_cursor из предыдущег
 ### Подключение
 
 ```
-WS /api/v1/chats/ws?token=<access_token>
+WS /api/v1/chats/ws/?token=<access_token>
 ```
 
 Одно соединение на пользователя получает **все** события по всем его чатам.  
@@ -1301,7 +1356,9 @@ WS /api/v1/chats/ws?token=<access_token>
   "type": "message_edited",
   "chat_id": 42,
   "payload": {
-    "message_id": 101,
+    "id": 101,
+    "chat_id": 42,
+    "author_id": 1,
     "content": "Updated text"
   }
 }
@@ -1317,19 +1374,6 @@ WS /api/v1/chats/ws?token=<access_token>
   "payload": {
     "user_id": 5,
     "last_read_message_id": 103
-  }
-}
-```
-
-#### `member_joined`
-Новый участник вошёл в чат.
-
-```json
-{
-  "type": "member_joined",
-  "chat_id": 42,
-  "payload": {
-    "user_id": 7
   }
 }
 ```
@@ -1449,7 +1493,7 @@ Heartbeat от сервера (каждые ~30 секунд). Отвечать 
 | Код | Причина |
 |-----|---------|
 | `4001` | Невалидный или истёкший токен |
-| `4029` | Слишком много соединений от пользователя |
+| `1008` | Слишком много соединений от пользователя (лимит: 2) |
 
 ---
 
@@ -1457,7 +1501,7 @@ Heartbeat от сервера (каждые ~30 секунд). Отвечать 
 
 ```javascript
 // 1. Подключение
-const ws = new WebSocket(`wss://api.example.com/api/v1/chats/ws?token=${accessToken}`);
+const ws = new WebSocket(`wss://api.example.com/api/v1/chats/ws/?token=${accessToken}`);
 
 // 2. Получение событий
 ws.onmessage = (event) => {
@@ -1476,7 +1520,7 @@ ws.onmessage = (event) => {
       removeMessage(data.chat_id, data.payload.message_id);
       break;
     case 'message_edited':
-      updateMessage(data.chat_id, data.payload.message_id, data.payload.content);
+      updateMessage(data.chat_id, data.payload.id, data.payload.content);
       break;
     case 'messages_read':
       updateReadCursor(data.chat_id, data.payload.user_id, data.payload.last_read_message_id);
@@ -1506,7 +1550,7 @@ ws.onclose = (event) => {
 
 ## Пагинация
 
-Все эндпоинты, возвращающие списки, поддерживают:
+Большинство эндпоинтов, возвращающих списки, поддерживают offset-пагинацию:
 
 **Query params:**
 ```
@@ -1525,7 +1569,10 @@ sort: string (формат: field:direction, например created_at:desc,us
 }
 ```
 
-> **Исключение:** `GET /chats/{chat_id}/messages` использует cursor-based пагинацию — параметры `before_id` и `limit` вместо `page`/`page_size`.
+> **Исключения:** следующие эндпоинты используют cursor-based пагинацию и не поддерживают `page`/`page_size`/`sort`:
+> - `GET /chats/my` — параметры `cursor` и `limit`
+> - `GET /chats/{chat_id}/messages` — параметры `before_id` и `limit`
+> - `GET /chats/{chat_id}/messages/read-details` — параметры `after_user_id` и `limit`
 
 ---
 
@@ -1593,30 +1640,31 @@ group    — групповой чат (до 100 участников)
 channel  — канал (только владелец/admin пишут) НЕРЕАЛИЗОВАНО
 ```
 
-### MemberRole (роли в чате)
+### ChatRoleId (роли в чате, передаются как role_id)
 ```
-owner   — создатель, все права
-admin   — управление участниками, редактирование чата
-member  — чтение и отправка сообщений
-viewer  — только чтение
+1 — owner        — создатель, все права
+2 — admin        — управление участниками, редактирование чата
+4 — direct       — участник direct-чата (назначается автоматически)
+5 — member       — чтение и отправка сообщений
+6 — viewer       — только чтение
 ```
 
 **Матрица прав участников чата:**
 
-| Действие | viewer | member | admin | owner |
-|----------|--------|--------|-------|-------|
-| Читать сообщения | ✓ | ✓ | ✓ | ✓ |
-| Отправлять сообщения | — | ✓ | ✓ | ✓ |
-| Редактировать своё сообщение | — | ✓ | ✓ | ✓ |
-| Удалять своё сообщение | — | ✓ | ✓ | ✓ |
-| Удалять любое сообщение | — | — | ✓ | ✓ |
-| Закреплять сообщения | — | — | ✓ | ✓ |
-| Добавлять участников | — | — | ✓ | ✓ |
-| Удалять участников | — | — | ✓ | ✓ |
-| Банить участников | — | — | ✓ | ✓ |
-| Редактировать чат (название/описание) | — | — | ✓ | ✓ |
-| Удалить чат | — | — | — | ✓ |
-| Менять роли участников | — | — | — | ✓ |
+| Действие | viewer | member | direct | admin | owner |
+|----------|--------|--------|--------|-------|-------|
+| Читать сообщения | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Отправлять сообщения | — | ✓ | ✓ | ✓ | ✓ |
+| Редактировать своё сообщение | — | ✓ | ✓ | ✓ | ✓ |
+| Удалять своё сообщение | — | ✓ | ✓ | ✓ | ✓ |
+| Закреплять сообщения | — | — | ✓ | ✓ | ✓ |
+| Удалять любое сообщение | — | — | — | ✓ | ✓ |
+| Добавлять участников | — | — | — | ✓ | ✓ |
+| Удалять участников | — | — | — | ✓ | ✓ |
+| Банить участников | — | — | — | ✓ | ✓ |
+| Редактировать чат (название/описание) | — | — | ✓ | ✓ | ✓ |
+| Удалить чат | — | — | — | — | ✓ |
+| Менять роли участников | — | — | — | — | ✓ |
 
 ### MessageType
 ```

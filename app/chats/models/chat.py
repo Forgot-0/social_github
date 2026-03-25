@@ -72,6 +72,9 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         description: str | None = None,
         is_public: bool = False,
     ) -> Self:
+        if len(members_ids) > chat_config.MAX_MEMBERS:
+                raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
+
         instance = cls(
             created_by=created_by,
             type=chat_type,
@@ -86,15 +89,17 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
 
             instance.add_member(created_by, 4)
             instance.add_member(members_ids[0], 4)
-        
+
         elif chat_type == ChatType.GROUP:
-            if len(members_ids) > chat_config.MAX_MEMBERS:
-                raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
             instance.add_member(created_by, role_id=1)
             for m_id in members_ids:
                 instance.add_member(m_id, role_id=5)
 
+        elif chat_type == ChatType.CHANNEL:
+            instance.add_member(created_by, role_id=1)
+            for m_id in members_ids:
+                instance.add_member(m_id, role_id=6)
 
         return instance
 

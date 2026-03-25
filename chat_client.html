@@ -37,6 +37,7 @@
     <div>
         <input type="text" id="chatId" placeholder="Chat ID">
         <input type="text" id="message" placeholder="Message">
+        <input type="text" id="messageId" placeholder="Message Id">
         <button onclick="sendMessage()">Send Message</button>
         <button onclick="markRead()">Mark as Read</button>
     </div>
@@ -103,11 +104,12 @@
                 return;
             }
             const chatId = document.getElementById('chatId').value;
+            const messageId = document.getElementById('messageId').value
             const event = {
                 type: 'messages_read',
                 chat_id: parseInt(chatId),
                 payload: {
-                    last_read_message_id: 123 // Replace with actual message ID
+                    last_read_message_id: parseInt(messageId) // Replace with actual message ID
                 }
             };
             ws.send(JSON.stringify(event));

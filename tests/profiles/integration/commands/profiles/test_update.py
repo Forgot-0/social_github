@@ -41,7 +41,7 @@ class TestUpdateProfileHandler:
                 ProfileCommandFactory.update_command(
                     display_name="new_name", bio="new bio", skills={"A", "b"}
                 ),
-                {"display_name": "new_name", "bio": "new bio", "skills": ["b", "a"]},
+                {"display_name": "new_name", "bio": "new bio", "skills": ["a", "b"]},
             ),
             (
                 ProfileCommandFactory.update_command(display_name="only_name"),
@@ -75,7 +75,7 @@ class TestUpdateProfileHandler:
         assert updated is not None
         assert updated.display_name == expected["display_name"]
         assert updated.bio == expected["bio"]
-        assert updated.skills == list(set(expected["skills"]))
+        assert set(updated.skills) == set(expected["skills"])
 
     @pytest.mark.asyncio
     async def test_not_found_raises(self, db_session: AsyncSession, handler_factory, user_jwt):

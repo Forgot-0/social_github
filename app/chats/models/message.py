@@ -84,6 +84,9 @@ class Message(BaseModel, DateMixin):
         reply_to_id: int | None = None,
         message_type: MessageType = MessageType.TEXT,
     ) -> Self:
+        if message_type == MessageType.REPLY and reply_to_id is None:
+            raise
+
         instance = cls(
             author_id=sender_id,
             chat_id=chat_id,
@@ -96,6 +99,7 @@ class Message(BaseModel, DateMixin):
 
     def update_content(self, new_content: str, modefied_by: int) -> None:
         self.content = new_content
+        self.is_edited = True
         self.validate_content()
         self.register_event(
             ModifiedMessageEvent(
