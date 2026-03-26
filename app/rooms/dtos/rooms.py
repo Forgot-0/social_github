@@ -29,14 +29,3 @@ class RoomDetailDTO(RoomDTO):
     members: list[RoomMemberDTO] = []
 
 
-class JoinTokenDTO(BaseModel):
-    token: str
-    slug: str
-    livekit_url: str
-
-
-class LiveParticipantDTO(BaseModel):
-    identity: str
-    name: str
-    state: int
-    joined_at: int

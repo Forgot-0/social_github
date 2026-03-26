@@ -1,8 +1,3 @@
-"""
-Thin async wrapper around the LiveKit Server SDK.
-All LiveKit I/O goes through this service so the rest of the module
-never imports livekit directly.
-"""
 from datetime import timedelta
 import logging
 from dataclasses import dataclass
@@ -10,6 +5,7 @@ from dataclasses import dataclass
 from livekit import api as lk_api
 
 from app.rooms.config import room_config
+from app.rooms.dtos.livekit import LiveKitParticipantsDTO
 from app.rooms.exceptions import LiveKitServiceException
 
 logger = logging.getLogger(__name__)
@@ -56,7 +52,6 @@ class LiveKitService:
         except Exception as exc:
             logger.exception("Failed to delete LiveKit room", extra={"slug": slug})
             raise LiveKitServiceException(reason=str(exc)) from exc
-
 
     def generate_join_token(
         self,
@@ -129,19 +124,19 @@ class LiveKitService:
                 extra={"slug": slug, "identity": identity, "error": str(exc)},
             )
 
-    async def list_participants(self, slug: str) -> list[dict]:
+    async def list_participants(self, slug: str) -> list[LiveKitParticipantsDTO]:
         try:
             async with self._client() as client:
                 resp = await client.room.list_participants(
                     lk_api.ListParticipantsRequest(room=slug)
                 )
             return [
-                {
-                    "identity": p.identity,
-                    "name": p.name,
-                    "state": p.state,
-                    "joined_at": p.joined_at,
-                }
+                LiveKitParticipantsDTO(
+                    identity=p.identity,
+                    name=p.name,
+                    state=p.state,
+                    joined_at=p.joined_at,
+                )
                 for p in resp.participants
             ]
         except Exception as exc:
