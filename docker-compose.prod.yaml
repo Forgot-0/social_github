@@ -16,3 +16,35 @@ services:
       - minio
     networks:
       - app-network
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: mini_discord_livekit
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit.yaml"]
+    expose:
+      - "7880"
+      - "7881"
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./infra/livekit/livekit.yaml:/etc/livekit.yaml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+
+  coturn:
+    image: coturn/coturn:4.6.2
+    container_name: mini_discord_coturn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./infra/turn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+    

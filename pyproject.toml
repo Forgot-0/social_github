@@ -37,6 +37,7 @@ dependencies = [
     "gunicorn (>=25.1.0,<26.0.0)",
     "aiojobs (>=1.4.0,<2.0.0)",
     "websockets (>=16.0,<17.0)",
+    "livekit-api (>=1.1.0,<2.0.0)",
 ]
 
 [dependency-groups]

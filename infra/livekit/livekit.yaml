@@ -1,0 +1,23 @@
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  use_external_ip: true
+
+redis:
+  address: redis:6379
+
+keys:
+  devkey: 3dYOdLF5Sj85rImIJ01O1X22hwnk5oLoi
+
+room:
+  auto_create: true
+
+logging:
+  level: info
+
+turn:
+  enabled: false
