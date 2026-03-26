@@ -67,7 +67,7 @@ class ChatModuleProvider(Provider):
     def delivery_tracking_service(self, redis: Redis) -> DeliveryTrackingService:
         return DeliveryTrackingService(redis=redis)
 
-    caht_access_service = provide(
+    chat_access_service = provide(
         ChatAccessService, scope=Scope.APP
     )
 

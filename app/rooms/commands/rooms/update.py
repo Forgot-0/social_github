@@ -37,7 +37,7 @@ class UpdateRoomCommandHandler(BaseCommandHandler[UpdateRoomCommand, None]):
             room=room,
             must_permissions={"manage_channels"}
         ): raise InsufficientRoomPermissionException(required="manage_channels")
-  
+
         if command.name is not None:
             room.name = command.name
         if command.description is not None:

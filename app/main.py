@@ -33,6 +33,8 @@ from app.pre_start import pre_start
 from app.profiles.routers import router_v1 as profile_router_v1
 from app.projects.routers import router_v1 as project_router_v1
 from app.chats.routers import router_v1 as chat_router_v1
+from app.rooms.routers import router_v1 as room_router_v1
+
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +94,7 @@ def setup_router(app: FastAPI) -> None:
     app.include_router(profile_router_v1, prefix=app_config.API_V1_STR)
     app.include_router(project_router_v1, prefix=app_config.API_V1_STR)
     app.include_router(chat_router_v1, prefix=app_config.API_V1_STR)
+    app.include_router(room_router_v1, prefix=app_config.API_V1_STR)
 
 
 def handle_application_exeption(request: Request, exc: ApplicationException) -> ORJSONResponse:

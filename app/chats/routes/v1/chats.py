@@ -208,6 +208,7 @@ async def ban_member(
         )
     )
 
+
 @router.get(
     "/{chat_id}/presence",
     status_code=status.HTTP_200_OK,

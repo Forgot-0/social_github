@@ -23,6 +23,7 @@ class RoleBlueprint:
 
     def to_dict(self) -> dict:
         return {
+            "id": self.id,
             "name": self.name,
             "level": self.level,
             "permissions": self.permissions,
