@@ -67,7 +67,8 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
 
         action = "banned" if command.ban else "unbanned"
         logger.info(
-            f"Member {action}",
+            "Member %s",
+            action,
             extra={
                 "chat_id": command.chat_id,
                 "target": command.target_user_id,

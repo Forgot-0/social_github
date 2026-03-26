@@ -1,6 +1,6 @@
 from typing import Self
 
-from sqlalchemy import BigInteger, Boolean, String, Text
+from sqlalchemy import BigInteger, Boolean, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -28,40 +28,47 @@ class Room(BaseModel, DateMixin, SoftDeleteMixin):
         "RoomBan",
         back_populates="room",
         cascade="all, delete-orphan",
+        foreign_keys="[RoomBan.room_slug]",
     )
 
     @classmethod
     def create(
-        cls, name: str, slug: str,
-        created_by: int, description: str | None=None,
-        is_public: bool=True, chat_id: int | None=None,
+        cls,
+        name: str,
+        slug: str,
+        created_by: int,
+        description: str | None = None,
+        is_public: bool = True,
+        chat_id: int | None = None,
     ) -> Self:
-        instance = cls(
+        return cls(
             name=name,
             slug=slug,
             created_by=created_by,
             description=description,
             is_public=is_public,
-            chat_id=chat_id
+            chat_id=chat_id,
         )
 
-        return instance
-
-    def add_memeber(self, member_id: int, username: str, role_id: int) -> None:
-        self.members.append(
-            RoomMember(
-                user_id=member_id,
-                username=username,
-                role_id=role_id,
-                is_muted=False
-            )
+    def add_memeber(self, member_id: int, username: str, role_id: int) -> RoomMember:
+        member = RoomMember(
+            user_id=member_id,
+            username=username,
+            role_id=role_id,
+            is_muted=False,
         )
+        self.members.append(member)
+        return member
 
-    def get_member_by_id(self, memebr_id: int) -> RoomMember | None:
+    def get_member_by_id(self, member_id: int) -> RoomMember | None:
         for member in self.members:
-            if member.user_id == memebr_id:
+            if member.user_id == member_id:
                 return member
+        return None
 
+    @property
+    def member_count(self) -> int:
+        return len(self.members)
 
 
 class RoomBan(BaseModel, DateMixin):
@@ -70,6 +77,7 @@ class RoomBan(BaseModel, DateMixin):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     room_slug: Mapped[str] = mapped_column(
         String(64),
+        ForeignKey("rooms.slug", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -77,4 +85,8 @@ class RoomBan(BaseModel, DateMixin):
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     banned_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
-    room: Mapped["Room"] = relationship("Room", back_populates="bans")
+    room: Mapped["Room"] = relationship(
+        "Room",
+        back_populates="bans",
+        foreign_keys=[room_slug],
+    )

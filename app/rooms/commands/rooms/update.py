@@ -35,8 +35,9 @@ class UpdateRoomCommandHandler(BaseCommandHandler[UpdateRoomCommand, None]):
         if not self.room_access_service.can_update(
             user_jwt_data=command.user_jwt_data,
             room=room,
-            must_permissions={"manage_channels"}
-        ): raise InsufficientRoomPermissionException(required="manage_channels")
+            must_permissions={"manage_channels"},
+        ):
+            raise InsufficientRoomPermissionException(required="manage_channels")
 
         if command.name is not None:
             room.name = command.name

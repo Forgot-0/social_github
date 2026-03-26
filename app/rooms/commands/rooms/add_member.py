@@ -5,7 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.rooms.exceptions import InsufficientRoomPermissionException, RoomNotFoundException, RoomRoleNotFoundException
+from app.rooms.exceptions import (
+    InsufficientRoomPermissionException,
+    RoomNotFoundException,
+    RoomRoleNotFoundException,
+)
 from app.rooms.repositories.roles import RoomRoleRepository
 from app.rooms.repositories.rooms import RoomRepository
 from app.rooms.services.access import RoomAccessService
@@ -42,22 +46,23 @@ class AddMemberRoomCommandHandler(BaseCommandHandler[AddMemberRoomCommand, None]
             user_jwt_data=command.user_jwt_data,
             room=room,
             must_permissions={"manage_roles"},
-            role=role
-        ): raise InsufficientRoomPermissionException(required="manage_roles")
+            role=role,
+        ):
+            raise InsufficientRoomPermissionException(required="manage_roles")
 
         room.add_memeber(
             member_id=command.member_id,
             username=command.member_username,
-            role_id=command.role_id
+            role_id=command.role_id,
         )
 
         await self.session.commit()
         logger.info(
-            "Add member to room", 
+            "Add member to room",
             extra={
                 "member_id": command.member_id,
                 "username": command.member_username,
                 "room_slug": command.slug,
-                "added_by": command.user_jwt_data.id
-            }
+                "added_by": command.user_jwt_data.id,
+            },
         )

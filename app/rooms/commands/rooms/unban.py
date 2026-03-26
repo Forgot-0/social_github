@@ -5,29 +5,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.exceptions import AccessDeniedException
-from app.rooms.exceptions import RoomNotFoundException
+from app.rooms.exceptions import (
+    InsufficientRoomPermissionException,
+    RoomNotFoundException,
+)
 from app.rooms.repositories.rooms import RoomRepository
 from app.rooms.services.access import RoomAccessService
-from app.rooms.services.livekit_service import LiveKitService
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class DeleteRoomCommand(BaseCommand):
+class UnbanMemberCommand(BaseCommand):
     slug: str
+    target_user_id: int
     user_jwt_data: UserJWTData
 
 
 @dataclass(frozen=True)
-class DeleteRoomCommandHandler(BaseCommandHandler[DeleteRoomCommand, None]):
+class UnbanMemberCommandHandler(BaseCommandHandler[UnbanMemberCommand, None]):
     session: AsyncSession
     room_repository: RoomRepository
-    livekit_service: LiveKitService
     room_access_service: RoomAccessService
 
-    async def handle(self, command: DeleteRoomCommand) -> None:
+    async def handle(self, command: UnbanMemberCommand) -> None:
         room = await self.room_repository.get_by_slug(command.slug)
         if room is None:
             raise RoomNotFoundException(slug=command.slug)
@@ -35,17 +36,20 @@ class DeleteRoomCommandHandler(BaseCommandHandler[DeleteRoomCommand, None]):
         if not self.room_access_service.can_update(
             user_jwt_data=command.user_jwt_data,
             room=room,
-            must_permissions={"room:delete"},
+            must_permissions={"ban"},
         ):
-            raise AccessDeniedException(need_permissions={"room:delete"})
+            raise InsufficientRoomPermissionException(required="ban")
 
-        room.soft_delete()
-        await self.session.commit()
-        await self.room_repository.invalidate_cache()
-
-        await self.livekit_service.delete_room(command.slug)
+        ban = await self.room_repository.get_ban(command.slug, command.target_user_id)
+        if ban is not None:
+            await self.room_repository.delete_ban(ban)
+            await self.session.commit()
 
         logger.info(
-            "Room deleted",
-            extra={"slug": command.slug, "deleted_by": command.user_jwt_data.id},
+            "Member unbanned from room",
+            extra={
+                "slug": command.slug,
+                "target_user_id": command.target_user_id,
+                "unbanned_by": command.user_jwt_data.id,
+            },
         )

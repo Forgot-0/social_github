@@ -21,3 +21,7 @@ from app.chats.models.message import Message
 from app.chats.models.chat_roles import ChatRole
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.read_receipts import ReadReceipt
+
+from app.rooms.models.rooms import Room, RoomBan
+from app.rooms.models.room_member import RoomMember
+from app.rooms.models.role_chat import RoomRole
