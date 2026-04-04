@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from app.core.exceptions import ApplicationException
 
@@ -123,3 +124,108 @@ class MessageTooLongException(ApplicationException):
     @property
     def detail(self):
         return {"length": self.length, "max_length": self.max_length}
+
+
+@dataclass(kw_only=True)
+class LiveKitServiceException(ApplicationException):
+    reason: str
+    code: str = "LIVEKIT_ERROR"
+    status: int = 502
+
+    @property
+    def message(self) -> str:
+        return "LiveKit service error"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"reason": self.reason}
+
+
+@dataclass(kw_only=True)
+class NoActiveCallException(ApplicationException):
+    chat_id: int
+    code: str = "NO_ACTIVE_CALL"
+    status: int = 404
+
+    @property
+    def message(self) -> str:
+        return "There is no active call in this chat"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"chat_id": self.chat_id}
+
+
+@dataclass(kw_only=True)
+class ActiveCallExistsException(ApplicationException):
+    chat_id: int
+    code: str = "ACTIVE_CALL_EXISTS"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return "A call is already active in this chat"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"chat_id": self.chat_id}
+
+
+@dataclass(kw_only=True)
+class AttachmentValidationException(ApplicationException):
+    mime_type: str
+    code: str = "ATTACHMENT_VALIDATION"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Attachment validation failed"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"mime_type": self.mime_type}
+
+
+@dataclass(kw_only=True)
+class InvalidUploadTokenException(ApplicationException):
+    token: str
+    code: str = "INVALID_UPLOAD_TOKEN"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Upload token is invalid, expired, or does not belong to this chat"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"token": self.token}
+
+
+@dataclass(kw_only=True)
+class AttachmentLimitExceededException(ApplicationException):
+    count: int
+    code: str = "ATTACHMENT_LIMIT_EXCEEDED"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Attachment limit exceeded"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"count": self.count}
+
+
+@dataclass(kw_only=True)
+class AttachmentNotFoundException(ApplicationException):
+    attachment_id: str
+    code: str = "ATTACHMENT_NOT_FOUND"
+    status: int = 404
+
+    @property
+    def message(self) -> str:
+        return "Attachment not found"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"attachment_id": self.attachment_id}

@@ -3,9 +3,12 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.models.chat import Chat, ChatType
+from app.chats.keys import ChatKeys
+from app.chats.models.chat import Chat, ChatType, CreadtedChatEvent
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.livekit_service import LiveKitService
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 logger = logging.getLogger(__name__)
@@ -26,10 +29,15 @@ class CreateChatCommand(BaseCommand):
 class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, int]):
     session: AsyncSession
     chat_repository: ChatRepository
+    livekit_service: LiveKitService
+    event_bus: BaseEventBus
 
     async def handle(self, command: CreateChatCommand) -> int:
         creator_id = int(command.user_jwt_data.id)
+        
         all_member_ids = list(command.member_ids)
+        if creator_id in all_member_ids:
+            all_member_ids.remove(creator_id)
 
         chat = Chat.create(
             created_by=creator_id,
@@ -41,7 +49,17 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, int]):
         )
         await self.chat_repository.create(chat)
         await self.session.commit()
-    
+        await self.livekit_service.create_room(slug=ChatKeys.chat_call_slug(chat.id))
+
+        await self.event_bus.publish(
+            [CreadtedChatEvent(
+                chat_id=chat.id,
+                created_by=creator_id,
+                member_ids=all_member_ids,
+                name=chat.name
+            )]
+        )
+
         logger.info(
             "Chat created",
             extra={

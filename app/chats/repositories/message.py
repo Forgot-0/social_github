@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from sqlalchemy import Select, func, select
+from sqlalchemy.orm import selectinload
 
 from app.chats.models.message import Message
 from app.core.db.repository import IRepository
@@ -28,7 +29,8 @@ class MessageRepository(IRepository[Message]):
         stmt = select(Message).where(
             Message.chat_id == chat_id,
             Message.is_deleted.is_(False),
-        )
+        ).options(selectinload(Message.reply_to))
+
         if before_id is not None:
             stmt = stmt.where(Message.id < before_id)
 

@@ -1,6 +1,8 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Query, status
 
+from app.chats.commands.calls.join import JoinCallCommand
+from app.chats.commands.calls.mute import MuteParticipantCommand
 from app.chats.commands.chats.add_member import AddMemberCommand
 from app.chats.commands.chats.ban_member import BanMemberCommand
 from app.chats.commands.chats.change_role import ChangeMemberRoleCommand
@@ -9,11 +11,15 @@ from app.chats.commands.chats.create import CreateChatCommand
 from app.chats.commands.chats.kick_member import KickMemberCommand
 from app.chats.commands.chats.leave import LeaveChatCommand
 from app.chats.commands.chats.update import UpdateChatCommand
-from app.chats.dtos.chats import ChatListCursorPageDTO, ChatListItemDTO, ChatPresenceDTO
+from app.chats.dtos.chats import ChatListCursorPageDTO, ChatPresenceDTO
+from app.chats.dtos.livekit import JoinTokenDTO, LiveKitParticipantsDTO
 from app.chats.dtos.messages import MessageDeliveryStatusDTO
+from app.chats.exceptions import NotChatMemberException
 from app.chats.queries.chats.get_by_id import ChatDetailDTO, GetChatByIdQuery
 from app.chats.queries.chats.get_cursor import GetChatsCursorQuery
 from app.chats.queries.chats.presence import GetChatPresenceQuery, GetMessageDeliveryQuery
+from app.chats.repositories.chat import ChatRepository
+from app.chats.schemas.calls.requests import MuteParticipantRequest
 from app.chats.schemas.chats.request import (
     AddMemberRequest,
     BanRequest,
@@ -21,9 +27,9 @@ from app.chats.schemas.chats.request import (
     CreateChatRequest,
     CreateChatResponse,
     GetChatsCursorRequest,
-    GetChatsRequest,
     UpdateChatRequest
 )
+from app.chats.services.livekit_service import LiveKitService
 from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
@@ -208,6 +214,7 @@ async def ban_member(
         )
     )
 
+
 @router.get(
     "/{chat_id}/presence",
     status_code=status.HTTP_200_OK,
@@ -241,3 +248,60 @@ async def get_message_delivery(
             message_id=message_id,
         )
     )
+
+@router.post(
+    "/{chat_id}/calls/join",
+    status_code=status.HTTP_200_OK,
+    summary="Join chat call and receive LiveKit token",
+)
+async def join_call(
+    chat_id: int,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> JoinTokenDTO:
+    result = await mediator.handle_command(
+        JoinCallCommand(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+        )
+    )
+    return next(iter(result))
+
+@router.put(
+    "/{chat_id}/calls/participants/{user_id}/mute",
+    status_code=status.HTTP_200_OK,
+    summary="Mute or unmute call participant",
+)
+async def mute_call_participant(
+    chat_id: int,
+    user_id: int,
+    request: MuteParticipantRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        MuteParticipantCommand(
+            user_jwt_data=user_jwt_data,
+            chat_id=chat_id,
+            target_user_id=user_id,
+            muted=request.muted,
+        )
+    )
+
+@router.get(
+    "/{chat_id}/calls/participants",
+    status_code=status.HTTP_200_OK,
+    summary="List active call participants in chat",
+)
+async def get_call_participants(
+    chat_id: int,
+    chat_repository: FromDishka[ChatRepository],
+    livekit_service: FromDishka[LiveKitService],
+    user_jwt_data: CurrentUserJWTData,
+) -> list[LiveKitParticipantsDTO]:
+    user_id = int(user_jwt_data.id)
+    member = await chat_repository.get_member(chat_id, user_id)
+    if member is None:
+        raise NotChatMemberException(chat_id=chat_id, user_id=user_id)
+
+    return await livekit_service.list_participants(f"chat:{chat_id}")

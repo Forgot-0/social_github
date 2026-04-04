@@ -3,7 +3,6 @@ from enum import Enum
 from app.chats.models.chat_roles import ChatRole
 
 
-
 class ChatRolesEnum(Enum):
     OWNER = ChatRole(
         id=1,
@@ -14,7 +13,8 @@ class ChatRolesEnum(Enum):
             "member:invite": True, "member:kick": True, "member:ban": True, "member:mute": True,
             "role:change": True, "permission:update": True,
             "message:delete": True, "message:send": True, "message:pin": True,
-            "settings:update": True, "settings:get": True
+            "settings:update": True, "settings:get": True,
+            "call:join": True, "call:mute_member": True, "call:end": True,
         }
     )
 
@@ -27,7 +27,8 @@ class ChatRolesEnum(Enum):
             "member:invite": True, "member:kick": True, "member:ban": True, "member:mute": True,
             "role:change": True, "permission:update": True,
             "message:delete": True, "message:send": True, "message:pin": True,
-            "settings:update": True, "settings:get": True
+            "settings:update": True, "settings:get": True,
+            "call:join": True, "call:mute_member": True, "call:end": True,
         }
     )
 
@@ -40,7 +41,8 @@ class ChatRolesEnum(Enum):
             "member:invite": False, "member:kick": False, "member:ban": False, "member:mute": False,
             "role:change": False, "permission:update": False,
             "message:delete": False, "message:send": True, "message:pin": True,
-            "settings:update": False, "settings:get": True
+            "settings:update": False, "settings:get": True,
+            "call:join": True, "call:mute_member": False, "call:end": False,
         }
     )
 
@@ -53,7 +55,8 @@ class ChatRolesEnum(Enum):
             "member:invite": False, "member:kick": False, "member:ban": False, "member:mute": False,
             "role:change": False, "permission:update": False,
             "message:delete": False, "message:send": True, "message:pin": False,
-            "settings:update": False, "settings:get": True
+            "settings:update": False, "settings:get": True,
+            "call:join": True, "call:mute_member": False, "call:end": False,
         }
     )
 
@@ -66,11 +69,11 @@ class ChatRolesEnum(Enum):
             "member:invite": False, "member:kick": False, "member:ban": False, "member:mute": False,
             "role:change": False, "permission:update": False,
             "message:delete": False, "message:send": False, "message:pin": False,
-            "settings:update": False, "settings:get": True
+            "settings:update": False, "settings:get": True,
+            "call:join": True, "call:mute_member": False, "call:end": False,
         }
     )
 
     @classmethod
     def get_all_chat_roles(cls) -> list[ChatRole]:
         return [role.value for role in cls]
-

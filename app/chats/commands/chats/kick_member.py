@@ -37,8 +37,6 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
         requester_id = int(command.user_jwt_data.id)
 
         requester = await self.chat_repository.get_member(command.chat_id, requester_id, with_role=True)
-        if not requester:
-            raise NotChatMemberException(chat_id=command.chat_id, user_id=requester_id)
 
         target = await self.chat_repository.get_member(command.chat_id, command.target_user_id, with_role=True)
         if not target:
@@ -58,7 +56,7 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
             [KickedChatMemberEvent(
                 chat_id=command.chat_id,
                 requester_id=requester_id,
-                target_user_id=target.user_id
+                target_user_id=target.user_id,
             )]
         )
 

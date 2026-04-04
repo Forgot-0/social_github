@@ -1,0 +1,213 @@
+import re
+from dataclasses import dataclass
+import logging
+from uuid import uuid4
+
+import orjson
+from redis.asyncio import Redis
+
+from app.chats.exceptions import (
+    AttachmentLimitExceededException,
+    AttachmentValidationException,
+    InvalidUploadTokenException,
+)
+from app.chats.models.attachment import AttachmentType
+from app.core.services.storage.service import StorageService
+
+logger = logging.getLogger(__name__)
+
+ATTACHMENT_BUCKET = "chat-attachments"
+
+_UPLOAD_TOKEN_TTL = 3600
+_DOWNLOAD_URL_TTL = 300
+_DOWNLOAD_CACHE_TTL = 240
+
+MAX_FILE_SIZE = 100 * 1024 * 1024
+MAX_MEDIA_SIZE = 50 * 1024 * 1024
+
+MAX_MEDIA_PER_MESSAGE = 10
+MAX_FILES_PER_MESSAGE = 1
+
+ALLOWED_IMAGE_MIMES = frozenset({
+    "image/jpeg", "image/png", "image/gif",
+    "image/webp", "image/heic", "image/heif",
+})
+ALLOWED_VIDEO_MIMES = frozenset({
+    "video/mp4", "video/webm",
+    "video/quicktime", "video/x-msvideo",
+})
+ALLOWED_FILE_MIMES = frozenset({
+    "application/pdf",
+    "application/zip", "application/x-zip-compressed",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "text/csv",
+    "application/octet-stream",
+})
+ALL_ALLOWED_MIMES = ALLOWED_IMAGE_MIMES | ALLOWED_VIDEO_MIMES | ALLOWED_FILE_MIMES
+
+_SAFE_FILENAME_RE = re.compile(r"[^\w.\-]")
+
+def resolve_attachment_type(mime_type: str) -> AttachmentType:
+    if mime_type in ALLOWED_IMAGE_MIMES:
+        return AttachmentType.IMAGE
+    if mime_type in ALLOWED_VIDEO_MIMES:
+        return AttachmentType.VIDEO
+    return AttachmentType.FILE
+
+
+def sanitize_filename(filename: str) -> str:
+    name = _SAFE_FILENAME_RE.sub("_", filename.strip())
+    return name[:200] or "file"
+
+
+@dataclass(frozen=True)
+class UploadSlot:
+    upload_token: str
+    upload_url: str
+    s3_key: str
+    attachment_type: AttachmentType
+    expires_in: int
+
+
+@dataclass(frozen=True)
+class ClaimedAttachment:
+    chat_id: int
+    user_id: int
+    s3_key: str
+    mime_type: str
+    file_size: int
+    original_filename: str
+    attachment_type: AttachmentType
+
+
+@dataclass
+class AttachmentService:
+    redis: Redis
+    storage_service: StorageService
+
+    def _pending_key(self, user_id: int, token: str) -> str:
+        return f"pending_upload:{user_id}:{token}"
+
+    def _download_cache_key(self, attachment_id: str) -> str:
+        return f"att_url:{attachment_id}"
+
+    async def create_upload_slot(
+        self,
+        chat_id: int,
+        user_id: int,
+        filename: str,
+        mime_type: str,
+        file_size: int,
+    ) -> UploadSlot:
+        if mime_type not in ALL_ALLOWED_MIMES:
+            raise AttachmentValidationException(mime_type=f"MIME type not allowed: {mime_type}")
+
+        attachment_type = resolve_attachment_type(mime_type)
+        max_size = MAX_MEDIA_SIZE if attachment_type != AttachmentType.FILE else MAX_FILE_SIZE
+
+        if file_size <= 0 or file_size > max_size:
+            raise AttachmentValidationException(
+                mime_type=f"Invalid file size {file_size}. Max: {max_size} bytes"
+            )
+
+        upload_token = str(uuid4())
+        safe_name = sanitize_filename(filename)
+        s3_key = f"chats/{chat_id}/{uuid4()}/{safe_name}"
+
+        upload_url = await self.storage_service.upload_put_url(
+            bucket_name=ATTACHMENT_BUCKET,
+            file_key=s3_key,
+            expires=_UPLOAD_TOKEN_TTL,
+        )
+
+        pending = {
+            "chat_id": chat_id,
+            "user_id": user_id,
+            "s3_key": s3_key,
+            "mime_type": mime_type,
+            "file_size": file_size,
+            "original_filename": filename,
+            "attachment_type": attachment_type.value,
+        }
+        await self.redis.setex(
+            self._pending_key(user_id, upload_token),
+            _UPLOAD_TOKEN_TTL,
+            orjson.dumps(pending),
+        )
+
+        logger.info(
+            "Upload slot created",
+            extra={"chat_id": chat_id, "user_id": user_id, "s3_key": s3_key},
+        )
+        return UploadSlot(
+            upload_token=upload_token,
+            upload_url=upload_url,
+            s3_key=s3_key,
+            attachment_type=attachment_type,
+            expires_in=_UPLOAD_TOKEN_TTL,
+        )
+
+    async def claim_tokens_for_message(
+        self,
+        user_id: int,
+        chat_id: int,
+        tokens: list[str],
+    ) -> list[ClaimedAttachment]:
+        claimed: list[ClaimedAttachment] = []
+
+        for token in tokens:
+            key = self._pending_key(user_id, token)
+            raw = await self.redis.getdel(key)
+            if raw is None:
+                raise InvalidUploadTokenException(token=token)
+
+            data = orjson.loads(raw)
+
+            if data["user_id"] != user_id or data["chat_id"] != chat_id:
+                await self.redis.setex(key, _UPLOAD_TOKEN_TTL, raw)
+                raise InvalidUploadTokenException(token=token)
+
+            claimed.append(
+                ClaimedAttachment(
+                    chat_id=data["chat_id"],
+                    user_id=data["user_id"],
+                    s3_key=data["s3_key"],
+                    mime_type=data["mime_type"],
+                    file_size=data["file_size"],
+                    original_filename=data["original_filename"],
+                    attachment_type=AttachmentType(data["attachment_type"]),
+                )
+            )
+
+        media_count = sum(
+            1 for a in claimed if a.attachment_type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
+        )
+        file_count = sum(1 for a in claimed if a.attachment_type == AttachmentType.FILE)
+
+        if media_count > MAX_MEDIA_PER_MESSAGE:
+            raise AttachmentLimitExceededException(count=media_count)
+        if file_count > MAX_FILES_PER_MESSAGE:
+            raise AttachmentLimitExceededException(count=file_count)
+
+        return claimed
+
+    async def get_download_url(self, attachment_id: str, s3_key: str) -> str:
+        cache_key = self._download_cache_key(attachment_id)
+        cached = await self.redis.get(cache_key)
+        if cached:
+            return cached.decode()
+
+        url = await self.storage_service.generate_presigned_url(
+            bucket_name=ATTACHMENT_BUCKET,
+            file_key=s3_key,
+            expires=_DOWNLOAD_URL_TTL,
+        )
+
+        await self.redis.setex(cache_key, _DOWNLOAD_CACHE_TTL, url)
+        return url
+
+    async def invalidate_download_cache(self, attachment_id: str) -> None:
+        await self.redis.delete(self._download_cache_key(attachment_id))

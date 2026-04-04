@@ -14,12 +14,29 @@ from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 
 
-
-
 class ChatType(str, PyEnum):
     DIRECT = "direct"
     GROUP = "group"
     CHANNEL = "channel"
+
+
+@dataclass(frozen=True)
+class CreadtedChatEvent(BaseEvent):
+    chat_id: int
+    created_by: int
+    name: str | None
+    member_ids: list[int]
+
+    __event_name__ = "chat.created"
+
+
+@dataclass(frozen=True)
+class AddedChatMemberEvent(BaseEvent):
+    chat_id: int
+    user_id: int
+    role_id: int
+
+    __event_name__ = "chat.memebers.added"
 
 
 @dataclass(frozen=True)
@@ -28,15 +45,16 @@ class KickedChatMemberEvent(BaseEvent):
     requester_id: int
     target_user_id: int
 
-    __event_name__ = ""
+    __event_name__ = "chat.memebers.kicked"
 
 
 @dataclass(frozen=True)
 class LeavedChatMemberEvent(BaseEvent):
     chat_id: int
     user_id: int
+    username: str = ""
 
-    __event_name__ = ""
+    __event_name__ = "chat.memebers.leaved"
 
 
 class Chat(BaseModel, DateMixin, SoftDeleteMixin):
@@ -53,14 +71,13 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     last_message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    members:  Mapped[list["ChatMember"]] = relationship(back_populates="chat", lazy="noload")
-    messages: Mapped[list["Message"]] = relationship(back_populates="chat",  lazy="noload")
+    members: Mapped[list["ChatMember"]] = relationship(back_populates="chat", lazy="noload")
+    messages: Mapped[list["Message"]] = relationship(back_populates="chat", foreign_keys=[Message.chat_id], lazy="noload")
 
     __table_args__ = (
         Index("ix_chats_type_public", "type", "is_public"),
         Index("ix_chats_last_activity", "last_activity_at"),
     )
-
 
     @classmethod
     def create(
@@ -72,32 +89,34 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         description: str | None = None,
         is_public: bool = False,
     ) -> Self:
+        if len(members_ids) > chat_config.MAX_MEMBERS:
+            raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
+
         instance = cls(
             created_by=created_by,
             type=chat_type,
             name=name,
             description=description,
-            is_public=is_public
+            is_public=is_public,
         )
 
         if chat_type == ChatType.DIRECT:
             if len(members_ids) != 1:
                 raise MemberLimitExceededException(limit=2)
-
             instance.add_member(created_by, 4)
             instance.add_member(members_ids[0], 4)
-        
-        elif chat_type == ChatType.GROUP:
-            if len(members_ids) > chat_config.MAX_MEMBERS:
-                raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
+        elif chat_type == ChatType.GROUP:
             instance.add_member(created_by, role_id=1)
             for m_id in members_ids:
                 instance.add_member(m_id, role_id=5)
 
+        elif chat_type == ChatType.CHANNEL:
+            instance.add_member(created_by, role_id=1)
+            for m_id in members_ids:
+                instance.add_member(m_id, role_id=6)
 
         return instance
-
 
     def add_member(self, member_id: int, role_id: int) -> None:
         self.members.append(
@@ -106,11 +125,17 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
                 role_id=role_id,
             )
         )
+        self.register_event(
+            AddedChatMemberEvent(
+                chat_id=self.id,
+                user_id=member_id,
+                role_id=role_id,
+            )
+        )
 
-    def update_last_activity(self,  message_id: int, message_date: datetime) -> None:
+    def update_last_activity(self, message_id: int, message_date: datetime) -> None:
         if self.last_activity_at is not None and self.last_activity_at > message_date:
-            raise
+            return
 
         self.last_message_id = message_id
         self.last_activity_at = message_date
-

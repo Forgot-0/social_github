@@ -2,49 +2,81 @@ from dishka import Provider, Scope, decorate, provide, provide_all
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.commands.attachments.request_upload import (
+    RequestAttachmentUploadCommand,
+    RequestAttachmentUploadCommandHandler
+)
+from app.chats.commands.calls.join import JoinCallCommand, JoinCallCommandHandler
+from app.chats.commands.calls.mute import MuteParticipantCommand, MuteParticipantCommandHandler
 from app.chats.commands.chats.add_member import AddMemberCommand, AddMemberCommandHandler
 from app.chats.commands.chats.ban_member import BanMemberCommand, BanMemberCommandHandler
 from app.chats.commands.chats.change_role import ChangeMemberRoleCommand, ChangeMemberRoleCommandHandler
 from app.chats.commands.chats.create import CreateChatCommand, CreateChatCommandHandler
-
 from app.chats.commands.chats.kick_member import KickMemberCommand, KickMemberCommandHandler
 from app.chats.commands.chats.leave import LeaveChatCommand, LeaveChatCommandHandler
 from app.chats.commands.chats.update import UpdateChatCommand, UpdateChatCommandHandler
 from app.chats.commands.messages.delete import DeleteMessageCommand, DeleteMessageCommandHandler
+from app.chats.commands.messages.forward import ForwardMessageCommand, ForwardMessageCommandHandler
 from app.chats.commands.messages.mark_read import MarkAsReadCommand, MarkAsReadCommandHandler
-from app.chats.commands.messages.modify import (
-    EditMessageCommand, EditMessageCommandHandler,
-)
+from app.chats.commands.messages.modify import EditMessageCommand, EditMessageCommandHandler
 from app.chats.commands.messages.send import SendMessageCommand, SendMessageCommandHandler
+from app.chats.config import chat_config
+from app.chats.events.members.added import AddedChatMemberEventHandler
 from app.chats.events.members.kicked import KickedChatMemberEventHandler
 from app.chats.events.members.leaved import LeavedChatMemberEventHandler
 from app.chats.events.messages.deleted import DeletedMessageEventHandler
 from app.chats.events.messages.modified import ModifiedMessageEventHandler
 from app.chats.events.messages.sended import SendedMessageEvent, SendedMessageEventHandler
-from app.chats.models.chat import KickedChatMemberEvent, LeavedChatMemberEvent
+from app.chats.models.chat import AddedChatMemberEvent, KickedChatMemberEvent, LeavedChatMemberEvent
 from app.chats.models.message import DeletedMessageEvent, ModifiedMessageEvent
+from app.chats.queries.attachments.get_url import (
+    GetAttachmentDownloadUrlQuery,
+    GetAttachmentDownloadUrlQueryHandler
+)
 from app.chats.queries.chats.get_by_id import GetChatByIdQuery, GetChatByIdQueryHandler
 from app.chats.queries.chats.get_cursor import GetChatsCursorQuery, GetChatsCursorQueryHandler
 from app.chats.queries.chats.presence import (
-    GetChatPresenceQuery, GetChatPresenceQueryHandler,
-    GetMessageDeliveryQuery, GetMessageDeliveryQueryHandler,
+    GetChatPresenceQuery,
+    GetChatPresenceQueryHandler,
+    GetMessageDeliveryQuery,
+    GetMessageDeliveryQueryHandler,
 )
 from app.chats.queries.messages.get_detail import GetMessageReadDetailsQuery, GetMessageReadDetailsQueryHandler
 from app.chats.queries.messages.get_list import GetMessagesQuery, GetMessagesQueryHandler
+from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.services.access import ChatAccessService
+from app.chats.services.attachment_service import ATTACHMENT_BUCKET, AttachmentService
 from app.chats.services.delivery import DeliveryTrackingService
+from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.presence import PresenceService
+from app.chats.services.system_message import SystemMessageService
 from app.chats.services.ws_client_events import ChatWebSocketClientService
-from app.core.websockets.base import BaseConnectionManager
 from app.core.events.event import EventRegisty
+from app.core.events.service import BaseEventBus
 from app.core.mediators.base import CommandRegisty, QueryRegistry
+from app.core.services.storage.aminio.policy import Policy
+from app.core.services.storage.service import StorageService
+from app.core.websockets.base import BaseConnectionManager
 
 
 class ChatModuleProvider(Provider):
     scope = Scope.REQUEST
+
+    @decorate
+    def register_attachment_bucket(self, bucket_policy: dict[str, Policy]) -> dict[str, Policy]:
+        bucket_policy[ATTACHMENT_BUCKET] = Policy.NONE
+        return bucket_policy
+
+    @provide(scope=Scope.APP)
+    def livekit_service(self) -> LiveKitService:
+        return LiveKitService(
+            url=chat_config.LIVEKIT_URL,
+            api_key=chat_config.LIVEKIT_API_KEY,
+            api_secret=chat_config.LIVEKIT_API_SECRET,
+        )
 
     @provide
     def chat_repository(self, session: AsyncSession, redis: Redis) -> ChatRepository:
@@ -55,9 +87,31 @@ class ChatModuleProvider(Provider):
         return MessageRepository(session=session)
 
     @provide
+    def attachment_repository(self, session: AsyncSession) -> AttachmentRepository:
+        return AttachmentRepository(session=session)
+
+    @provide
     def read_receipt_service(self, redis: Redis, session: AsyncSession) -> ReadReceiptRepository:
         return ReadReceiptRepository(redis=redis, session=session)
 
+    @provide
+    def system_message_service(
+        self,
+        session: AsyncSession,
+        message_repository: MessageRepository,
+        chat_repository: ChatRepository,
+        event_bus: BaseEventBus,
+    ) -> SystemMessageService:
+        return SystemMessageService(
+            session=session,
+            message_repository=message_repository,
+            chat_repository=chat_repository,
+            event_bus=event_bus,
+        )
+
+    @provide(scope=Scope.APP)
+    def attachment_service(self, redis: Redis, storage_service: StorageService) -> AttachmentService:
+        return AttachmentService(redis=redis, storage_service=storage_service)
 
     @provide(scope=Scope.APP)
     def presence_service(self, redis: Redis) -> PresenceService:
@@ -67,10 +121,7 @@ class ChatModuleProvider(Provider):
     def delivery_tracking_service(self, redis: Redis) -> DeliveryTrackingService:
         return DeliveryTrackingService(redis=redis)
 
-    caht_access_service = provide(
-        ChatAccessService, scope=Scope.APP
-    )
-
+    chat_access_service = provide(ChatAccessService, scope=Scope.APP)
 
     @provide
     def chat_websocket_client_service(
@@ -85,7 +136,6 @@ class ChatModuleProvider(Provider):
             delivery_service=delivery_tracking_service,
         )
 
-
     chat_handlers = provide_all(
         CreateChatCommandHandler,
         AddMemberCommandHandler,
@@ -94,10 +144,16 @@ class ChatModuleProvider(Provider):
         BanMemberCommandHandler,
         ChangeMemberRoleCommandHandler,
         UpdateChatCommandHandler,
+
         SendMessageCommandHandler,
         DeleteMessageCommandHandler,
         EditMessageCommandHandler,
         MarkAsReadCommandHandler,
+        RequestAttachmentUploadCommandHandler,
+        ForwardMessageCommandHandler,
+
+        JoinCallCommandHandler,
+        MuteParticipantCommandHandler,
 
         GetChatsCursorQueryHandler,
         GetChatByIdQueryHandler,
@@ -105,7 +161,9 @@ class ChatModuleProvider(Provider):
         GetMessageReadDetailsQueryHandler,
         GetChatPresenceQueryHandler,
         GetMessageDeliveryQueryHandler,
+        GetAttachmentDownloadUrlQueryHandler,
 
+        AddedChatMemberEventHandler,
         KickedChatMemberEventHandler,
         LeavedChatMemberEventHandler,
         DeletedMessageEventHandler,
@@ -126,6 +184,10 @@ class ChatModuleProvider(Provider):
         registry.register_command(DeleteMessageCommand, [DeleteMessageCommandHandler])
         registry.register_command(EditMessageCommand, [EditMessageCommandHandler])
         registry.register_command(MarkAsReadCommand, [MarkAsReadCommandHandler])
+        registry.register_command(RequestAttachmentUploadCommand, [RequestAttachmentUploadCommandHandler])
+        registry.register_command(ForwardMessageCommand, [ForwardMessageCommandHandler])
+        registry.register_command(JoinCallCommand, [JoinCallCommandHandler])
+        registry.register_command(MuteParticipantCommand, [MuteParticipantCommandHandler])
         return registry
 
     @decorate
@@ -136,10 +198,12 @@ class ChatModuleProvider(Provider):
         registry.register_query(GetMessageReadDetailsQuery, GetMessageReadDetailsQueryHandler)
         registry.register_query(GetChatPresenceQuery, GetChatPresenceQueryHandler)
         registry.register_query(GetMessageDeliveryQuery, GetMessageDeliveryQueryHandler)
+        registry.register_query(GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler)
         return registry
 
     @decorate
     def register_chat_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
+        event_registry.subscribe(AddedChatMemberEvent, [AddedChatMemberEventHandler])
         event_registry.subscribe(KickedChatMemberEvent, [KickedChatMemberEventHandler])
         event_registry.subscribe(LeavedChatMemberEvent, [LeavedChatMemberEventHandler])
         event_registry.subscribe(DeletedMessageEvent, [DeletedMessageEventHandler])

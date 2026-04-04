@@ -17,6 +17,11 @@ class WSEventType(str, Enum):
     TYPING_STOP = "typing_stop"
     PING = "ping"
 
+    CALL_STARTED = "call_started"
+    CALL_ENDED = "call_ended"
+    CALL_JOINED = "call_joined"
+    CALL_LEFT = "call_left"
+
 
 class WSEvent(BaseModel):
     type: WSEventType
@@ -28,11 +33,14 @@ class WSEvent(BaseModel):
 class WSNewMessagePayload(BaseModel):
     id: int
     chat_id: int
-    author_id: int
+    author_id: int | None
     content: str | None
     created_at: datetime
     is_edited: bool = False
     reply_to_id: int | None = None
+    attachment_count: int = 0
+    forwarded_from_chat_id: int | None = None
+    forwarded_from_message_id: int | None = None
 
 
 class WSModifyMessagePayload(BaseModel):
@@ -57,3 +65,13 @@ class WSClientEvent(BaseModel):
     type: WSEventType
     chat_id: int
     payload: dict[str, Any] = {}
+
+
+class WSCallPayload(BaseModel):
+    chat_id: int
+    slug: str | None = None
+    started_by: int | None = None
+    ended_by: int | None = None
+    user_id: int | None = None
+    username: str | None = None
+    duration_seconds: int | None = None

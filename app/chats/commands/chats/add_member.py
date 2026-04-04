@@ -9,11 +9,13 @@ from app.chats.exceptions import (
     AlreadyMemberException,
     MemberLimitExceededException,
     NotChatMemberException,
+    NotFoundChatException,
 )
 from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.websockets.base import BaseConnectionManager
 
@@ -35,9 +37,13 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
     chat_repository: ChatRepository
     chat_access_servise: ChatAccessService
     connection_manager: BaseConnectionManager
+    event_bus: BaseEventBus
 
     async def handle(self, command: AddMemberCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
+        chat = await self.chat_repository.get_by_id(command.chat_id)
+        if chat is None:
+            raise NotFoundChatException(chat_id=command.chat_id)
 
         requester = await self.chat_repository.get_member(command.chat_id, requester_id, with_role=True)
         if not requester:
@@ -57,12 +63,13 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         if count >= chat_config.MAX_MEMBERS:
             raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
-        await self.chat_repository.add_member(
-            chat_id=command.chat_id,
-            user_id=command.target_user_id,
+        chat.add_member(
+            member_id=command.target_user_id,
             role_id=command.role_id,
         )
+
         await self.session.commit()
+        await self.event_bus.publish(chat.pull_events())
         await self.connection_manager.bind_key_connections(
             source_key=ChatKeys.user_channel(command.target_user_id),
             target_key=ChatKeys.chat_channel(command.chat_id),

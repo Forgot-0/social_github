@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 
+from sqlalchemy.orm import selectinload
+
+from app.chats.dtos.attachments import AttachmentDTO
 from app.chats.dtos.messages import MessageCursorPage, MessageDTO
 from app.chats.exceptions import NotChatMemberException
+from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
@@ -23,6 +27,7 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPa
     chat_repository: ChatRepository
     message_repository: MessageRepository
     read_receipt_repository: ReadReceiptRepository
+    attachment_repository: AttachmentRepository
 
     async def handle(self, query: GetMessagesQuery) -> MessageCursorPage:
         user_id = int(query.user_jwt_data.id)
@@ -44,6 +49,9 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPa
 
         next_cursor = rows[-1].id if (has_more and rows) else None
 
+        message_ids = [m.id for m in rows]
+        attachments_map = await self.attachment_repository.get_by_message_ids(message_ids)
+
         read_cursors: dict[int, int] = {}
         if query.include_read_details:
             member_ids = await self.chat_repository.get_member_user_ids(query.chat_id)
@@ -52,10 +60,15 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPa
                 user_ids=member_ids,
             )
 
-        items = [
-            MessageDTO.model_validate(m.to_dict())
-            for m in rows
-        ]
+        items = []
+        for m in rows:
+            msg_dict = m.to_dict()
+            msg_dto = MessageDTO.model_validate(msg_dict)
+            msg_dto.attachments = [
+                AttachmentDTO.model_validate(a.__dict__)
+                for a in attachments_map.get(m.id, [])
+            ]
+            items.append(msg_dto)
 
         return MessageCursorPage(
             items=items,

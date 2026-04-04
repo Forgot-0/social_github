@@ -12,6 +12,15 @@ class ChatConfig(BaseConfig):
     WS_MAX_CONNECTIONS_PER_USER: int = 2
     RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
 
+    CHAT_TOPIC: str = "CHATS"
+
+    LIVEKIT_URL: str = "ws://localhost:7880"
+    LIVEKIT_API_KEY: str = ""
+    LIVEKIT_API_SECRET: str = ""
+
+    ROOM_TOKEN_TTL: int = 3600
+    ROOM_MAX_PARTICIPANTS: int = 100
+
 
 chat_config = ChatConfig()
 

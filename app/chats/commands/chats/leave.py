@@ -9,11 +9,11 @@ from app.chats.exceptions import (
 )
 from app.chats.keys import ChatKeys
 from app.chats.models.chat import LeavedChatMemberEvent
+from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.projects.models.role_permissions import ProjectRolesEnum
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
         if not member:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
-        if member.role_id == ProjectRolesEnum.OWNER.value.id:
+        if member.role_id == ChatRolesEnum.OWNER.value.id:
             count = await self.chat_repository.get_member_count(command.chat_id)
             if count > 1:
                 raise AccessDeniedChatException()

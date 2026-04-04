@@ -37,8 +37,6 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
         requester_id = int(command.user_jwt_data.id)
 
         requester = await self.chat_repository.get_member(command.chat_id, requester_id, with_role=True)
-        if not requester:
-            raise NotChatMemberException(chat_id=command.chat_id, user_id=requester_id)
 
         target = await self.chat_repository.get_member(command.chat_id, command.target_user_id, with_role=True)
         if not target:
@@ -69,7 +67,8 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
 
         action = "banned" if command.ban else "unbanned"
         logger.info(
-            f"Member {action}",
+            "Member %s",
+            action,
             extra={
                 "chat_id": command.chat_id,
                 "target": command.target_user_id,

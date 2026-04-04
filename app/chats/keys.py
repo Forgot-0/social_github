@@ -39,3 +39,7 @@ class ChatKeys:
     @staticmethod
     def pending_read_receipts() -> str:
         return "pending:read_receipts"
+
+    @staticmethod
+    def chat_call_slug(chat_id: int) -> str:
+        return f"chat:slug:{chat_id}"

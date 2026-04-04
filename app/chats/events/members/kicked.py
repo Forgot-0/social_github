@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 
+from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
 from app.chats.models.chat import KickedChatMemberEvent
 from app.chats.repositories.chat import ChatRepository
 from app.chats.schemas.ws import WSEventType
 from app.core.events.event import BaseEventHandler
+from app.core.message_brokers.base import BaseMessageBroker
 from app.core.websockets.base import BaseConnectionManager
 
 
@@ -12,6 +14,7 @@ from app.core.websockets.base import BaseConnectionManager
 class KickedChatMemberEventHandler(BaseEventHandler[KickedChatMemberEvent, None]):
     connection_manager: BaseConnectionManager
     chat_repository: ChatRepository
+    message_broker: BaseMessageBroker
 
     async def __call__(self, event: KickedChatMemberEvent) -> None:
         member_ids = await self.chat_repository.get_member_user_ids(event.chat_id)
@@ -27,3 +30,8 @@ class KickedChatMemberEventHandler(BaseEventHandler[KickedChatMemberEvent, None]
         }
         keys = [ChatKeys.user_channel(uid) for uid in member_ids]
         await self.connection_manager.publish_bulk(keys, payload)
+        await self.message_broker.send_event(
+            key=str(event.chat_id),
+            topic=chat_config.CHAT_TOPIC,
+            event=event
+        )
