@@ -26,7 +26,6 @@ class Application(BaseModel, DateMixin):
         UniqueConstraint("project_id", "position_id", "candidate_id", name="unique_id"),
     )
 
-
     id: Mapped[PyUUID] = mapped_column(UUID, primary_key=True)
 
     project_id: Mapped[int] = mapped_column(

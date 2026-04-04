@@ -16,6 +16,7 @@ from app.projects.models.role import ProjectRole
 from app.projects.models.position import Position
 from app.projects.models.application import Application
 
+from app.chats.models.attachment import MessageAttachment
 from app.chats.models.chat import Chat
 from app.chats.models.message import Message
 from app.chats.models.chat_roles import ChatRole

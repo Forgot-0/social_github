@@ -14,7 +14,7 @@ from app.projects.dtos.positions import PositionDTO
 from app.projects.queries.applications.get_list import GetApplicationsQuery
 from app.projects.queries.positions.get_by_id import GetPositionByIdQuery
 from app.projects.queries.positions.get_list import GetProjectPositionsQuery
-from app.projects.schemas.applications.requests import ApplicationCreateRequest, GetApplicationsRequest, GetPositionApplicationsRequest
+from app.projects.schemas.applications.requests import ApplicationCreateRequest, GetPositionApplicationsRequest
 from app.projects.schemas.positions.requests import GetPositionsRequest, PositionUpdateRequest
 
 

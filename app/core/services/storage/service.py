@@ -32,7 +32,7 @@ class StorageService(ABC):
         bucket_name: str,
         file_key: str,
         expires: int = 3600,
-    ) -> str | None:
+    ) -> str:
         ...
 
     @abstractmethod

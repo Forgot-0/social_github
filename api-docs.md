@@ -903,10 +903,15 @@ page_size: integer
 
 ---
 
-## Чаты
 
-### POST `/chats/` 🔒
-Создать чат — direct (1:1) или группу.
+## 8) Chats API (`/chats`)
+
+Базовый префикс: `/api/v1/chats`
+
+---
+
+### 8.1 `POST /chats/`
+Создать чат.
 
 **Request:**
 ```json
@@ -919,168 +924,147 @@ page_size: integer
 }
 ```
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `chat_type` | `direct \| group \| channel` | Тип чата |
-| `member_ids` | `integer[]` | Для `direct` — ровно 1 ID; для `group` — до 99 ID |
-| `name` | `string \| null` | Название (обязательно для group/channel) |
-| `description` | `string \| null` | Описание |
-| `is_public` | `boolean` | Публичная группа (можно найти) |
+**Поля:**
+- `chat_type`: `direct | group | channel`
+- `member_ids`: set пользователей (до 99)
+- `name`: до 256
+- `description`: до 1024
+- `is_public`: boolean
 
 **Response 201:**
 ```json
-{
-  "chat_id": 42
-}
+{ "chat_id": 42 }
 ```
 
-**Ошибки:** `DIRECT_CHAT_EXISTS` 409, `MEMBER_LIMIT_EXCEEDED` 400
+**Правила:**
+- `direct`: ожидается ровно 1 `member_id` (плюс текущий пользователь)
+- `group/channel`: текущий пользователь становится owner
 
 ---
 
-### GET `/chats/` 🔒
-Список чатов текущего пользователя, отсортированных по активности.
+### 8.2 `GET /chats/my`
+Список чатов пользователя с keyset/cursor пагинацией.
 
-**Query params:**
-```
-page: integer (default 1)
-page_size: integer (1–100, default 20)
-```
+**Query:**
+- `limit` (1..100, default 20)
+- `cursor` (string | null)
 
-**Response 200 — PageResult\<ChatListItemDTO\>:**
+**Response 200 (ChatListCursorPageDTO):**
 ```json
 {
   "items": [
     {
       "id": 42,
-      "type": "direct",
-      "name": null,
-      "description": null,
+      "type": "group",
+      "name": "Team",
+      "description": "Core chat",
       "avatar_url": null,
       "is_public": false,
       "created_by": 1,
-      "last_activity_at": "2024-01-15T10:30:00Z",
+      "last_activity_at": "2026-03-31T10:00:00Z",
       "unread_count": 3,
-      "member_count": 2
+      "member_count": 5
     }
   ],
-  "total": 5,
-  "page": 1,
-  "page_size": 20
+  "next_cursor": "...",
+  "has_more": true
 }
 ```
 
 ---
 
-### GET `/chats/{chat_id}` 🔒
-Детальная информация о чате со списком участников.
+### 8.3 `GET /chats/{chat_id}`
+Детали чата и участники.
 
-**Response 200 — ChatDetailDTO:**
+**Response 200 (ChatDetailDTO):**
 ```json
 {
   "id": 42,
   "type": "group",
-  "name": "Team Chat",
-  "description": "Our team channel",
-  "avatar_url": "https://...",
+  "name": "Team",
+  "description": "Core chat",
+  "avatar_url": null,
   "is_public": false,
   "created_by": 1,
   "members": [
-    {
-      "user_id": 1,
-      "role": "owner",
-      "is_muted": false
-    },
-    {
-      "user_id": 5,
-      "role": "member",
-      "is_muted": false
-    }
+    { "user_id": 1, "role_id": 1, "is_muted": false },
+    { "user_id": 5, "role_id": 5, "is_muted": false }
   ],
   "unread_count": 0
 }
 ```
 
-**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403
-
 ---
 
-### PUT `/chats/{chat_id}` 🔒
-Обновить название, описание или аватар чата. Требует роль `admin` или `owner`.
+### 8.4 `PUT /chats/{chat_id}`
+Обновить `name`, `description`, `avatar_url`.
 
 **Request:**
 ```json
 {
   "name": "New Name",
-  "description": "New description",
+  "description": "New Description",
   "avatar_url": "https://..."
 }
 ```
-Все поля опциональны. `null` не меняет значение, поле просто не передаётся.
 
-**Response 200:** `{}`
-
-**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+**Response:** `200`
 
 ---
 
-### POST `/chats/{chat_id}/members` 🔒
-Добавить пользователя в чат. Требует роль `admin` или `owner`.
+### 8.5 Участники чата
+
+#### `POST /chats/{chat_id}/members`
+Добавить участника.
 
 **Request:**
 ```json
 {
   "user_id": 7,
-  "role": "member"
+  "role_id": 5
 }
 ```
-- `role`: `owner | admin | member | viewer` (default `member`)
 
-**Response 200:** `{}`
+**Response:** `200`
 
-**Ошибки:** `NOT_FOUND_CHAT` 404, `ALREADY_CHAT_MEMBER` 409, `MEMBER_LIMIT_EXCEEDED` 400, `CHAT_ACCESS_DENIED` 403
+#### `DELETE /chats/{chat_id}/members/{user_id}`
+Кик участника.
 
----
+**Response:** `204`
 
-### DELETE `/chats/{chat_id}/members/{user_id}` 🔒
-Выгнать участника из чата. Требует роль `admin` или `owner`; нельзя кикнуть пользователя с более высокой ролью.
-
-**Response 204**
-
-**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
-
----
-
-### POST `/chats/{chat_id}/leave` 🔒
-Покинуть чат. Owner может покинуть чат только если он единственный участник.
-
-**Response 204**
-
-**Ошибки:** `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
-
----
-
-### POST `/chats/{chat_id}/members/{user_id}/ban` 🔒
-Забанить или разбанить участника. Требует роль `admin` или `owner`.
+#### `PUT /chats/{chat_id}/members/{user_id}/role`
+Смена роли участника.
 
 **Request:**
 ```json
-{
-  "ban": true
-}
+{ "role_id": 2 }
 ```
-- `ban: true` — заблокировать; `ban: false` — разблокировать
 
-**Response 200:** `{}`
+**Response:** `200`
 
-**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
+#### `POST /chats/{chat_id}/members/{user_id}/ban`
+Бан/разбан.
+
+**Request:**
+```json
+{ "ban": true }
+```
+
+**Response:** `200`
+
+#### `POST /chats/{chat_id}/leave`
+Выйти из чата.
+
+**Response:** `204`
 
 ---
 
-### GET `/chats/{chat_id}/presence` 🔒
-Онлайн-статус всех участников чата.
+### 8.6 Дополнительные данные
 
-**Response 200 — ChatPresenceDTO:**
+#### `GET /chats/{chat_id}/presence`
+Онлайн-статусы участников.
+
+**Response 200:**
 ```json
 {
   "chat_id": 42,
@@ -1092,137 +1076,13 @@ page_size: integer (1–100, default 20)
 }
 ```
 
-**Ошибки:** `NOT_CHAT_MEMBER` 403
+#### `GET /chats/{chat_id}/messages/{message_id}/delivery`
+Кому доставлено сообщение.
 
----
-
-### GET `/chats/{chat_id}/messages` 🔒
-Сообщения чата — cursor-based пагинация (от новых к старым).
-
-**Query params:**
-```
-limit: integer (default 30, max 100)
-before_id: integer | null — загрузить сообщения старше этого ID
-```
-
-**Response 200 — MessageCursorPage:**
+**Response 200:**
 ```json
 {
-  "items": [
-    {
-      "id": 101,
-      "chat_id": 42,
-      "author_id": 1,
-      "type": "text",
-      "content": "Hello!",
-      "reply_to_id": null,
-      "media_url": null,
-      "is_deleted": false,
-      "is_edited": false,
-      "created_at": "2024-01-15T10:30:00Z",
-      "updated_at": "2024-01-15T10:30:00Z"
-    }
-  ],
-  "next_cursor": 95,
-  "has_more": true,
-  "read_cursors": {
-    "1": 101,
-    "5": 98
-  }
-}
-```
-
-| Поле | Описание |
-|------|----------|
-| `next_cursor` | ID последнего сообщения для следующего запроса (`before_id=next_cursor`) |
-| `has_more` | Есть ли ещё сообщения |
-| `read_cursors` | Словарь `{ user_id: last_read_message_id }` — кто до какого сообщения прочитал |
-
-**Паттерн загрузки истории:**
-```
-// Первая загрузка
-GET /chats/42/messages?limit=30
-
-// Подгрузка следующей страницы
-GET /chats/42/messages?limit=30&before_id={next_cursor из предыдущего ответа}
-```
-
-**Ошибки:** `NOT_CHAT_MEMBER` 403
-
----
-
-### POST `/chats/{chat_id}/messages` 🔒
-Отправить сообщение в чат.
-
-**Request:**
-```json
-{
-  "content": "Hello, world!",
-  "reply_to_id": null,
-  "message_type": "text"
-}
-```
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `content` | `string` | Текст сообщения (max 4096 символов) |
-| `reply_to_id` | `integer \| null` | ID сообщения, на которое отвечаем |
-| `message_type` | `text \| image \| file \| reply` | Тип (default `text`) |
-
-**Response 201:**
-```json
-{
-  "message_id": 102,
-  "chat_id": 42,
-  "created_at": "2024-01-15T10:31:00Z"
-}
-```
-
-**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403, `MESSAGE_TOO_LONG` 400
-
----
-
-### PUT `/chats/{chat_id}/messages/{message_id}` 🔒
-Редактировать сообщение. Только автор сообщения.
-
-**Request:**
-```json
-{
-  "new_content": "Edited text"
-}
-```
-
-**Response 200:** `{}`
-
-**Ошибки:** `NOT_FOUND_MESSAGE` 404, `CHAT_ACCESS_DENIED` 403
-
----
-
-### DELETE `/chats/{chat_id}/messages/{message_id}` 🔒
-Удалить сообщение. Автор может удалить своё; `admin`/`owner` — любое.
-
-**Response 204**
-
-**Ошибки:** `NOT_FOUND_MESSAGE` 404, `NOT_CHAT_MEMBER` 403, `CHAT_ACCESS_DENIED` 403
-
----
-
-### POST `/chats/{chat_id}/messages/{message_id}/read` 🔒
-Отметить сообщения прочитанными вплоть до указанного ID.
-
-**Request:** тело пустое, `message_id` в URL.
-
-**Response 200:** `{}`
-
----
-
-### GET `/chats/{chat_id}/messages/{message_id}/delivery` 🔒
-Статус доставки сообщения (доставлено ли на устройства участников).
-
-**Response 200 — MessageDeliveryStatusDTO:**
-```json
-{
-  "message_id": 102,
+  "message_id": 101,
   "delivered_to": {
     "1": true,
     "5": false
@@ -1230,279 +1090,412 @@ GET /chats/42/messages?limit=30&before_id={next_cursor из предыдущег
 }
 ```
 
-**Ошибки:** `NOT_CHAT_MEMBER` 403
-
 ---
 
-## WebSocket
+### 8.7 Звонки в чате (LiveKit)
 
-### Подключение
+#### `POST /chats/{chat_id}/calls/join`
+Вход в звонок и получение токена для LiveKit.
 
-```
-WS /api/v1/chats/ws?token=<access_token>
-```
-
-Одно соединение на пользователя получает **все** события по всем его чатам.  
-При невалидном токене сервер закрывает соединение с кодом `4001`.
-
----
-
-### Формат всех серверных событий
-
+**Response 200 (`JoinTokenDTO`):**
 ```json
 {
-  "type": "event_type",
+  "token": "eyJ...",
+  "slug": "chat:42",
+  "livekit_url": "wss://livekit.example.com"
+}
+```
+
+#### `GET /chats/{chat_id}/calls/participants`
+Список активно подключённых участников звонка.
+
+**Response 200 (`list[LiveKitParticipantsDTO]`):**
+```json
+[
+  {
+    "identity": "1",
+    "name": "johndoe",
+    "state": 2,
+    "joined_at": 1711872000
+  }
+]
+```
+
+#### `PUT /chats/{chat_id}/calls/participants/{user_id}/mute`
+Заглушить или разглушить участника.
+
+**Request:**
+```json
+{ "muted": true }
+```
+
+**Response:** `200`
+
+---
+
+## 9) Messages API (`/chats/{chat_id}/messages`)
+
+Базовый префикс: `/api/v1/chats/{chat_id}/messages`
+
+---
+
+### 9.1 Двухшаговая отправка вложений
+
+#### Шаг 1 — `POST /upload`
+Запросить upload URL/token для каждого файла.
+
+**Request:**
+```json
+{
+  "uploads": [
+    {
+      "filename": "photo.png",
+      "mime_type": "image/png",
+      "file_size": 123456
+    }
+  ]
+}
+```
+
+Ограничения:
+- `uploads`: 1..11 элементов
+- `file_size`: до 100MB на файл
+
+**Response 200:**
+```json
+[
+  {
+    "upload_token": "...",
+    "upload_url": "https://s3...",
+    "attachment_type": "image",
+    "expires_in": 300
+  }
+]
+```
+
+#### Шаг 2 — `POST /`
+Отправить сообщение с `upload_tokens` (после загрузки файлов в S3).
+
+**Request:**
+```json
+{
+  "content": "Look at this",
+  "reply_to_id": null,
+  "message_type": "text",
+  "upload_tokens": ["token-1"]
+}
+```
+
+Правила:
+- хотя бы одно: `content` или `upload_tokens`
+- `content`: до 4096 символов
+- `upload_tokens`: до 11
+
+**Response 201 (SendMessageResult):**
+```json
+{
+  "message_id": 120,
   "chat_id": 42,
-  "payload": { ... }
+  "created_at": "2026-03-31T10:10:00Z"
 }
 ```
 
 ---
 
-### События от сервера к клиенту
+### 9.2 Пересылка сообщений — `POST /forward`
 
-#### `new_message`
-Новое сообщение в чате.
+**Request:**
+```json
+{
+  "source_chat_id": 10,
+  "source_message_id": 501,
+  "comment": "FYI"
+}
+```
 
+**Response 201 (ForwardMessageResult):**
+```json
+{
+  "message_id": 121,
+  "chat_id": 42,
+  "created_at": "2026-03-31T10:11:00Z"
+}
+```
+
+---
+
+### 9.3 Список сообщений — `GET /`
+
+**Query:**
+- `limit` (1..100, default 30)
+- `before_id` (int | null)
+
+**Response 200 (MessageCursorPage):**
+```json
+{
+  "items": [
+    {
+      "id": 120,
+      "chat_id": 42,
+      "author_id": 1,
+      "type": "text",
+      "content": "hello",
+      "reply_to_id": null,
+      "media_url": null,
+      "is_deleted": false,
+      "is_edited": false,
+      "created_at": "2026-03-31T10:10:00Z",
+      "updated_at": "2026-03-31T10:10:00Z",
+      "reply_to": null,
+      "attachments": [],
+      "forwarded_from_chat_id": null,
+      "forwarded_from_message_id": null
+    }
+  ],
+  "next_cursor": 119,
+  "has_more": true,
+  "read_cursors": {}
+}
+```
+
+---
+
+### 9.4 URL на скачивание вложения
+`GET /{message_id}/attachments/{attachment_id}/url`
+
+**Response 200:**
+```json
+{
+  "attachment_id": "6d0de7a6-94b6-42ba-9005-62f40e7652f6",
+  "url": "https://s3...",
+  "expires_in": 300
+}
+```
+
+---
+
+### 9.5 Read details
+`GET /read-details`
+
+**Query:**
+- `limit` (1..200, default 50)
+- `after_user_id` (int | null)
+
+**Response 200:**
+```json
+{
+  "items": [
+    { "user_id": 1, "last_read_message_id": 120 },
+    { "user_id": 5, "last_read_message_id": 118 }
+  ],
+  "next_cursor": 5,
+  "has_more": false
+}
+```
+
+---
+
+### 9.6 Редактировать/удалить/прочитать
+
+#### `PUT /{message_id}`
+**Request:**
+```json
+{ "content": "edited text" }
+```
+**Response:** `200`
+
+#### `DELETE /{message_id}`
+**Response:** `204`
+
+#### `POST /read`
+**Request:**
+```json
+{ "message_id": 120 }
+```
+**Response:** `204`
+
+---
+
+## 10) WebSocket API
+
+### Endpoint
+```text
+WS /api/v1/chats/ws/?token=<access_token>
+```
+
+### Поведение подключения
+- Токен валидируется при коннекте
+- Если токен невалиден -> закрытие `4001`
+- Если превышен лимит подключений пользователя -> закрытие `1008`
+- Одно соединение подписывается на каналы всех чатов пользователя
+
+### Формат события
+```json
+{
+  "type": "event_type",
+  "chat_id": 42,
+  "payload": {},
+  "ts": "2026-03-31T10:00:00Z"
+}
+```
+
+### События от сервера
+- `new_message`
+- `message_deleted`
+- `message_edited`
+- `messages_read`
+- `member_joined`
+- `member_left`
+- `member_kick`
+- `typing_start`
+- `typing_stop`
+- `ping`
+- `call_started`
+- `call_joined`
+- `call_left`
+- `call_ended`
+
+### События от клиента
+Клиент может слать JSON того же формата:
+
+- индикатор набора: `typing_start`
+- стоп индикатора: `typing_stop`
+- подтверждение доставки: `new_message` + `payload.message_id`
+
+Пример подтверждения доставки:
 ```json
 {
   "type": "new_message",
   "chat_id": 42,
   "payload": {
-    "id": 103,
-    "chat_id": 42,
-    "author_id": 5,
-    "content": "Hey!",
-    "created_at": "2024-01-15T10:35:00Z",
-    "is_edited": false,
-    "reply_to_id": null
-  }
-}
-```
-
-#### `message_deleted`
-Сообщение удалено.
-
-```json
-{
-  "type": "message_deleted",
-  "chat_id": 42,
-  "payload": {
-    "message_id": 101
-  }
-}
-```
-
-#### `message_edited`
-Сообщение отредактировано.
-
-```json
-{
-  "type": "message_edited",
-  "chat_id": 42,
-  "payload": {
-    "message_id": 101,
-    "content": "Updated text"
-  }
-}
-```
-
-#### `messages_read`
-Участник прочитал сообщения.
-
-```json
-{
-  "type": "messages_read",
-  "chat_id": 42,
-  "payload": {
-    "user_id": 5,
-    "last_read_message_id": 103
-  }
-}
-```
-
-#### `member_joined`
-Новый участник вошёл в чат.
-
-```json
-{
-  "type": "member_joined",
-  "chat_id": 42,
-  "payload": {
-    "user_id": 7
-  }
-}
-```
-
-#### `member_left`
-Участник покинул чат.
-
-```json
-{
-  "type": "member_left",
-  "chat_id": 42,
-  "payload": {
-    "user_id": 5
-  }
-}
-```
-
-#### `member_kick`
-Участник выгнан из чата.
-
-```json
-{
-  "type": "member_kick",
-  "chat_id": 42,
-  "payload": {
-    "user_id": 5,
-    "kicked_by": 1
-  }
-}
-```
-
-#### `typing_start`
-Участник начал печатать.
-
-```json
-{
-  "type": "typing_start",
-  "chat_id": 42,
-  "payload": {
-    "user_id": 5,
-    "ts": "2024-01-15T10:35:00Z"
-  }
-}
-```
-
-#### `typing_stop`
-Участник перестал печатать.
-
-```json
-{
-  "type": "typing_stop",
-  "chat_id": 42,
-  "payload": {
-    "user_id": 5,
-    "ts": "2024-01-15T10:35:00Z"
-  }
-}
-```
-
-#### `ping`
-Heartbeat от сервера (каждые ~30 секунд). Отвечать не нужно.
-
-```json
-{
-  "type": "ping",
-  "ts": "2024-01-15T10:35:00Z"
-}
-```
-
----
-
-### События от клиента к серверу
-
-Клиент отправляет JSON через WebSocket-соединение:
-
-```json
-{
-  "type": "event_type",
-  "chat_id": 42,
-  "payload": { ... }
-}
-```
-
-#### Отправить индикатор набора текста
-```json
-{
-  "type": "typing_start",
-  "chat_id": 42,
-  "payload": {}
-}
-```
-
-#### Остановить индикатор набора текста
-```json
-{
-  "type": "typing_stop",
-  "chat_id": 42,
-  "payload": {}
-}
-```
-
-#### Подтвердить доставку сообщения
-```json
-{
-  "type": "new_message",
-  "chat_id": 42,
-  "payload": {
-    "message_id": 103
+    "message_id": 120
   }
 }
 ```
 
 ---
 
-### WS коды закрытия
+## 11) LiveKit webhook (server-side integration)
 
-| Код | Причина |
-|-----|---------|
-| `4001` | Невалидный или истёкший токен |
-| `4029` | Слишком много соединений от пользователя |
+> Этот endpoint обычно не вызывает frontend напрямую, но важно понимать, откуда приходят call-события в чатах.
 
----
+### `POST /api/v1/livekit/webhook`
+- Проверяется подпись webhook
+- По событию LiveKit публикуется WS-событие в чат и создаётся system message
 
-### Типичная WS-логика на клиенте
+Маппинг:
+- `room_started` -> `call_started`
+- `participant_joined` -> `call_joined`
+- `participant_left` -> `call_left`
+- `room_finished` -> `call_ended`
 
-```javascript
-// 1. Подключение
-const ws = new WebSocket(`wss://api.example.com/api/v1/chats/ws?token=${accessToken}`);
-
-// 2. Получение событий
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  switch (data.type) {
-    case 'new_message':
-      addMessage(data.chat_id, data.payload);
-      // подтвердить доставку
-      ws.send(JSON.stringify({
-        type: 'new_message',
-        chat_id: data.chat_id,
-        payload: { message_id: data.payload.id }
-      }));
-      break;
-    case 'message_deleted':
-      removeMessage(data.chat_id, data.payload.message_id);
-      break;
-    case 'message_edited':
-      updateMessage(data.chat_id, data.payload.message_id, data.payload.content);
-      break;
-    case 'messages_read':
-      updateReadCursor(data.chat_id, data.payload.user_id, data.payload.last_read_message_id);
-      break;
-    case 'typing_start':
-      showTypingIndicator(data.chat_id, data.payload.user_id);
-      break;
-    case 'typing_stop':
-      hideTypingIndicator(data.chat_id, data.payload.user_id);
-      break;
-    case 'ping':
-      // ничего не делать
-      break;
-  }
-};
-
-// 3. Переподключение при разрыве
-ws.onclose = (event) => {
-  if (event.code !== 4001) {
-    // переподключиться через 2 секунды
-    setTimeout(connect, 2000);
-  }
-};
+**Response 200:**
+```json
+{ "ok": true }
 ```
 
 ---
+
+## 12) Ошибки и обработка на клиенте
+
+Единый формат ошибки:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable",
+    "detail": {}
+  },
+  "status": 400,
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": 1700000000.123
+}
+```
+
+### Частые статусы
+- `400` — бизнес-ошибка/невалидные данные на уровне домена
+- `401/403` — проблемы авторизации/доступа
+- `404` — сущность не найдена
+- `409` — конфликт
+- `422` — валидация входных данных (`VALIDATION`)
+- `500` — внутренняя ошибка
+
+### Рекомендованная стратегия на frontend
+1. `401/403` на приватных ручках -> попытка `POST /auth/refresh` (1 раз)
+2. Если refresh неуспешен -> принудительный logout + редирект на login
+3. Для `422` показывать field-level ошибки формы
+4. Логировать `request_id` в Sentry/консоль для саппорта
+
+---
+
+## 13) Пагинация (offset и cursor)
+
+### Offset pagination
+Используется в большинстве list endpoint.
+
+**Query:**
+- `page` (>=1)
+- `page_size` (1..100)
+- `sort` в формате `field:asc|desc[,field2:asc|desc]`
+
+**Response envelope:**
+```json
+{
+  "items": [],
+  "total": 100,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+### Cursor pagination
+Используется в:
+- `GET /chats/my` -> `limit`, `cursor`
+- `GET /chats/{chat_id}/messages` -> `limit`, `before_id`
+- `GET /chats/{chat_id}/messages/read-details` -> `limit`, `after_user_id`
+
+---
+
+## 14) Типы/enum, важные для UI
+
+### ChatType
+- `direct`
+- `group`
+- `channel`
+
+### MessageType
+- `text`
+- `image`
+- `file`
+- `system`
+- `reply`
+
+### AttachmentType
+- `image`
+- `video`
+- `file`
+
+### WS event types
+- `new_message`
+- `message_deleted`
+- `message_edited`
+- `messages_read`
+- `member_joined`
+- `member_left`
+- `member_kick`
+- `typing_start`
+- `typing_stop`
+- `ping`
+- `call_started`
+- `call_joined`
+- `call_left`
+- `call_ended`
+
+---
+
+
+Сейчас для звонков используется чат (`/chats/{chat_id}/calls/*`) + WS + `livekit/webhook`, а не отдельный публичный room REST API.
 
 ## Пагинация
 
