@@ -1,13 +1,18 @@
+import { Route, Routes } from 'react-router';
 import './App.css';
+import { LoginPage } from './pages/auth/login-page.tsx';
+import { OAuthCallbackPage } from './pages/auth/oauth-callback-page.tsx';
+import { RegisterPage } from './pages/auth/register-page.tsx';
+import { HomePage } from './pages/home-page.tsx';
 
 const App = () => {
   return (
-    <div>
-      <h1 className="text-3xl font-bold underline">Hello world!</h1>
-      <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-        Test
-      </button>
-    </div>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/auth/callback/:provider" element={<OAuthCallbackPage />} />
+    </Routes>
   );
 };
 
