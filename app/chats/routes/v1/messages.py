@@ -66,7 +66,7 @@ async def request_upload(
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED,
     summary="Шаг 2: отправить сообщение (с текстом и/или вложениями)",
     description=(
@@ -122,7 +122,7 @@ async def forward_message(
 
 
 @router.get(
-    "/",
+    "",
     status_code=status.HTTP_200_OK,
     summary="Список сообщений (cursor-based), включает metadata вложений",
     description=(

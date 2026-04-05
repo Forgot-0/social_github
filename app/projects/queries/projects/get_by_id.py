@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
+from app.projects.dtos.members import MemberDTO
 from app.projects.repositories.projects import ProjectRepository
-from app.projects.dtos.projects import ProjectDTO
 from app.projects.exceptions import NotFoundProjectException
 from app.projects.services.permission_service import ProjectPermissionService
 
@@ -15,11 +15,11 @@ class GetProjectByIdQuery(BaseQuery):
 
 
 @dataclass(frozen=True)
-class GetProjectByIdQueryHandler(BaseQueryHandler[GetProjectByIdQuery, ProjectDTO]):
+class GetProjectByIdQueryHandler(BaseQueryHandler[GetProjectByIdQuery, MemberDTO]):
     project_repository: ProjectRepository
     project_permission_servise: ProjectPermissionService
 
-    async def handle(self, query: GetProjectByIdQuery) -> ProjectDTO:
+    async def handle(self, query: GetProjectByIdQuery) -> MemberDTO:
         project = await self.project_repository.get_by_id(query.project_id, with_member=True, with_positon=True)
         if not project:
             raise NotFoundProjectException(project_id=query.project_id)
@@ -29,4 +29,4 @@ class GetProjectByIdQueryHandler(BaseQueryHandler[GetProjectByIdQuery, ProjectDT
             project=project
         ): raise
 
-        return ProjectDTO.model_validate(project.to_dict())
+        return MemberDTO.model_validate(project.to_dict())

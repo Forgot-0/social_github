@@ -19,7 +19,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/",
+    "",
     summary="Create a new permission",
     description="Creates a new permission",
     response_model=None,
@@ -69,7 +69,7 @@ async def delete_permission(
 
 
 @router.get(
-    "/",
+    "",
     summary="Get a list of permissions",
     description="Get a list of permissions",
     responses={

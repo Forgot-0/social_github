@@ -35,7 +35,9 @@ from app.projects.queries.positions.get_list import (
     GetProjectPositionsQuery,
     GetProjectPositionsQueryHandler,
 )
+from app.projects.queries.profiles.get_my_invites import GetProfileInvitesQuery, GetProfileInvitesQueryHandler
 from app.projects.repositories.applications import ApplicationRepository
+from app.projects.repositories.members import MemberProjectRepository
 from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
@@ -94,6 +96,7 @@ class ProjectModuleProvider(Provider):
     project_role_repository = provide(ProjectRoleRepository)
     position_repository = provide(PositionRepository)
     application_repository = provide(ApplicationRepository)
+    member_repository = provide(MemberProjectRepository)
 
     # service
     project_permission_service = provide(
@@ -130,6 +133,7 @@ class ProjectModuleProvider(Provider):
         GetProjectPositionsQueryHandler,
         GetPositionByIdQueryHandler,
         GetApplicationsQueryHandler,
+        GetProfileInvitesQueryHandler,
     )
 
     @decorate
@@ -168,6 +172,7 @@ class ProjectModuleProvider(Provider):
         query_registry.register_query(GetPositionByIdQuery, GetPositionByIdQueryHandler)
         query_registry.register_query(GetApplicationsQuery, GetApplicationsQueryHandler)
 
+        query_registry.register_query(GetProfileInvitesQuery, GetProfileInvitesQueryHandler)
         return query_registry
 
     @decorate

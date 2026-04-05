@@ -39,7 +39,7 @@ async def user_session_delete(
     )
 
 @router.get(
-    "/",
+    "",
     summary="Get a list of sessions",
     description="Get a list of sessions",
     status_code=status.HTTP_200_OK,

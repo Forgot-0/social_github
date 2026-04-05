@@ -4,6 +4,7 @@ from app.auth.providers import AuthModuleProvider
 from app.chats.providers import ChatModuleProvider
 from app.core.di import get_core_providers
 from app.profiles.providers import ProfileModuleProvider
+from app.projects.providers import ProjectModuleProvider
 
 
 def create_container(*app_providers: Provider) -> AsyncContainer:
@@ -15,6 +16,7 @@ def create_container(*app_providers: Provider) -> AsyncContainer:
         AuthModuleProvider(),
         ProfileModuleProvider(),
         ChatModuleProvider(),
+        ProjectModuleProvider(),
     ]
 
     return make_async_container(*providers, *app_providers)

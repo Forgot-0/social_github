@@ -21,7 +21,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.post(
-            "/api/v1/projects/",
+            "/api/v1/projects",
             json={
                 "name": "API Test Project",
                 "slug": "api-test-project",
@@ -41,7 +41,7 @@ class TestProjectEndpoints:
         client: AsyncClient,
     ) -> None:
         response = await client.post(
-            "/api/v1/projects/",
+            "/api/v1/projects",
             json={"name": "Test", "slug": "test"},
         )
 
@@ -193,7 +193,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            "/api/v1/positions/",
+            "/api/v1/positions",
             params={"project_id": persisted_position.project_id},
             headers=headers,
         )
@@ -311,7 +311,7 @@ class TestApplicationEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            "/api/v1/applications/",
+            "/api/v1/applications",
             params={
                 "project_id": persisted_application.project_id,
                 "status": "pending",
@@ -370,7 +370,7 @@ class TestApplicationEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            "/api/v1/applications/",
+            "/api/v1/applications",
             params={
                 "candidate_id": persisted_application.candidate_id,
                 "status": "pending",

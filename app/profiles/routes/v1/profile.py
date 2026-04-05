@@ -30,7 +30,7 @@ from app.profiles.schemas.profiles.requests import (
 router = APIRouter(route_class=DishkaRoute)
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED
 )
 async def create_profile(
@@ -50,7 +50,7 @@ async def create_profile(
     )
 
 @router.get(
-    "/",
+    "",
     status_code=status.HTTP_200_OK
 )
 async def get_profiles(

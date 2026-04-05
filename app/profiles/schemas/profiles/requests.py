@@ -23,6 +23,7 @@ class ProfileUpdateRequest(BaseModel):
 
 
 class GetProfilesRequest(BaseModel):
+    username: str | None = None
     display_name: str | None = None
     skills: list[str] | None = None
 
@@ -33,6 +34,7 @@ class GetProfilesRequest(BaseModel):
 
     def to_profile_filter(self) -> ProfileFilter:
         profile_filter = ProfileFilter(
+            username=self.username,
             display_name=self.display_name,
             skills=self.skills
         )

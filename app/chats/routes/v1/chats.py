@@ -38,7 +38,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED,
     summary="Create a chat — direct DM or group/channel",
 )

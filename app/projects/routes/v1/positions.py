@@ -24,7 +24,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.get(
-    "/",
+    "",
     status_code=status.HTTP_200_OK,
 )
 async def list_positions(

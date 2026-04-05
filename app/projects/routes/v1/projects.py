@@ -33,7 +33,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED
 )
 async def create_project(
@@ -55,7 +55,7 @@ async def create_project(
     )
 
 @router.get(
-    "/",
+    "",
     status_code=status.HTTP_200_OK
 )
 async def get_projects(

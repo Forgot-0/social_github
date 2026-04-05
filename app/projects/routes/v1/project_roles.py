@@ -12,7 +12,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.get(
-    "/",
+    "",
     summary="Get project roles",
     description="Get project roles",
     status_code=status.HTTP_200_OK

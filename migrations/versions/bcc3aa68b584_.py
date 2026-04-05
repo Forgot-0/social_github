@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 487c37c04f62
+Revision ID: bcc3aa68b584
 Revises: 
-Create Date: 2026-03-23 16:43:05.410271
+Create Date: 2026-04-05 11:26:14.856980
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '487c37c04f62'
+revision: str = 'bcc3aa68b584'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -40,7 +40,7 @@ def upgrade() -> None:
     sa.Column('last_activity_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_chats_last_activity', 'chats', ['last_activity_at'], unique=False)
@@ -72,7 +72,7 @@ def upgrade() -> None:
     sa.Column('skills', postgresql.ARRAY(sa.String(length=30)), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('username')
     )
@@ -99,7 +99,7 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('idx_projects_tags', 'projects', ['tags'], unique=False, postgresql_using='gin')
@@ -124,7 +124,7 @@ def upgrade() -> None:
     sa.Column('is_verified', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
@@ -145,7 +145,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('chat_id', 'user_id', name='uq_chat_member')
     )
-    op.create_index('ix_chat_members_chat_user', 'chat_members', ['chat_id', 'user_id'], unique=False)
     op.create_index(op.f('ix_chat_members_role_id'), 'chat_members', ['role_id'], unique=False)
     op.create_index('ix_chat_members_user_chat', 'chat_members', ['user_id', 'chat_id'], unique=False)
     op.create_index(op.f('ix_chat_members_user_id'), 'chat_members', ['user_id'], unique=False)
@@ -168,12 +167,15 @@ def upgrade() -> None:
     sa.Column('type', sa.Enum('TEXT', 'IMAGE', 'FILE', 'SYSTEM', 'REPLY', name='messagetype'), nullable=False),
     sa.Column('content', sa.Text(), nullable=True),
     sa.Column('reply_to_id', sa.BigInteger(), nullable=True),
-    sa.Column('media_url', sa.String(length=1024), nullable=True),
+    sa.Column('forwarded_from_chat_id', sa.BigInteger(), nullable=True),
+    sa.Column('forwarded_from_message_id', sa.BigInteger(), nullable=True),
     sa.Column('is_deleted', sa.Boolean(), nullable=False),
     sa.Column('is_edited', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['chat_id'], ['chats.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['forwarded_from_chat_id'], ['chats.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['forwarded_from_message_id'], ['messages.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['reply_to_id'], ['messages.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -204,7 +206,7 @@ def upgrade() -> None:
     sa.Column('expected_load', sa.Enum('low', 'medium', 'high', name='positionload'), server_default='medium', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -298,11 +300,37 @@ def upgrade() -> None:
     op.create_index(op.f('ix_applications_candidate_id'), 'applications', ['candidate_id'], unique=False)
     op.create_index(op.f('ix_applications_position_id'), 'applications', ['position_id'], unique=False)
     op.create_index(op.f('ix_applications_project_id'), 'applications', ['project_id'], unique=False)
+    op.create_table('message_attachments',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('message_id', sa.BigInteger(), nullable=False),
+    sa.Column('chat_id', sa.BigInteger(), nullable=False),
+    sa.Column('uploader_id', sa.BigInteger(), nullable=False),
+    sa.Column('attachment_type', sa.Enum('IMAGE', 'VIDEO', 'FILE', name='attachmenttype'), nullable=False),
+    sa.Column('s3_key', sa.String(length=512), nullable=False),
+    sa.Column('bucket', sa.String(length=128), nullable=False),
+    sa.Column('mime_type', sa.String(length=128), nullable=False),
+    sa.Column('original_filename', sa.String(length=256), nullable=False),
+    sa.Column('file_size', sa.BigInteger(), nullable=False),
+    sa.Column('width', sa.Integer(), nullable=True),
+    sa.Column('height', sa.Integer(), nullable=True),
+    sa.Column('duration_seconds', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['message_id'], ['messages.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_message_attachments_message_id'), 'message_attachments', ['message_id'], unique=False)
+    op.create_index('ix_msg_attachments_chat_uploader', 'message_attachments', ['chat_id', 'uploader_id'], unique=False)
+    op.create_index('ix_msg_attachments_message_id', 'message_attachments', ['message_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index('ix_msg_attachments_message_id', table_name='message_attachments')
+    op.drop_index('ix_msg_attachments_chat_uploader', table_name='message_attachments')
+    op.drop_index(op.f('ix_message_attachments_message_id'), table_name='message_attachments')
+    op.drop_table('message_attachments')
     op.drop_index(op.f('ix_applications_project_id'), table_name='applications')
     op.drop_index(op.f('ix_applications_position_id'), table_name='applications')
     op.drop_index(op.f('ix_applications_candidate_id'), table_name='applications')
@@ -336,7 +364,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_chat_members_user_id'), table_name='chat_members')
     op.drop_index('ix_chat_members_user_chat', table_name='chat_members')
     op.drop_index(op.f('ix_chat_members_role_id'), table_name='chat_members')
-    op.drop_index('ix_chat_members_chat_user', table_name='chat_members')
     op.drop_table('chat_members')
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')

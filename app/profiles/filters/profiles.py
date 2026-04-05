@@ -6,6 +6,7 @@ from app.core.filters.condition import FilterOperator
 
 @dataclass
 class ProfileFilter(BaseFilter):
+    username: str | None = None
     display_name: str | None = None
     skills: list[str] | None = None
 
@@ -13,6 +14,7 @@ class ProfileFilter(BaseFilter):
         self._build_conditions()
 
     def _build_conditions(self) -> None:
+        self.add_condition("username", FilterOperator.LIKE, self.username)
         self.add_condition("display_name", FilterOperator.CONTAINS, self.display_name)
 
         if self.skills:

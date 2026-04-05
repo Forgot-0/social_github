@@ -1,5 +1,11 @@
 from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 from pydantic import BaseModel, Field
+
+from app.projects.dtos.roles import ProjectRoleDTO
+
+if TYPE_CHECKING:
+    from app.projects.dtos.projects import ProjectDTO
 
 
 class MemberDTO(BaseModel):
@@ -10,5 +16,7 @@ class MemberDTO(BaseModel):
     status: str
     invited_by: int | None
     joined_at: datetime | None
-    permissions_overrides: dict = Field(alias="permissions_overrides")
+    permissions_overrides: dict
 
+    role: ProjectRoleDTO | None = None
+    project: Optional["ProjectDTO"] = Field(default=None, repr=False)
