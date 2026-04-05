@@ -1,5 +1,4 @@
-html,
-body,
-#root {
-  min-height: 100%;
+@import 'tailwindcss';
+
+:root {
 }
