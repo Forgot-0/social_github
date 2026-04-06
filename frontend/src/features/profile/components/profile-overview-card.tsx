@@ -1,4 +1,4 @@
-import { TagChips } from '../../../components/tag_chips';
+import { TagChips } from '../../../components/tag_chips.tsx';
 
 type ProfileOverviewCardProps = {
   isLoading: boolean;
