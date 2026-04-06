@@ -87,6 +87,10 @@ class ProcessOAuthCallbackCommandHandler(BaseCommandHandler[ProcessOAuthCallback
                 if not role:
                     raise NotFoundRoleException(name=RolesEnum.STANDARD_USER.value.name)
 
+                user = await self.user_repository.get_by_email(oauth_data.email)
+                if user:
+                    raise LinkedAnotherUserOAuthException(provider=command.provider)
+
                 user = User.create_oauth(
                     email=oauth_data.email,
                     username=oauth_data.email,

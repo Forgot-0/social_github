@@ -1,6 +1,11 @@
 import type { ContactDTO } from '../../../types/api/profile.ts';
 
-export type ContactProvider = 'telegram' | 'github' | 'email';
+export type ContactProvider =
+  | 'telegram'
+  | 'github'
+  | 'email'
+  | 'vk'
+  | 'instagram';
 
 type ProfileContactsEditorProps = {
   providers: ContactProvider[];

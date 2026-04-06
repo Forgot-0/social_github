@@ -1,3 +1,5 @@
+import { TagChips } from '../../../components/tag_chips';
+
 type ProfileOverviewCardProps = {
   isLoading: boolean;
   error: string | null;
@@ -9,6 +11,7 @@ type ProfileOverviewCardProps = {
   username: string;
   specialization: string;
   dateBirthday: string;
+  skills?: string[];
 };
 
 export function ProfileOverviewCard({
@@ -22,6 +25,7 @@ export function ProfileOverviewCard({
   username,
   specialization,
   dateBirthday,
+  skills = [],
 }: ProfileOverviewCardProps) {
   if (isLoading) {
     return <p className="mt-4 text-sm text-zinc-500">Загрузка профиля...</p>;
@@ -65,6 +69,12 @@ export function ProfileOverviewCard({
           <span className="text-zinc-500">Дата рождения:</span> {dateBirthday}
         </li>
       </ul>
+      <div>
+        <p className="mb-2 text-xs uppercase tracking-wide text-zinc-500">
+          Навыки
+        </p>
+        <TagChips items={skills} emptyText="Навыки не указаны" />
+      </div>
     </div>
   );
 }

@@ -23,6 +23,7 @@ import { deleteSession } from '../services/sessions/sessions.service.ts';
 import { listMySessions } from '../services/users/users.service.ts';
 import type { ContactDTO, ProfileDTO } from '../types/api/profile.ts';
 import type { SessionDTO } from '../types/api/session.ts';
+import { TagEditor } from '../components/tag_editor.tsx';
 
 type ProfileTab = 'overview' | 'edit' | 'security';
 
@@ -30,7 +31,7 @@ type EditFormState = {
   displayName: string;
   specialization: string;
   bio: string;
-  skills: string;
+  skills: string[];
   dateBirthday: string;
 };
 
@@ -73,7 +74,7 @@ export function ProfilePage() {
     displayName: '',
     specialization: '',
     bio: '',
-    skills: '',
+    skills: [],
     dateBirthday: '',
   });
   const [savePending, setSavePending] = useState(false);
@@ -129,7 +130,7 @@ export function ProfilePage() {
         displayName: loadedProfile?.display_name ?? '',
         specialization: loadedProfile?.specialization ?? '',
         bio: loadedProfile?.bio ?? '',
-        skills: (loadedProfile?.skills ?? []).join(', '),
+        skills: loadedProfile?.skills ?? [],
         dateBirthday: loadedProfile?.date_birthday ?? '',
       });
     } catch {
@@ -178,10 +179,7 @@ export function ProfilePage() {
     setSaveMessage(null);
     setContactMessage(null);
     setSavePending(true);
-    const parsedSkills = editForm.skills
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const parsedSkills = editForm.skills;
 
     try {
       if (profile?.id) {
@@ -383,6 +381,7 @@ export function ProfilePage() {
               username={user?.username ?? '—'}
               specialization={profile?.specialization || 'Не указано'}
               dateBirthday={profile?.date_birthday || 'Не указана'}
+              skills={profile?.skills ?? []}
             />
           </article>
 
@@ -486,20 +485,20 @@ export function ProfilePage() {
               />
             </label>
 
-            <label className="text-sm text-zinc-300">
-              Навыки (через запятую)
-              <input
-                value={editForm.skills}
-                onChange={(event) =>
+            <div className="md:col-span-2">
+              <TagEditor
+                label="Навыки"
+                values={editForm.skills}
+                onChange={(next) =>
                   setEditForm((prev) => ({
                     ...prev,
-                    skills: event.target.value,
+                    skills: next,
                   }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-zinc-500"
+                placeholder="Добавить навык..."
+                helperText="Enter или запятая — добавить навык"
               />
-            </label>
-
+            </div>
             <label className="text-sm text-zinc-300 md:col-span-2">
               О себе
               <textarea

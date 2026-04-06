@@ -44,7 +44,7 @@ export function Header() {
     <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
         <div className="text-left">
-          <p className="text-sm font-medium text-zinc-200">Social GitHub</p>
+          <p className="text-sm font-medium text-zinc-200">ИнКоллаб</p>
           <p className="text-xs text-zinc-500">Рабочее пространство</p>
         </div>
 

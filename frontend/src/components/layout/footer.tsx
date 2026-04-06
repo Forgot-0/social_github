@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="border-t border-zinc-800 bg-zinc-950">
       <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-6 text-sm text-zinc-400 md:grid-cols-3">
         <div>
-          <p className="text-zinc-100">Social GitHub</p>
+          <p className="text-zinc-100">ИнКоллаб</p>
           <p className="mt-2 text-xs text-zinc-500">
             Единое пространство для профиля, проектов и командной работы.
           </p>
