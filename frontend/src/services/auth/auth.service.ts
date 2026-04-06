@@ -1,11 +1,8 @@
-import type { AccessTokenResponse } from '../../types/api/auth.ts';
-import {
-  apiGet,
-  apiPost,
-  apiPostForm,
-  followAuthRedirectGet,
-  resolveApiUrl,
-} from '../api/client.ts';
+import type {
+  AccessTokenResponse,
+  OAuthUrlResponse,
+} from '../../types/api/auth.ts';
+import { apiGet, apiPost, apiPostForm } from '../api/client.ts';
 
 export async function login(
   username: string,
@@ -62,12 +59,21 @@ export async function confirmPasswordReset(payload: {
   });
 }
 
-export function getOAuthAuthorizeUrl(provider: string): string {
-  return resolveApiUrl(`/auth/oauth/${encodeURIComponent(provider)}/authorize`);
+export async function getOAuthAuthorizeUrl(
+  provider: string,
+): Promise<OAuthUrlResponse> {
+  return apiGet<OAuthUrlResponse>(
+    `/auth/oauth/${encodeURIComponent(provider)}/authorize`,
+    {
+      auth: false,
+    },
+  );
 }
 
-export async function startOAuthConnect(provider: string): Promise<void> {
-  await followAuthRedirectGet(
+export async function getOAuthConnectUrl(
+  provider: string,
+): Promise<OAuthUrlResponse> {
+  return apiGet<OAuthUrlResponse>(
     `/auth/oauth/${encodeURIComponent(provider)}/authorize/connect`,
   );
 }

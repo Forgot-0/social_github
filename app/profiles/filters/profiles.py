@@ -14,7 +14,7 @@ class ProfileFilter(BaseFilter):
         self._build_conditions()
 
     def _build_conditions(self) -> None:
-        self.add_condition("username", FilterOperator.LIKE, self.username)
+        self.add_condition("username", FilterOperator.CONTAINS, self.username)
         self.add_condition("display_name", FilterOperator.CONTAINS, self.display_name)
 
         if self.skills:

@@ -34,7 +34,7 @@ export interface ListProfilesQuery {
 export async function listProfiles(
   query?: ListProfilesQuery,
 ): Promise<PageResult<ProfileDTO>> {
-  return apiGet<PageResult<ProfileDTO>>('/profiles/', {
+  return apiGet<PageResult<ProfileDTO>>('/profiles', {
     query: query as Record<string, QueryParamValue>,
   });
 }
@@ -80,6 +80,35 @@ export async function completeAvatarUpload(
   body: AvatarUploadCompleteBody,
 ): Promise<string> {
   return apiPost<string>('/profiles/avatar/upload_complete', { body });
+}
+
+export async function uploadAvatar(file: File): Promise<string> {
+  const presign = await presignAvatarUpload({
+    filename: file.name,
+    content_type: file.type || 'application/octet-stream',
+    size: file.size,
+  });
+
+  const formData = new FormData();
+  Object.entries(presign.fields).forEach(([key, value]) => {
+    formData.append(key, value);
+  });
+  formData.append('file', file);
+
+  const uploadResponse = await fetch(presign.url, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error('Failed to upload avatar');
+  }
+
+  return completeAvatarUpload({
+    key_base: presign.key_base,
+    size: file.size,
+    content_type: file.type || 'application/octet-stream',
+  });
 }
 
 export interface AddContactBody {

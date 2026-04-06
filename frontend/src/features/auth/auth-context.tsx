@@ -11,6 +11,7 @@ import type { UserResponse } from '../../types/api/user.ts';
 import { configureApiClient } from '../../services/api/client.ts';
 import {
   getOAuthAuthorizeUrl,
+  getOAuthConnectUrl,
   login as apiLogin,
   logout as apiLogout,
   oauthCallback,
@@ -31,7 +32,9 @@ type AuthContextValue = {
   register: (body: RegisterUserBody) => Promise<void>;
   logout: () => Promise<void>;
   /** Редирект на провайдера; refresh_token придёт в httpOnly cookie (SameSite=strict, Secure). */
-  startOAuthLogin: (provider: OAuthProvider) => void;
+  startOAuthLogin: (provider: OAuthProvider) => Promise<void>;
+  /** OAuth connect для привязки внешнего аккаунта к текущему пользователю. */
+  startOAuthConnect: (provider: OAuthProvider) => Promise<void>;
   completeOAuthLogin: (
     provider: OAuthProvider,
     params: { code: string; state: string },
@@ -122,8 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [clearSession]);
 
-  const startOAuthLogin = useCallback((provider: OAuthProvider) => {
-    window.location.assign(getOAuthAuthorizeUrl(provider));
+  const startOAuthLogin = useCallback(async (provider: OAuthProvider) => {
+    const { url } = await getOAuthAuthorizeUrl(provider);
+    window.location.assign(url);
+  }, []);
+
+  const startOAuthConnect = useCallback(async (provider: OAuthProvider) => {
+    const { url } = await getOAuthConnectUrl(provider);
+    window.location.assign(url);
   }, []);
 
   const completeOAuthLogin = useCallback(
@@ -146,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       startOAuthLogin,
+      startOAuthConnect,
       completeOAuthLogin,
     }),
     [
@@ -156,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       startOAuthLogin,
+      startOAuthConnect,
       completeOAuthLogin,
     ],
   );
