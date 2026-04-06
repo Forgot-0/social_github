@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -11,5 +12,5 @@ class ApplicationDTO(BaseModel):
     status: str
     message: str | None
     decided_by: int | None
-    decided_at: str | None
+    decided_at: datetime | None
 

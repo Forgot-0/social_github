@@ -12,8 +12,8 @@ class PositionFilter(BaseFilter):
 
     required_skills: set[str] | None = None
     is_open: bool = True
-    location_type: PositionLocationType = PositionLocationType.remote
-    expected_load: PositionLoad = PositionLoad.low
+    location_type: PositionLocationType | None = None
+    expected_load: PositionLoad | None = None
 
     def __post_init__(self):
         self._build_conditions()
@@ -27,6 +27,8 @@ class PositionFilter(BaseFilter):
 
         self.add_condition("required_skills", FilterOperator.ALL, self.required_skills)
         self.add_condition("is_open", FilterOperator.EQ, self.is_open)
-        self.add_condition("location_type", FilterOperator.EQ, self.location_type.value)
-        self.add_condition("expected_load", FilterOperator.EQ, self.expected_load.value)
+        if self.location_type:
+            self.add_condition("location_type", FilterOperator.EQ, self.location_type.value)
+        if self.expected_load:
+            self.add_condition("expected_load", FilterOperator.EQ, self.expected_load.value)
 

@@ -18,13 +18,12 @@ class GetProjectPositionsQueryHandler(BaseQueryHandler[GetProjectPositionsQuery,
 
     async def handle(self, query: GetProjectPositionsQuery) -> PageResult[PositionDTO]:
         return await self.position_repository.cache_paginated(
-            PositionDTO, self._handle, ttl=400,
+            PositionDTO, self._handle, ttl=1,
             query=query
         )
 
     async def _handle(self, query: GetProjectPositionsQuery) -> PageResult[PositionDTO]:
         page = await self.position_repository.find_by_filter(Position, query.filter)
-
         return PageResult(
             items=[
                 PositionDTO.model_validate(position.to_dict())
