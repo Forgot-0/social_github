@@ -17,7 +17,6 @@ services:
       --graceful-timeout 30
       --max-requests 10000
       --max-requests-jitter 1000
-      --access-logfile -
     depends_on:
       db:
         condition: service_healthy

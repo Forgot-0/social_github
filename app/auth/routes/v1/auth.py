@@ -205,7 +205,7 @@ async def reset_password(
 @router.get(
     "/oauth/{provider}/authorize",
     summary="Get URL for OAuth authorization",
-    status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    status_code=status.HTTP_200_OK,
     responses={
         400: create_response(NotExistProviderOAuthException(provider="test"))
     }
@@ -225,7 +225,7 @@ async def oauth_authorize(
 @router.get(
     "/oauth/{provider}/authorize/connect",
     summary="Get the OAuth connection URL for an existing user",
-    status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    status_code=status.HTTP_200_OK,
     responses={
         400: create_response(NotExistProviderOAuthException(provider="test"))
     }

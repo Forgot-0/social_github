@@ -24,7 +24,6 @@ async def create_first_data(db: AsyncSession) -> None:
         if role.scalar() is None:
             db.add(base_role)
 
-
     chat_roles = ChatRolesEnum.get_all_chat_roles()
     for base_role in chat_roles:
         role = await db.execute(select(ChatRole).where(ChatRole.name==base_role.name))

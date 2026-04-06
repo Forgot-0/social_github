@@ -484,7 +484,12 @@ password: string   (обязательно)
 
 ### GET `/auth/oauth/{provider}/authorize`
 
-**Response 307** → редирект на страницу провайдера.
+**Response 200 → `OAuthUrlResponse`:**
+```json
+{ "url": "https://accounts.google.com/o/oauth2/v2/auth?..." }
+```
+
+> Фронтенд должен сам выполнить редирект на полученный `url`.
 
 **Ошибки:** `NOT_EXIST_PROVIDER_OAUTH` 400
 
@@ -494,7 +499,12 @@ password: string   (обязательно)
 
 Привязать OAuth к существующему аккаунту.
 
-**Response 307** → редирект.
+**Response 200 → `OAuthUrlResponse`:**
+```json
+{ "url": "https://accounts.google.com/o/oauth2/v2/auth?..." }
+```
+
+> Фронтенд должен сам выполнить редирект на полученный `url`.
 
 **Ошибки:** `NOT_EXIST_PROVIDER_OAUTH` 400
 
@@ -1339,10 +1349,10 @@ sort:               string
 
 **Request:**
 ```json
-{ "permissions": ["delete:message"] }
+{ "permission": ["delete:message"] }
 ```
 
-> ⚠️ Поле называется `permissions` (тип `set[str]`).
+> ⚠️ Поле называется `permission` (тип `set[str]`).
 
 **Response 200:** `{}`
 
@@ -1352,7 +1362,7 @@ sort:               string
 
 **Request:**
 ```json
-{ "permissions": ["delete:message"] }
+{ "permission": ["delete:message"] }
 ```
 
 **Response 200:** `{}`
