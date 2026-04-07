@@ -23,5 +23,7 @@ class AuthConfig(BaseConfig):
     OAUTH_GITHUB_CLIENT_SECRET: str = ""
     OAUTH_GITHUB_REDIRECT_URI: str = ""
 
+    USER_TOPIC: str = "users"
+
 
 auth_config = AuthConfig()

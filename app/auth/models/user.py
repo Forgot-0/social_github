@@ -22,6 +22,15 @@ class CreatedUserEvent(BaseEvent):
     __event_name__: str = "user_created"
 
 
+@dataclass(frozen=True)
+class VerifiedUserEvent(BaseEvent):
+    user_id: int
+    username: str
+    email: str
+
+    __event_name__: str = "user.verified"
+
+
 class UserPermissions(BaseModel):
     __tablename__ = "user_permissions"
 
@@ -114,6 +123,13 @@ class User(BaseModel, DateMixin, SoftDeleteMixin):
 
     def verify(self) -> None:
         self.is_verified = True
+        self.register_event(
+            VerifiedUserEvent(
+                user_id=self.id,
+                username=self.username,
+                email=self.email
+            )
+        )
 
     def get_highest_role(self) -> "Role":
         return max(self.roles, key=lambda r: r.security_level)

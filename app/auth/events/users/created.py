@@ -41,3 +41,4 @@ class SendVerifyEventHandler(BaseEventHandler[CreatedUserEvent, None]):
         )
 
         await self.mail_service.queue(template=template, email_data=email_data)
+

@@ -9,5 +9,7 @@ class ProfileConfig(BaseConfig):
     MAX_LEN_BIO: int = 1024
     MAX_LEN_DISPLAY_NAME: int = 100
 
+    USER_TOPIC: str = "users"
+
 
 profile_config = ProfileConfig()

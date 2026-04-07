@@ -8,8 +8,9 @@ from faststream.kafka import KafkaBroker
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
 from app.core.log.init import configure_logging
-
 from app.core.message_brokers.base import BaseMessageBroker
+
+from app.profiles.consumers import user
 
 
 logger = logging.getLogger(__name__)
@@ -27,8 +28,8 @@ async def lifespan(context: ContextRepo) :
     await message_broker.stop()
 
 
-def setup_router(app: FastStream) -> None:
-    ...
+def setup_router(broker: KafkaBroker) -> None:
+    broker.include_router(user.router)
 
 
 def init_app() -> FastStream:
@@ -36,7 +37,7 @@ def init_app() -> FastStream:
     broker = KafkaBroker(app_config.BROKER_URL, client_id=app_config.GROUP_ID)
     app = FastStream(broker, lifespan=lifespan)
 
-    setup_router(app)
+    setup_router(broker)
     container = create_container(FastStreamProvider())
     app.context.set_global("container__", container)
 
@@ -47,3 +48,4 @@ def init_app() -> FastStream:
 
 
 app = init_app()
+
