@@ -29,7 +29,7 @@ class PositionUpdateRequest(BaseModel):
 
 class GetProjectPositionRequest(BaseModel):
     title: str | None = None
-    required_skills: set[str] | None = None
+    required_skills: list[str] | None = None
     is_open: bool = True
     location_type: PositionLocationType | None = None
     expected_load: PositionLoad | None = None
@@ -62,7 +62,7 @@ class GetProjectPositionRequest(BaseModel):
 class GetPositionsRequest(BaseModel):
     project_id: int | None = None
     title: str | None = None
-    required_skills: set[str] | None = None
+    required_skills: list[str] | None = None
     is_open: bool = True
     location_type: PositionLocationType | None = None
     expected_load: PositionLoad | None = None

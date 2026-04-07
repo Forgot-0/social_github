@@ -36,6 +36,22 @@ class NotFoundPositionException(ApplicationException):
 
 
 @dataclass(kw_only=True)
+class NotFoundMemberException(ApplicationException):
+    memebr_id: int
+
+    code: str = "NOT_FOUND_MEMBER"
+    status: int = 404
+
+    @property
+    def message(self) -> str:
+        return "Member not found"
+
+    @property
+    def detail(self):
+        return {"memebr_id": self.memebr_id}
+
+
+@dataclass(kw_only=True)
 class AlreadyMemberException(ApplicationException):
     code: str = "ALREADY_MEMBER"
     status: int = 409

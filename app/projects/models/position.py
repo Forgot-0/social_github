@@ -2,8 +2,9 @@ from enum import Enum
 from typing import TYPE_CHECKING, Self
 from uuid import UUID as PyUUID, uuid4
 
-from sqlalchemy import ARRAY, UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
+from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, validates, relationship
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.projects.config import project_config

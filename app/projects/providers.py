@@ -10,6 +10,7 @@ from app.projects.commands.applications.decision import (
     DecideApplicationCommand,
     DecideApplicationCommandHandler,
 )
+from app.projects.commands.members.change_role import ChangeRoleMemberCommand, ChangeRoleMemberCommandHandler
 from app.projects.commands.positions.create import (
     CreatePositionCommand,
     CreatePositionCommandHandler,
@@ -104,28 +105,24 @@ class ProjectModuleProvider(Provider):
     )
 
     project_handlers = provide_all(
-        # project commands
         CreateProjectCommandHandler,
         DeleteProjectCommandHandler,
         UpdateProjectCommandHandler,
         InviteMemberCommandHandler,
         AcceptInviteCommandHandler,
         UpdateMemberPermissionsCommandHandler,
+        ChangeRoleMemberCommandHandler,
 
-        # position commands
         CreatePositionCommandHandler,
         UpdatePositionCommandHandler,
         DeletePositionCommandHandler,
 
-        # role commands
         CreateProjectRoleCommandHandler,
         UpdateProjectRoleCommandHandler,
 
-        # application commands
         CreateApplicationCommandHandler,
         DecideApplicationCommandHandler,
 
-        # queries
         GetProjectByIdQueryHandler,
         GetProjectsQueryHandler,
         GetMyProjectsQueryHandler,
@@ -144,9 +141,8 @@ class ProjectModuleProvider(Provider):
         command_registry.register_command(UpdateProjectCommand, [UpdateProjectCommandHandler])
         command_registry.register_command(InviteMemberCommand, [InviteMemberCommandHandler])
         command_registry.register_command(AcceptInviteCommand, [AcceptInviteCommandHandler])
-        command_registry.register_command(
-            UpdateMemberPermissionsCommand, [UpdateMemberPermissionsCommandHandler]
-        )
+        command_registry.register_command(UpdateMemberPermissionsCommand, [UpdateMemberPermissionsCommandHandler])
+        command_registry.register_command(ChangeRoleMemberCommand, [ChangeRoleMemberCommandHandler])
 
         command_registry.register_command(CreatePositionCommand, [CreatePositionCommandHandler])
         command_registry.register_command(UpdatePositionCommand, [UpdatePositionCommandHandler])

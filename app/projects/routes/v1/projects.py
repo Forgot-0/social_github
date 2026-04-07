@@ -5,6 +5,7 @@ from app.core.api.builder import create_response
 from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
+from app.projects.commands.members.change_role import ChangeRoleMemberCommand
 from app.projects.commands.positions.create import CreatePositionCommand
 from app.projects.commands.projects.delete import DeleteProjectCommand
 from app.projects.dtos.projects import ProjectDTO
@@ -13,7 +14,7 @@ from app.projects.queries.positions.get_list import GetProjectPositionsQuery
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
 from app.projects.queries.projects.get_list import GetProjectsQuery
 from app.projects.queries.projects.get_my import GetMyProjectsQuery
-from app.projects.schemas.positions.requests import GetPositionsRequest, GetProjectPositionRequest, PositionCreateRequest
+from app.projects.schemas.positions.requests import GetProjectPositionRequest, PositionCreateRequest
 from app.projects.schemas.projects.requests import (
     GetMyProjectsRequest,
     GetProjectsRequest,
@@ -21,7 +22,7 @@ from app.projects.schemas.projects.requests import (
     ProjectCreateRequest,
     ProjectUpdateRequest,
 )
-from app.projects.schemas.members.requests import MemberUpdatePermissionsRequest
+from app.projects.schemas.members.requests import MemberChangeRoleRequest, MemberUpdatePermissionsRequest
 from app.projects.commands.projects.create import CreateProjectCommand
 from app.projects.commands.projects.update import UpdateProjectCommand
 from app.projects.commands.projects.invite import InviteMemberCommand
@@ -204,6 +205,22 @@ async def update_member_permissions(
         )
     )
 
+@router.post("/{project_id}/members/{user_id}/role", status_code=status.HTTP_200_OK)
+async def change_role_member(
+    project_id: int,
+    user_id: int,
+    member_request: MemberChangeRoleRequest,
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> None:
+    await mediator.handle_command(
+        ChangeRoleMemberCommand(
+            user_jwt_data=user_jwt_data,
+            project_id=project_id,
+            target_user_id=user_id,
+            role_id=member_request.role_id,
+        )
+    )
 
 @router.post(
     "/{project_id}/positions",

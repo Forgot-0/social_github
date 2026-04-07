@@ -10,7 +10,7 @@ class PositionFilter(BaseFilter):
     project_id: int | None = None
     title: str | None = None
 
-    required_skills: set[str] | None = None
+    required_skills: list[str] | None = None
     is_open: bool = True
     location_type: PositionLocationType | None = None
     expected_load: PositionLoad | None = None
@@ -23,7 +23,7 @@ class PositionFilter(BaseFilter):
         self.add_condition("title", FilterOperator.CONTAINS, self.title)
 
         if self.required_skills:
-            self.required_skills = {skill.lower() for skill in self.required_skills}
+            self.required_skills = [skill.lower() for skill in self.required_skills]
 
         self.add_condition("required_skills", FilterOperator.ALL, self.required_skills)
         self.add_condition("is_open", FilterOperator.EQ, self.is_open)
