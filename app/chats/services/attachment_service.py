@@ -1,6 +1,6 @@
+import logging
 import re
 from dataclasses import dataclass
-import logging
 from uuid import uuid4
 
 import orjson

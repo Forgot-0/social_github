@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import Select, select
-from sqlalchemy.orm import selectinload
 
 from app.chats.models.attachment import MessageAttachment
 from app.core.db.repository import IRepository

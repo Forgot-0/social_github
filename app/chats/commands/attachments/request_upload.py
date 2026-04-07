@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass
 
 from app.chats.dtos.attachments import UploadSlotDTO
 from app.chats.exceptions import (

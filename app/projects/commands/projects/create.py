@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +8,6 @@ from app.projects.config import project_config
 from app.projects.exceptions import AlreadySlugProjectExistsException, MaxProjectsLimitExceededException
 from app.projects.models.project import Project, ProjectVisibility
 from app.projects.repositories.projects import ProjectRepository
-
 
 logger = logging.getLogger(__name__)
 

@@ -15,7 +15,7 @@ class NotFoundProjectException(ApplicationException):
         return "Project not found"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, int]:
         return {"project_id": self.project_id}
 
 
@@ -31,7 +31,7 @@ class NotFoundPositionException(ApplicationException):
         return "Position not found"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, str]:
         return {"position_id": self.position_id}
 
 
@@ -47,7 +47,7 @@ class NotFoundMemberException(ApplicationException):
         return "Member not found"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, int]:
         return {"memebr_id": self.memebr_id}
 
 
@@ -61,7 +61,7 @@ class AlreadyMemberException(ApplicationException):
         return "Already member"
 
     @property
-    def detail(self):
+    def detail(self) -> dict:
         return {}
 
 
@@ -72,11 +72,11 @@ class TooLongTagNameException(ApplicationException):
     status: int = 400
 
     @property
-    def message(self):
+    def message(self) -> str:
         return f"Too long tag name {self.name}"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, str]:
         return {
             "tag_name": self.name
         }
@@ -89,11 +89,11 @@ class TooLongNameException(ApplicationException):
     status: int = 400
 
     @property
-    def message(self):
+    def message(self) -> str:
         return f"Too long name {self.name}"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, str]:
         return {
             "name": self.name
         }
@@ -112,7 +112,7 @@ class NotValidMemberStatusException(ApplicationException):
         return "Not valid member status"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, str]:
         return {"status": self.member_status, "action": self.action}
 
 
@@ -128,7 +128,7 @@ class NotFoundProjectRoleException(ApplicationException):
         return "Project role not found"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, int]:
         return {"role_id": self.role_id}
 
 
@@ -144,7 +144,7 @@ class RoleAlreadyExsistsException(ApplicationException):
         return "Role alredy exisist"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, str]:
         return {"name": self.role_name}
 
 
@@ -161,7 +161,7 @@ class MaxProjectsLimitExceededException(ApplicationException):
         return "Maximum number of projects reached"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, int]:
         return {
             "owner_id": self.owner_id,
             "limit": self.limit,
@@ -181,7 +181,7 @@ class MaxPositionsPerProjectLimitExceededException(ApplicationException):
         return "Maximum number of positions for project reached"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, int]:
         return {
             "project_id": self.project_id,
             "limit": self.limit,
@@ -198,7 +198,7 @@ class AlreadySlugProjectExistsException(ApplicationException):
         return "This slug already exists"
 
     @property
-    def detail(self):
+    def detail(self) -> dict[str, str]:
         return {
             "slug": self.slug,
         }

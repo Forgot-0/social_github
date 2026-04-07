@@ -1,8 +1,8 @@
-from dataclasses import dataclass
 import logging
- 
+from dataclasses import dataclass
+
 from sqlalchemy.ext.asyncio import AsyncSession
- 
+
 from app.chats.exceptions import (
     AccessDeniedChatException,
     NotChatMemberException,
@@ -14,17 +14,17 @@ from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
- 
+
 logger = logging.getLogger(__name__)
- 
- 
+
+
 @dataclass(frozen=True)
 class DeleteMessageCommand(BaseCommand):
     user_jwt_data: UserJWTData
     chat_id: int
     message_id: int
- 
- 
+
+
 @dataclass(frozen=True)
 class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]):
     session: AsyncSession

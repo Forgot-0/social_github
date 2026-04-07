@@ -1,13 +1,13 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
-from app.projects.repositories.projects import ProjectRepository
 from app.projects.exceptions import NotFoundMemberException, NotFoundProjectException
+from app.projects.repositories.projects import ProjectRepository
 from app.projects.services.permission_service import ProjectPermissionService
 
 logger = logging.getLogger(__name__)

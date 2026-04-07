@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
+from app.core.db.repository import PageResult
 from app.core.queries import BaseQuery, BaseQueryHandler
+from app.projects.dtos.roles import ProjectRoleDTO
+from app.projects.filters.roles import ProjectRoleFilter
 from app.projects.models.role import ProjectRole
 from app.projects.repositories.roles import ProjectRoleRepository
-from app.projects.dtos.roles import ProjectRoleDTO
-from app.core.db.repository import PageResult
-from app.projects.filters.roles import ProjectRoleFilter
 
 
 @dataclass(frozen=True)

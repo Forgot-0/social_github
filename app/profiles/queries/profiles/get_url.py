@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from uuid import uuid4
 
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData

@@ -89,7 +89,7 @@ class AvatarNotImageType(ApplicationException):
 
     @property
     def message(self):
-        return f"Avatar must be image type(jpg, png, ...)"
+        return "Avatar must be image type(jpg, png, ...)"
 
     @property
     def detail(self):

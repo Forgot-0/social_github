@@ -1,6 +1,6 @@
+import logging
 from dataclasses import dataclass
 from datetime import date
-import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +8,6 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.profiles.exceptions import AlreadeExistProfileException
 from app.profiles.models.profile import Profile
 from app.profiles.repositories.profiles import ProfileRepository
-
 
 logger = logging.getLogger(__name__)
 

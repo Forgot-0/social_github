@@ -1,9 +1,8 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from app.chats.exceptions import (
     AccessDeniedChatException,
-    NoActiveCallException,
     NotChatMemberException,
 )
 from app.chats.keys import ChatKeys

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
+from app.core.db.repository import PageResult
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
-from app.projects.repositories.projects import ProjectRepository
 from app.projects.dtos.projects import ProjectDTO
-from app.core.db.repository import PageResult
 from app.projects.filters.projects import ProjectFilter
 from app.projects.models.project import Project
+from app.projects.repositories.projects import ProjectRepository
 
 
 @dataclass(frozen=True)

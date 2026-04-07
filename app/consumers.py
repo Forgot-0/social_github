@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 
 from dishka.integrations.faststream import FastStreamProvider, setup_dishka
 from faststream import ContextRepo, FastStream
@@ -9,9 +9,7 @@ from app.core.configs.app import app_config
 from app.core.di.container import create_container
 from app.core.log.init import configure_logging
 from app.core.message_brokers.base import BaseMessageBroker
-
 from app.profiles.consumers import user
-
 
 logger = logging.getLogger(__name__)
 
@@ -48,4 +46,3 @@ def init_app() -> FastStream:
 
 
 app = init_app()
-

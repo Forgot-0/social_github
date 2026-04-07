@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,8 +12,6 @@ from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.services.permission_service import ProjectPermissionService
-from app.projects.models.position import PositionLocationType, PositionLoad
-
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +49,8 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
         if not self.project_permission_service.can_update(
             user_jwt_data=command.user_jwt_data,
             project=project,
-            must_permissions={"position:create", }
-        ): raise AccessDeniedException(need_permissions={"position:create", })
+            must_permissions={"position:create" }
+        ): raise AccessDeniedException(need_permissions={"position:create" })
 
         project.new_position(
             title=command.title,

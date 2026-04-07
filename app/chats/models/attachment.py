@@ -1,5 +1,5 @@
 from enum import Enum as PyEnum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID as PyUUID
 
 from sqlalchemy import UUID, BigInteger, Enum, ForeignKey, Index, Integer, String
@@ -37,9 +37,9 @@ class MessageAttachment(BaseModel, DateMixin):
     original_filename: Mapped[str] = mapped_column(String(256), nullable=False)
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
-    width: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    height: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    duration_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     message: Mapped["Message"] = relationship(back_populates="attachments", lazy="noload")
 

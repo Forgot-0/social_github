@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select
 from sqlalchemy.orm import selectinload
 
 from app.core.db.repository import CacheRepository, IRepository

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from redis.asyncio import Redis
-from sqlalchemy import Select, distinct, func, select
-from sqlalchemy.orm import selectinload, subqueryload
+from sqlalchemy import Select, select
+from sqlalchemy.orm import selectinload
 
 from app.auth.filters.roles import RoleFilter
 from app.auth.models.permission import Permission

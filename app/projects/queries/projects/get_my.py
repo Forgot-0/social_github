@@ -4,7 +4,6 @@ from app.core.db.repository import PageResult
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
 from app.projects.dtos.projects import ProjectDTO
-from app.projects.models.project import Project
 from app.projects.repositories.projects import ProjectRepository
 
 

@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,6 @@ from app.projects.exceptions import NotFoundProjectException
 from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.services.permission_service import ProjectPermissionService
-
 
 logger = logging.getLogger(__name__)
 

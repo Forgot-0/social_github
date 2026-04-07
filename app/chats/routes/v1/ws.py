@@ -9,10 +9,10 @@ from fastapi_limiter.depends import WebSocketRateLimiter
 from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
-from app.chats.services.ws_client_events import ChatWebSocketClientService
 from app.chats.services.presence import PresenceService
+from app.chats.services.ws_client_events import ChatWebSocketClientService
+from app.core.services.auth.dto import Token, UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager
-from app.core.services.auth.dto import UserJWTData, Token
 from app.core.websockets.base import BaseConnectionManager
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ async def websocket_endpoint(
         while True:
             try:
                 data = await asyncio.wait_for(websocket.receive_json(), timeout=45.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await presence_service.refresh(user_id)
                 continue
 

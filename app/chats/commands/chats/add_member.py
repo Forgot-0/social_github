@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +18,6 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.websockets.base import BaseConnectionManager
-
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         if not self.chat_access_servise.can_update(
             user_jwt_data=command.user_jwt_data,
             memeber=requester,
-            must_permissions={"member:invite",}
+            must_permissions={"member:invite"}
         ): raise AccessDeniedChatException()
 
         existing = await self.chat_repository.get_member(command.chat_id, command.target_user_id)

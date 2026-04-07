@@ -1,14 +1,14 @@
-from dataclasses import dataclass
 import io
+from dataclasses import dataclass
 
-from dishka.integrations.taskiq import FromDishka, inject
-from taskiq import AsyncBroker
-from app.core.services.storage.dtos import UploadFile
 import magic
 import pyvips
+from dishka.integrations.taskiq import FromDishka, inject
+from taskiq import AsyncBroker
 
 from app.core.events.service import BaseEventBus
 from app.core.services.queues.task import BaseTask
+from app.core.services.storage.dtos import UploadFile
 from app.core.services.storage.service import StorageService
 from app.profiles.config import profile_config
 from app.profiles.events.avatars.uploaded import UploadedAvatarsEvent
@@ -39,18 +39,18 @@ class AvatarUploadTask(BaseTask):
         data = await storage_service.download(profile_config.AVATAR_BUCKET,original_key)
         mime = magic.from_buffer(data, mime=True)
 
-        if not mime.startswith('image/'):
+        if not mime.startswith("image/"):
             raise AvatarNotImageType(type_avatar=mime)
 
-        img: pyvips.Image = pyvips.Image.new_from_buffer(data, '') # type: ignore
+        img: pyvips.Image = pyvips.Image.new_from_buffer(data, "") # type: ignore
         versions = {}
 
         for s in SizeAvatar:
             thumb = img.thumbnail_image(s, height=s) # type: ignore
 
-            webp = thumb.write_to_buffer('.webp') # type: ignore
-            avif = thumb.write_to_buffer('.avif') # type: ignore
-            jpg = thumb.write_to_buffer('.jpg') # type: ignore
+            webp = thumb.write_to_buffer(".webp") # type: ignore
+            avif = thumb.write_to_buffer(".avif") # type: ignore
+            jpg = thumb.write_to_buffer(".jpg") # type: ignore
 
             key_webp = f"{key_base}/{s.value}.webp"
             key_avif = f"{key_base}/{s.value}.avif"

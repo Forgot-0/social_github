@@ -15,7 +15,7 @@ class PositionFilter(BaseFilter):
     location_type: PositionLocationType | None = None
     expected_load: PositionLoad | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._build_conditions()
 
     def _build_conditions(self) -> None:

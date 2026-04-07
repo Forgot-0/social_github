@@ -7,7 +7,6 @@ from app.core.services.auth.depends import CurrentUserJWTData
 from app.projects.dtos.members import MemberDTO
 from app.projects.queries.profiles.get_my_invites import GetProfileInvitesQuery
 
-
 router = APIRouter(route_class=DishkaRoute)
 
 

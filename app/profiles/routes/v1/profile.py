@@ -1,5 +1,5 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.api.builder import create_response
 from app.core.api.rate_limiter import ConfigurableRateLimiter
@@ -23,9 +23,8 @@ from app.profiles.schemas.profiles.requests import (
     AvatarUploadCompleteRequest,
     GetProfilesRequest,
     ProfileCreateRequest,
-    ProfileUpdateRequest
+    ProfileUpdateRequest,
 )
-
 
 router = APIRouter(route_class=DishkaRoute)
 

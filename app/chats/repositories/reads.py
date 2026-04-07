@@ -10,7 +10,6 @@ from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
 from app.core.utils import now_utc
 
-
 _UNREAD_INCR_BATCH_SIZE = 1000
 
 
@@ -91,7 +90,7 @@ class ReadReceiptRepository(IRepository[ReadReceipt], CacheRepository):
         result: dict[int, int] = {}
         missing_ids: list[int] = []
 
-        for uid, val in zip(user_ids, values):
+        for uid, val in zip(user_ids, values, strict=False):
             if val is not None:
                 result[uid] = int(val)
             else:

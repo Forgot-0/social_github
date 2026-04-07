@@ -1,11 +1,10 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.exceptions import (
     AccessDeniedChatException,
-    NotChatMemberException,
     NotFoundChatException,
 )
 from app.chats.repositories.chat import ChatRepository

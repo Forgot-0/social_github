@@ -19,7 +19,8 @@ class ProjectPermissionService:
     ) -> bool:
         if self.rbac_manager.check_permission(
             user_jwt_data, {"project:update"}
-        ): return True
+        ):
+            return True
 
         if int(user_jwt_data.id) == project.owner_id:
             return True
@@ -29,11 +30,7 @@ class ProjectPermissionService:
             return False
 
         memeber_permissions = memeber.effective_permissions()
-        for perm in must_permissions:
-            if not memeber_permissions.get(perm, False):
-                return False
-
-        return True
+        return all(memeber_permissions.get(perm, False) for perm in must_permissions)
 
     def can_invite(
         self,
@@ -43,7 +40,8 @@ class ProjectPermissionService:
     ) -> bool:
         if self.rbac_manager.check_permission(
             user_jwt_data, {"project:update"}
-        ): return True
+        ):
+            return True
 
         if int(user_jwt_data.id) == project.owner_id:
             return True
@@ -53,13 +51,10 @@ class ProjectPermissionService:
             return False
 
         memeber_permissions = memeber.effective_permissions()
-        if not memeber_permissions.get("memebr:invite", False):
+        if not memeber_permissions.get("member:invite", False):
             return False
 
-        if memeber.role.level < role.level:
-            return False
-
-        return True
+        return memeber.role.level < role.level
 
     def can_view(
         self,
@@ -71,13 +66,11 @@ class ProjectPermissionService:
 
         if self.rbac_manager.check_permission(
             user_jwt_data, {"project:update"}
-        ): return True
+        ):
+            return True
 
         if int(user_jwt_data.id) == project.owner_id:
             return True
 
         memeber = project.get_memeber_by_user_id(int(user_jwt_data.id))
-        if memeber is not None and memeber.status != MembershipStatus.active:
-            return True
-
-        return False
+        return memeber is not None and memeber.status == MembershipStatus.active

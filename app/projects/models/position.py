@@ -1,16 +1,16 @@
 from enum import Enum
 from typing import TYPE_CHECKING, Self
-from uuid import UUID as PyUUID, uuid4
+from uuid import UUID as PyUUID, uuid4 # noqa: N811
 
 from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, validates, relationship
 from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.projects.config import project_config
 from app.projects.exceptions import AlreadyMemberException, TooLongTagNameException
-from app.projects.models.member import MembershipStatus
 from app.projects.models.application import Application
+from app.projects.models.member import MembershipStatus
 
 if TYPE_CHECKING:
     from app.projects.models.project import Project
@@ -91,7 +91,7 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
     ) -> None:
         member = self.project.get_memeber_by_user_id(candidate_id)
         if member and member.status != MembershipStatus.active:
-            raise AlreadyMemberException()
+            raise AlreadyMemberException
 
         self.applications.append(
             Application.create(

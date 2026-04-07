@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import (

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship

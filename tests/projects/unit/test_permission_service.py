@@ -163,7 +163,7 @@ class TestCanInvite:
 
     def test_member_cannot_invite_higher_level_role(self, service: ProjectPermissionService) -> None:
         project = make_project(owner_id=1)
-        add_member(project, user_id=2, role_level=3, role_permissions={"memebr:invite": True})
+        add_member(project, user_id=2, role_level=3, role_permissions={"member:invite": True})
         invitee_role = make_role(level=5)
         jwt = make_jwt(user_id="2")
 

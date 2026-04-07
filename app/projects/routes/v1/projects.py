@@ -5,15 +5,21 @@ from app.core.api.builder import create_response
 from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
+from app.projects.commands.members.accept import AcceptInviteCommand
 from app.projects.commands.members.change_role import ChangeRoleMemberCommand
+from app.projects.commands.members.update_permissions import UpdateMemberPermissionsCommand
 from app.projects.commands.positions.create import CreatePositionCommand
+from app.projects.commands.projects.create import CreateProjectCommand
 from app.projects.commands.projects.delete import DeleteProjectCommand
+from app.projects.commands.projects.invite import InviteMemberCommand
+from app.projects.commands.projects.update import UpdateProjectCommand
 from app.projects.dtos.projects import ProjectDTO
 from app.projects.exceptions import NotFoundProjectException
 from app.projects.queries.positions.get_list import GetProjectPositionsQuery
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
 from app.projects.queries.projects.get_list import GetProjectsQuery
 from app.projects.queries.projects.get_my import GetMyProjectsQuery
+from app.projects.schemas.members.requests import MemberChangeRoleRequest, MemberUpdatePermissionsRequest
 from app.projects.schemas.positions.requests import GetProjectPositionRequest, PositionCreateRequest
 from app.projects.schemas.projects.requests import (
     GetMyProjectsRequest,
@@ -22,13 +28,6 @@ from app.projects.schemas.projects.requests import (
     ProjectCreateRequest,
     ProjectUpdateRequest,
 )
-from app.projects.schemas.members.requests import MemberChangeRoleRequest, MemberUpdatePermissionsRequest
-from app.projects.commands.projects.create import CreateProjectCommand
-from app.projects.commands.projects.update import UpdateProjectCommand
-from app.projects.commands.projects.invite import InviteMemberCommand
-from app.projects.commands.members.accept import AcceptInviteCommand
-from app.projects.commands.members.update_permissions import UpdateMemberPermissionsCommand
-
 
 router = APIRouter(route_class=DishkaRoute)
 

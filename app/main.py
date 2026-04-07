@@ -2,8 +2,8 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from aiojobs import Scheduler
 import redis.asyncio as redis
+from aiojobs import Scheduler
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
@@ -16,6 +16,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
 from app.auth.routers import router_v1 as auth_router_v1
+from app.chats.routers import router_v1 as chat_router_v1
 from app.core.api.builder import create_response
 from app.core.api.schemas import ErrorDetail, ErrorResponse, ORJSONResponse
 from app.core.configs.app import app_config
@@ -32,7 +33,6 @@ from app.init_data import init_data
 from app.pre_start import pre_start
 from app.profiles.routers import router_v1 as profile_router_v1
 from app.projects.routers import router_v1 as project_router_v1
-from app.chats.routers import router_v1 as chat_router_v1
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,7 @@ async def lifespan(app: FastAPI) :
     await scheduler.spawn(connection_manager.startup())
 
     yield
+    await scheduler.close()
     await redis_client.aclose()
     await message_broker.close()
     await app.state.dishka_container.close()
@@ -238,4 +239,3 @@ def init_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, handle_validation_exeption) # type: ignore
     app.openapi = lambda: custom_openapi(app)
     return app
-

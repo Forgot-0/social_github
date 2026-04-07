@@ -1,10 +1,10 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
+from dishka.integrations.taskiq import FromDishka, inject
 from redis.asyncio import Redis
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from dishka.integrations.taskiq import FromDishka, inject
 from taskiq import AsyncBroker
 
 from app.chats.keys import ChatKeys

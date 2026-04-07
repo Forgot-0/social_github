@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,16 +8,11 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
 from app.projects.exceptions import AlreadyMemberException, NotFoundProjectException
-from app.projects.models.application import ApplicationStatus
-from app.projects.models.member import MembershipStatus
-from app.projects.models.project import Project
-from app.projects.models.member import ProjectMembership
 from app.projects.models.role_permissions import ProjectRolesEnum
 from app.projects.repositories.applications import ApplicationRepository
-from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.positions import PositionRepository
+from app.projects.repositories.projects import ProjectRepository
 from app.projects.services.permission_service import ProjectPermissionService
-
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +37,10 @@ class DecideApplicationCommandHandler(BaseCommandHandler[DecideApplicationComman
         if not application:
             raise NotFoundProjectException(project_id=0)
 
-        project = await self.project_repository.get_by_id(application.project_id, True, True)
+        project = await self.project_repository.get_by_id(
+            application.project_id,
+            with_member=True, with_positon=True
+        )
         if not project:
             raise NotFoundProjectException(project_id=application.project_id)
 

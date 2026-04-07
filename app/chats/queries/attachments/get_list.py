@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from sqlalchemy.orm import selectinload
-
 from app.chats.dtos.attachments import AttachmentDTO
 from app.chats.dtos.messages import MessageCursorPage, MessageDTO
 from app.chats.exceptions import NotChatMemberException

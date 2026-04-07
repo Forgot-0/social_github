@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 import hashlib
-from typing import Any, Awaitable, Callable, Generic, ParamSpec, TypeVar
+from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
+from typing import Any, Generic, ParamSpec, TypeVar
 
 import orjson
 from pydantic import BaseModel
@@ -12,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.base_model import SoftDeleteMixin
 from app.core.db.convertor import SQLAlchemyFilterConverter
 from app.core.filters.base import BaseFilter
-
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -115,7 +115,7 @@ class CacheRepository:
     def _serialize_args_kwargs(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> bytes:
         args_repr = "|".join(repr(a) for a in args)
         kwargs_items = sorted(kwargs.items())
-        kwargs_repr = "|".join(f"{k}={repr(v)}" for k, v in kwargs_items)
+        kwargs_repr = "|".join(f"{k}={v!r}" for k, v in kwargs_items)
         combined = f"args:{args_repr};kwargs:{kwargs_repr}"
         return combined.encode("utf-8")
 

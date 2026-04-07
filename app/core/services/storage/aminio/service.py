@@ -4,7 +4,6 @@ import mimetypes
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Iterator
 
 from minio import Minio, S3Error
 from minio.datatypes import PostPolicy
@@ -15,7 +14,6 @@ from app.core.services.storage.aminio.policy import Policy
 from app.core.services.storage.dtos import UploadFile, UploadFilePost, UploadFilePostResponse
 from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
-
 
 logger = logging.getLogger(__name__)
 

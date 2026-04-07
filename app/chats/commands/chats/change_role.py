@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,6 @@ from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,7 @@ class ChangeMemberRoleCommandHandler(BaseCommandHandler[ChangeMemberRoleCommand,
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,
-            must_permissions={"role:change", }
+            must_permissions={"role:change" }
         ): raise AccessDeniedChatException()
 
         target.role_id = command.role_id

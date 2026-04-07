@@ -3,22 +3,23 @@ from enum import Enum
 from typing import Any, Optional, Self
 from uuid import UUID
 
-from sqlalchemy import  BigInteger, Boolean, Enum as SAEnum, Index, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, Index, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 from app.core.utils import now_utc
 from app.projects.config import project_config
 from app.projects.exceptions import (
+    AlreadyMemberException,
     MaxPositionsPerProjectLimitExceededException,
     TooLongNameException,
     TooLongTagNameException,
 )
 from app.projects.models.application import Application
-from app.projects.models.position import Position, PositionLoad, PositionLocationType
 from app.projects.models.member import MembershipStatus, ProjectMembership
+from app.projects.models.position import Position, PositionLoad, PositionLocationType
 
 
 @dataclass(frozen=True)
@@ -40,12 +41,6 @@ class ProjectStatus(Enum):
     active = "active"
     archived = "archived"
 
-# [
-#     "member:read", "member:invite", "member:kick", "member:update",
-#     "project:read", "project:write", "project:visibility", "project:delete"
-#     "permission:update", "permission:delete"
-#     ""
-# ]
 
 class Project(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "projects"
@@ -96,7 +91,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     @classmethod
     def create(
         cls,  owner_id: int, name: str, slug: str,
-        small_description: str, full_description: str, visibility=ProjectVisibility.public,
+        small_description: str, full_description: str, visibility: ProjectVisibility=ProjectVisibility.public,
         metadata: dict[str, Any] | None=None,
         tags: set[str] | None=None
     ) -> Self:
@@ -114,7 +109,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             ProjectMembership(
                 user_id=owner_id,
                 invited_by=owner_id,
-                role_id=1,#ProjectRolesEnum.OWNER.value.id, Из за этого ошибка импорта 
+                role_id=1,#ProjectRolesEnum.OWNER.value.id, Из за этого ошибка импорта
                 status=MembershipStatus.active,
                 joined_at=now_utc(),
             )
@@ -130,11 +125,11 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             permissions_overrides: dict | None=None
         ) -> None:
         if user_id == invited_by:
-            raise
+            raise AlreadyMemberException
 
         already_member = self.get_memeber_by_user_id(user_id=user_id)
         if already_member is not None:
-            raise
+            raise AlreadyMemberException
 
         self.memberships.append(
             ProjectMembership(
@@ -200,14 +195,16 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         for member in self.memberships:
             if member.user_id == user_id:
                 return member
+        return None
 
     def get_position_by_id(self, position_id: UUID) -> Optional["Position"]:
         for pos in self.positions:
             if pos.id == position_id:
                 return pos
+        return None
 
     @validates("tags")
-    def validate_tags(self, key, value):
+    def validate_tags(self, key: str, value: list[str]) -> list[str]:
 
         if len(value) != len(set(value)):
             raise ValueError("Duplicate skills are not allowed")

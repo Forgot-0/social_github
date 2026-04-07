@@ -6,7 +6,6 @@ from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
 from app.core.utils import now_utc
 
-
 PRESENCE_TTL = chat_config.WS_HEARTBEAT_INTERVAL * 3
 
 
@@ -41,5 +40,5 @@ class PresenceService:
         scores = await self.redis.zmscore(ChatKeys.presence_last_seen_zset(), members)
         return {
             uid: self._is_fresh_score(score, now_ts)
-            for uid, score in zip(user_ids, scores)
+            for uid, score in zip(user_ids, scores, strict=False)
         }

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dtos.user import AuthUserJWTData
-from app.auth.exceptions import DuplicatePermissionException, NotFoundPermissionsException
+from app.auth.exceptions import DuplicatePermissionException
 from app.auth.models.permission import Permission
 from app.auth.repositories.permission import PermissionRepository
 from app.auth.services.rbac import AuthRBACManager

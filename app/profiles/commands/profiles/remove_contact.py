@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +9,6 @@ from app.core.services.auth.exceptions import AccessDeniedException
 from app.core.services.auth.rbac import RBACManager
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.repositories.profiles import ProfileRepository
-
 
 logger = logging.getLogger(__name__)
 

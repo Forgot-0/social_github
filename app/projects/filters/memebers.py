@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from app.core.filters.base import BaseFilter
 from app.core.filters.condition import FilterOperator
-from app.core.filters.loading_strategy import LoadingStrategyType
 from app.projects.models.member import MembershipStatus
 
 
@@ -14,7 +13,7 @@ class MemebrFilter(BaseFilter):
     status: MembershipStatus = MembershipStatus.active
     project_id: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._build_conditions()
 
     def _build_conditions(self) -> None:

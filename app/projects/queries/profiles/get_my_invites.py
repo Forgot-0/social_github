@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
+from app.core.db.repository import PageResult
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
 from app.projects.dtos.members import MemberDTO
 from app.projects.filters.memebers import MemebrFilter
 from app.projects.models.member import MembershipStatus, ProjectMembership
 from app.projects.repositories.members import MemberProjectRepository
-from app.core.db.repository import PageResult
 
 
 @dataclass(frozen=True)

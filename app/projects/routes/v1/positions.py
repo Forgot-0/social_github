@@ -7,8 +7,8 @@ from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 from app.projects.commands.applications.create import CreateApplicationCommand
-from app.projects.commands.positions.update import UpdatePositionCommand
 from app.projects.commands.positions.delete import DeletePositionCommand
+from app.projects.commands.positions.update import UpdatePositionCommand
 from app.projects.dtos.applications import ApplicationDTO
 from app.projects.dtos.positions import PositionDTO
 from app.projects.queries.applications.get_list import GetApplicationsQuery
@@ -16,7 +16,6 @@ from app.projects.queries.positions.get_by_id import GetPositionByIdQuery
 from app.projects.queries.positions.get_list import GetProjectPositionsQuery
 from app.projects.schemas.applications.requests import ApplicationCreateRequest, GetPositionApplicationsRequest
 from app.projects.schemas.positions.requests import GetPositionsRequest, PositionUpdateRequest
-
 
 router = APIRouter(route_class=DishkaRoute)
 

@@ -1,8 +1,8 @@
+import asyncio
 from abc import (
     ABC,
     abstractmethod,
 )
-import asyncio
 from collections import defaultdict
 from dataclasses import (
     dataclass,

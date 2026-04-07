@@ -1,6 +1,5 @@
-from dataclasses import dataclass
 import logging
-from uuid import uuid4
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

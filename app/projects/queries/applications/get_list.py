@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from app.core.db.repository import PageResult
 from app.core.queries import BaseQuery, BaseQueryHandler
+from app.core.services.auth.dto import UserJWTData
 from app.projects.dtos.applications import ApplicationDTO
 from app.projects.filters.applications import ApplicationFilter
 from app.projects.models.application import Application
@@ -11,6 +12,7 @@ from app.projects.repositories.applications import ApplicationRepository
 @dataclass(frozen=True)
 class GetApplicationsQuery(BaseQuery):
     filter: ApplicationFilter
+    user_jwt_data: UserJWTData
 
 
 @dataclass(frozen=True)

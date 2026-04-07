@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,10 +7,9 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
-from app.projects.repositories.projects import ProjectRepository
 from app.projects.exceptions import NotFoundProjectException
+from app.projects.repositories.projects import ProjectRepository
 from app.projects.services.permission_service import ProjectPermissionService
-
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +42,8 @@ class UpdateProjectCommandHandler(BaseCommandHandler[UpdateProjectCommand, None]
         if not self.project_permission_service.can_update(
             user_jwt_data=command.user_jwt_data,
             project=project,
-            must_permissions={"project:update",}
-        ): raise AccessDeniedException(need_permissions={"project:update", })
+            must_permissions={"project:update"}
+        ): raise AccessDeniedException(need_permissions={"project:update" })
 
         if command.name is not None:
             project.update_name(command.name)

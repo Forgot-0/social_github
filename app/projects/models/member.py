@@ -3,17 +3,17 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, DateTime, Enum as SAEnum, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
 from app.projects.exceptions import NotValidMemberStatusException
-from app.projects.models.role import ProjectRole
-
 
 if TYPE_CHECKING:
     from app.projects.models.project import Project
+    from app.projects.models.role import ProjectRole
+
 
 
 
@@ -60,7 +60,7 @@ class ProjectMembership(BaseModel, DateMixin):
             raise NotValidMemberStatusException(
                 member_status=self.status.value,
                 action="accept"
-            ) 
+            )
 
         self.status = MembershipStatus.active
         self.joined_at = now_utc()

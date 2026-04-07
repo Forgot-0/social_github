@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events.event import BaseEvent, BaseEventHandler
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.repositories.profiles import ProfileRepository
-
 
 logger = logging.getLogger(__name__)
 

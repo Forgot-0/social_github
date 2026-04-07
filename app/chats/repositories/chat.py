@@ -2,14 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import orjson
-from redis.asyncio import Redis
 from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.chats.keys import ChatKeys
-from app.chats.models.chat import Chat, ChatType
+from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
-from app.core.db.repository import CacheRepository, IRepository, PageResult
+from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
 
 
@@ -136,7 +135,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         result: dict[int, int] = {}
         missing: list[int] = []
 
-        for cid, val in zip(chat_ids, cached):
+        for cid, val in zip(chat_ids, cached, strict=False):
             if val is not None:
                 result[cid] = int(val)
             else:
@@ -156,7 +155,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
 
         return result
 
-    async def get_member_user_ids(self, chat_id: int, ) -> list[int]:
+    async def get_member_user_ids(self, chat_id: int ) -> list[int]:
         key = ChatKeys.chat_members_ids(chat_id)
         cached = await self.redis.get(key)
         if cached:

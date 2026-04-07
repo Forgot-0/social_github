@@ -4,7 +4,6 @@ from uuid import UUID
 from app.core.filters.base import BaseFilter
 from app.core.filters.condition import FilterOperator
 from app.projects.models.application import ApplicationStatus
-from app.projects.models.position import PositionLoad, PositionLocationType
 
 
 @dataclass
@@ -15,7 +14,7 @@ class ApplicationFilter(BaseFilter):
 
     status: ApplicationStatus = ApplicationStatus.pending
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._build_conditions()
 
     def _build_conditions(self) -> None:

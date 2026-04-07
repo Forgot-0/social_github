@@ -7,7 +7,6 @@ from app.projects.dtos.roles import ProjectRoleDTO
 from app.projects.queries.roles.get_list import GetProjectRolesQuery
 from app.projects.schemas.roles.requests import GetProjectRolesRequest
 
-
 router = APIRouter(route_class=DishkaRoute)
 
 

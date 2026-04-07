@@ -1,20 +1,19 @@
 import logging
-from dataclasses import dataclass
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.exceptions import LiveKitServiceException
 from app.chats.keys import ChatKeys
-from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.chat import ChatRepository
+from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import WSEventType
 from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.system_message import SystemMessageService
 from app.core.events.service import BaseEventBus
 from app.core.utils import now_utc
 from app.core.websockets.base import BaseConnectionManager
-from app.chats.exceptions import LiveKitServiceException
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ async def livekit_webhook(
     participant_name = event.participant.name if event.participant else identity
 
     if event_type == _EV_ROOM_STARTED:
-        
+
         await svc.send(
             chat_id=chat_id,
             content=f"📞 {participant_name} started a call",

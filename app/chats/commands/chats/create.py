@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,7 +34,7 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, int]):
 
     async def handle(self, command: CreateChatCommand) -> int:
         creator_id = int(command.user_jwt_data.id)
-        
+
         all_member_ids = list(command.member_ids)
         if creator_id in all_member_ids:
             all_member_ids.remove(creator_id)

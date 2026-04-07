@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,8 +8,8 @@ from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
 from app.core.services.auth.rbac import RBACManager
 from app.projects.exceptions import RoleAlreadyExsistsException
-from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.models.role import ProjectRole
+from app.projects.repositories.roles import ProjectRoleRepository
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class CreateProjectRoleCommandHandler(BaseCommandHandler[CreateProjectRoleComman
 
     async def handle(self, command: CreateProjectRoleCommand) -> None:
         if not self.rbac_manager.check_permission(command.user_jwt_data, {"role:create"}):
-            raise AccessDeniedException(need_permissions={"role:create", })
+            raise AccessDeniedException(need_permissions={"role:create" })
 
         existing = await self.project_role_repository.get_by_name(command.name)
         if existing:

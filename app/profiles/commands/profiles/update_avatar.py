@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.queues.service import QueueService
 from app.profiles.repositories.profiles import ProfileRepository
 from app.profiles.tasks import AvatarUploadTask
-
 
 logger = logging.getLogger(__name__)
 

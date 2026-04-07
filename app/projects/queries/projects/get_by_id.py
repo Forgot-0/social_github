@@ -2,9 +2,10 @@ from dataclasses import dataclass
 
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.auth.exceptions import AccessDeniedException
 from app.projects.dtos.projects import ProjectDTO
-from app.projects.repositories.projects import ProjectRepository
 from app.projects.exceptions import NotFoundProjectException
+from app.projects.repositories.projects import ProjectRepository
 from app.projects.services.permission_service import ProjectPermissionService
 
 
@@ -27,6 +28,7 @@ class GetProjectByIdQueryHandler(BaseQueryHandler[GetProjectByIdQuery, ProjectDT
         if not self.project_permission_servise.can_view(
             user_jwt_data=query.user_jwt_data,
             project=project
-        ): raise
+        ):
+            raise AccessDeniedException(need_permissions={"project:view" })
 
         return ProjectDTO.model_validate(project.to_dict())

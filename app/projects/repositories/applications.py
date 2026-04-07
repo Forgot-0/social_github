@@ -13,8 +13,8 @@ from app.projects.models.application import Application
 class ApplicationRepository(IRepository[Application], CacheRepository):
     _LIST_VERSION_KEY = "applications:list"
 
-    async def get_by_id(self, id: UUID, with_position: bool = False) -> Application | None:
-        stmt = select(Application).where(Application.id == id)
+    async def get_by_id(self, application_id: UUID, with_position: bool = False) -> Application | None:
+        stmt = select(Application).where(Application.id == application_id)
 
         if with_position:
             stmt = stmt.options(selectinload(Application.position))

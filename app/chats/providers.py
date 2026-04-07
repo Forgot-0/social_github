@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.attachments.request_upload import (
     RequestAttachmentUploadCommand,
-    RequestAttachmentUploadCommandHandler
+    RequestAttachmentUploadCommandHandler,
 )
 from app.chats.commands.calls.join import JoinCallCommand, JoinCallCommandHandler
 from app.chats.commands.calls.mute import MuteParticipantCommand, MuteParticipantCommandHandler
@@ -29,10 +29,7 @@ from app.chats.events.messages.modified import ModifiedMessageEventHandler
 from app.chats.events.messages.sended import SendedMessageEvent, SendedMessageEventHandler
 from app.chats.models.chat import AddedChatMemberEvent, KickedChatMemberEvent, LeavedChatMemberEvent
 from app.chats.models.message import DeletedMessageEvent, ModifiedMessageEvent
-from app.chats.queries.attachments.get_url import (
-    GetAttachmentDownloadUrlQuery,
-    GetAttachmentDownloadUrlQueryHandler
-)
+from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler
 from app.chats.queries.chats.get_by_id import GetChatByIdQuery, GetChatByIdQueryHandler
 from app.chats.queries.chats.get_cursor import GetChatsCursorQuery, GetChatsCursorQueryHandler
 from app.chats.queries.chats.presence import (

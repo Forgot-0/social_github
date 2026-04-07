@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,11 +7,10 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
+from app.projects.exceptions import NotFoundProjectException, NotFoundProjectRoleException
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
-from app.projects.exceptions import NotFoundProjectException
 from app.projects.services.permission_service import ProjectPermissionService
-
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +40,13 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
 
         role = await self.project_role_repository.get_by_id(command.role_id)
         if not role:
-            raise
+            raise NotFoundProjectRoleException(role_id=command.role_id)
 
         if not self.project_permission_service.can_invite(
             user_jwt_data=command.user_jwt_data,
             project=project,
             role=role
-        ): raise AccessDeniedException(need_permissions={"memebr:invite", })
+        ): raise AccessDeniedException(need_permissions={"member:invite" })
 
         project.invite_memeber(
             user_id=command.user_id,

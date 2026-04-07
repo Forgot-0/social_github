@@ -67,4 +67,4 @@ class DeliveryTrackingService:
             pipe.zscore(self._key(chat_id, uid), str(message_id))
 
         results = await pipe.execute()
-        return {uid: (score is not None) for uid, score in zip(user_ids, results)}
+        return {uid: (score is not None) for uid, score in zip(user_ids, results, strict=False)}

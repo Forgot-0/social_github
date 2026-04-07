@@ -10,7 +10,15 @@ from app.projects.commands.applications.decision import (
     DecideApplicationCommand,
     DecideApplicationCommandHandler,
 )
+from app.projects.commands.members.accept import (
+    AcceptInviteCommand,
+    AcceptInviteCommandHandler,
+)
 from app.projects.commands.members.change_role import ChangeRoleMemberCommand, ChangeRoleMemberCommandHandler
+from app.projects.commands.members.update_permissions import (
+    UpdateMemberPermissionsCommand,
+    UpdateMemberPermissionsCommandHandler,
+)
 from app.projects.commands.positions.create import (
     CreatePositionCommand,
     CreatePositionCommandHandler,
@@ -23,7 +31,27 @@ from app.projects.commands.positions.update import (
     UpdatePositionCommand,
     UpdatePositionCommandHandler,
 )
+from app.projects.commands.projects.create import (
+    CreateProjectCommand,
+    CreateProjectCommandHandler,
+)
 from app.projects.commands.projects.delete import DeleteProjectCommand, DeleteProjectCommandHandler
+from app.projects.commands.projects.invite import (
+    InviteMemberCommand,
+    InviteMemberCommandHandler,
+)
+from app.projects.commands.projects.update import (
+    UpdateProjectCommand,
+    UpdateProjectCommandHandler,
+)
+from app.projects.commands.roles.create import (
+    CreateProjectRoleCommand,
+    CreateProjectRoleCommandHandler,
+)
+from app.projects.commands.roles.update import (
+    UpdateProjectRoleCommand,
+    UpdateProjectRoleCommandHandler,
+)
 from app.projects.queries.applications.get_list import (
     GetApplicationsQuery,
     GetApplicationsQueryHandler,
@@ -37,23 +65,6 @@ from app.projects.queries.positions.get_list import (
     GetProjectPositionsQueryHandler,
 )
 from app.projects.queries.profiles.get_my_invites import GetProfileInvitesQuery, GetProfileInvitesQueryHandler
-from app.projects.repositories.applications import ApplicationRepository
-from app.projects.repositories.members import MemberProjectRepository
-from app.projects.repositories.positions import PositionRepository
-from app.projects.repositories.projects import ProjectRepository
-from app.projects.repositories.roles import ProjectRoleRepository
-from app.projects.commands.projects.create import (
-    CreateProjectCommand,
-    CreateProjectCommandHandler,
-)
-from app.projects.commands.projects.update import (
-    UpdateProjectCommand,
-    UpdateProjectCommandHandler,
-)
-from app.projects.commands.projects.invite import (
-    InviteMemberCommand,
-    InviteMemberCommandHandler,
-)
 from app.projects.queries.projects.get_by_id import (
     GetProjectByIdQuery,
     GetProjectByIdQueryHandler,
@@ -66,26 +77,15 @@ from app.projects.queries.projects.get_my import (
     GetMyProjectsQuery,
     GetMyProjectsQueryHandler,
 )
-from app.projects.commands.members.accept import (
-    AcceptInviteCommand,
-    AcceptInviteCommandHandler,
-)
-from app.projects.commands.members.update_permissions import (
-    UpdateMemberPermissionsCommand,
-    UpdateMemberPermissionsCommandHandler,
-)
-from app.projects.commands.roles.create import (
-    CreateProjectRoleCommand,
-    CreateProjectRoleCommandHandler,
-)
-from app.projects.commands.roles.update import (
-    UpdateProjectRoleCommand,
-    UpdateProjectRoleCommandHandler,
-)
 from app.projects.queries.roles.get_list import (
     GetProjectRolesQuery,
     GetProjectRolesQueryHandler,
 )
+from app.projects.repositories.applications import ApplicationRepository
+from app.projects.repositories.members import MemberProjectRepository
+from app.projects.repositories.positions import PositionRepository
+from app.projects.repositories.projects import ProjectRepository
+from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.services.permission_service import ProjectPermissionService
 
 

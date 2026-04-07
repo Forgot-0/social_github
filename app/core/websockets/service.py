@@ -1,16 +1,15 @@
 import asyncio
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
 from typing import Any
 
-from fastapi import WebSocket
-from starlette.websockets import WebSocketState
 import orjson
+from fastapi import WebSocket
 from redis.asyncio import Redis
+from starlette.websockets import WebSocketState
 
 from app.core.utils import now_utc
 from app.core.websockets.base import BaseConnectionManager
-
 
 logger = logging.getLogger(__name__)
 _PUBLISH_BATCH_SIZE = 1000

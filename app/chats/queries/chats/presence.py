@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from pydantic import BaseModel
-
 from app.chats.dtos.chats import ChatPresenceDTO
 from app.chats.dtos.members import MemberPresenceDTO
 from app.chats.dtos.messages import MessageDeliveryStatusDTO

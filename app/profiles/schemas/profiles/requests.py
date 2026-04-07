@@ -1,4 +1,5 @@
 from datetime import date
+
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.api.filter_mapper import FilterMapper
@@ -60,7 +61,7 @@ class AvatarPreSignUrlRequest(BaseModel):
     size: int
     content_type: str
 
-    @field_validator('content_type')
+    @field_validator("content_type")
     @classmethod
     def validate_content_type(cls, v):
         if v.split("/")[0] != "image":

@@ -7,7 +7,6 @@ from app.chats.commands.chats.add_member import AddMemberCommand
 from app.chats.commands.chats.ban_member import BanMemberCommand
 from app.chats.commands.chats.change_role import ChangeMemberRoleCommand
 from app.chats.commands.chats.create import CreateChatCommand
-
 from app.chats.commands.chats.kick_member import KickMemberCommand
 from app.chats.commands.chats.leave import LeaveChatCommand
 from app.chats.commands.chats.update import UpdateChatCommand
@@ -27,10 +26,9 @@ from app.chats.schemas.chats.request import (
     CreateChatRequest,
     CreateChatResponse,
     GetChatsCursorRequest,
-    UpdateChatRequest
+    UpdateChatRequest,
 )
 from app.chats.services.livekit_service import LiveKitService
-from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 

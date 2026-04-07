@@ -3,7 +3,6 @@ from enum import Enum
 from app.projects.models.role import ProjectRole
 
 
-
 class ProjectRolesEnum(Enum):
     OWNER = ProjectRole(
         id=1,

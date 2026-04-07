@@ -1,12 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Optional, Self
-from uuid import UUID as PyUUID
 
-from sqlalchemy import (
-    UUID, BigInteger, Boolean, Enum as SAEnum,
-    ForeignKey, Index, String, Text
-)
+from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config

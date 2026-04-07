@@ -8,10 +8,7 @@ from aiokafka.producer import AIOKafkaProducer
 
 from app.core.events.event import BaseEvent
 from app.core.message_brokers.base import BaseMessageBroker
-from app.core.message_brokers.converters import (
-    convert_dict_to_broker_message,
-    convert_event_to_broker_message
-)
+from app.core.message_brokers.converters import convert_dict_to_broker_message, convert_event_to_broker_message
 
 
 @dataclass

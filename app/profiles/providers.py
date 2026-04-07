@@ -7,7 +7,7 @@ from app.profiles.commands.profiles.add_contact import AddContactToProfileComman
 from app.profiles.commands.profiles.create import CreateProfileCommand, CreateProfileCommandHanler
 from app.profiles.commands.profiles.remove_contact import (
     RemoveContactToProfileCommand,
-    RemoveContactToProfileCommandHandler
+    RemoveContactToProfileCommandHandler,
 )
 from app.profiles.commands.profiles.update import UpdateProfileCommand, UpdateProfileCommandHandler
 from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatrCommand, UpdateProfileAvatrCommandHandler

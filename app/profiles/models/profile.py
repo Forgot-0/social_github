@@ -1,18 +1,14 @@
 from datetime import date
 from enum import Enum
+
 from sqlalchemy import BigInteger, Date, Index, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.profiles.config import profile_config
-from app.profiles.exceptions import (
-    TooLongBioException,
-    TooLongDisplayNameException,
-    TooLongSkillNameException
-)
+from app.profiles.exceptions import TooLongBioException, TooLongDisplayNameException, TooLongSkillNameException
 from app.profiles.models.contact import Contact
-
 
 
 class SizeAvatar(int, Enum):
@@ -117,7 +113,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
         for cont in self.contacts:
             if provider == cont.provider:
                 cont.contact = contact
-                return 
+                return
 
         self.contacts.append(
             Contact(
