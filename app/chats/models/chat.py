@@ -27,7 +27,10 @@ class CreadtedChatEvent(BaseEvent):
     name: str | None
     member_ids: list[int]
 
-    __event_name__ = "chat.created"
+    __event_name__ = "chats.chat.created"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 
 @dataclass(frozen=True)
@@ -36,7 +39,10 @@ class AddedChatMemberEvent(BaseEvent):
     user_id: int
     role_id: int
 
-    __event_name__ = "chat.memebers.added"
+    __event_name__ = "chats.memeber.added"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 
 @dataclass(frozen=True)
@@ -45,16 +51,22 @@ class KickedChatMemberEvent(BaseEvent):
     requester_id: int
     target_user_id: int
 
-    __event_name__ = "chat.memebers.kicked"
+    __event_name__ = "chats.member.kicked"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 
 @dataclass(frozen=True)
 class LeavedChatMemberEvent(BaseEvent):
     chat_id: int
     user_id: int
-    username: str = ""
+    username: str
 
-    __event_name__ = "chat.memebers.leaved"
+    __event_name__ = "chats.memeber.leaved"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 
 class Chat(BaseModel, DateMixin, SoftDeleteMixin):

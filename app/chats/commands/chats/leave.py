@@ -48,7 +48,8 @@ class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
         await self.event_bus.publish(
             [LeavedChatMemberEvent(
                 chat_id=member.chat_id,
-                user_id=user_id
+                user_id=user_id,
+                username=command.user_jwt_data.username
             )]
         )
 

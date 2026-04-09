@@ -5,11 +5,14 @@ from dishka import AsyncContainer
 
 from app.core.events.event import BaseEvent
 from app.core.events.service import BaseEventBus
+from app.core.message_brokers.base import BaseMessageBroker
+from app.core.configs.app import app_config
 
 
 @dataclass(eq=False)
 class MediatorEventBus(BaseEventBus):
     container: AsyncContainer
+    message_broker: BaseMessageBroker
 
     async def publish(self, events: Iterable[BaseEvent]) -> None:
         for event in events:
@@ -21,3 +24,9 @@ class MediatorEventBus(BaseEventBus):
                 for type_handler in type_handlers:
                         handler = await requests_container.get(type_handler)
                         await handler(event)
+
+            await self.message_broker.send_event(
+                key=event.get_partition_key(),
+                topic=app_config.ANALYTICS_KAFKA_TOPIC,
+                event=event
+            )

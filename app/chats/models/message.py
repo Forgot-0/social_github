@@ -36,7 +36,10 @@ class ModifiedMessageEvent(BaseEvent):
     chat_id: int
     modefied_by: int
 
-    __event_name__ = ""
+    __event_name__ = "chats.message.modified"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 
 @dataclass(frozen=True)
@@ -45,7 +48,10 @@ class DeletedMessageEvent(BaseEvent):
     chat_id: int
     deleted_by: int
 
-    __event_name__ = ""
+    __event_name__ = "chats.message.deleted"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 
 class Message(BaseModel, DateMixin):

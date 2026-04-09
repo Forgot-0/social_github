@@ -26,9 +26,8 @@ _EV_PARTICIPANT_LEFT = "participant_left"
 
 
 @router.post(
-    "/livekit/webhook",
+    "/webhook",
     status_code=status.HTTP_200_OK,
-    include_in_schema=False,
 )
 async def livekit_webhook(
     request: Request,
@@ -42,17 +41,11 @@ async def livekit_webhook(
     raw_body = await request.body()
     auth_header = request.headers.get("Authorization", "")
 
-    try:
-        event = livekit_service.receive_webhook(raw_body.decode(), auth_header)
-    except LiveKitServiceException as exc:
-        logger.warning("Rejected LiveKit webhook: %s", exc.detail)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+    event = livekit_service.receive_webhook(raw_body.decode(), auth_header)
 
     event_type = event.event
     room_slug = event.room.name
     chat_id = int(room_slug.split(":")[-1])
-
-    logger.debug("LiveKit webhook received", extra={"event": event_type, "slug": room_slug})
 
     if not room_slug:
         return {"ok": True}
@@ -85,22 +78,22 @@ async def livekit_webhook(
             },
         )
 
-    elif event_type == _EV_PARTICIPANT_JOINED:
-        await svc.send(
-            chat_id=chat_id,
-            content=f"📞 {participant_name} joined the call",
-        )
-        await connection_manager.publish(
-            ChatKeys.chat_channel(chat_id),
-            {
-                "type": WSEventType.CALL_JOINED,
-                "chat_id": chat_id,
-                "payload": {
-                    "user_id": int(identity) if identity.isdigit() else None,
-                    "username": participant_name,
-                },
-            },
-        )
+    # elif event_type == _EV_PARTICIPANT_JOINED:
+    #     await svc.send(
+    #         chat_id=chat_id,
+    #         content=f"📞 {participant_name} joined the call",
+    #     )
+    #     await connection_manager.publish(
+    #         ChatKeys.chat_channel(chat_id),
+    #         {
+    #             "type": WSEventType.CALL_JOINED,
+    #             "chat_id": chat_id,
+    #             "payload": {
+    #                 "user_id": int(identity) if identity.isdigit() else None,
+    #                 "username": participant_name,
+    #             },
+    #         },
+    #     )
 
     elif event_type == _EV_PARTICIPANT_LEFT:
         await svc.send(

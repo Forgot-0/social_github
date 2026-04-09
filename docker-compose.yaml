@@ -41,7 +41,7 @@ services:
     container_name: clickhouse
     ports:
       - "8123:8123"
-      - "9000:9000"
+      - "8124:8124"
     environment:
       CLICKHOUSE_DB: analytics
       CLICKHOUSE_USER: default
@@ -221,6 +221,7 @@ volumes:
   kafka_data:
   kafka_secrets:
   miniodata:
+  clickhouse_data:
 
 
 networks:

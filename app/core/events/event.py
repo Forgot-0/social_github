@@ -22,6 +22,10 @@ class BaseEvent(ABC):
             raise FieldRequiredException()
         return name
 
+    @abstractmethod
+    def get_partition_key(self) -> str:
+        ...
+
 ET = TypeVar("ET", bound=BaseEvent)
 ER = TypeVar("ER", bound=Any)
 

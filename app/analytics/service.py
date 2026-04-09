@@ -9,15 +9,6 @@ from clickhouse_connect.driver import AsyncClient
 class AnalyticsClickHouseService:
     client: AsyncClient
 
-    # def __post_init__(self) -> None:
-        # self.client = await clickhouse_connect.get_async_client(
-        #     host=self.host,
-        #     port=self.port,
-        #     username=self.user,
-        #     password=self.password,
-        #     database=self.database,
-        # )
-
     def normalize_event(self, message: dict[str, Any]) -> dict[str, Any]:
         payload = message.get("payload", {})
         event_name = message.get("event_name", "unknown")

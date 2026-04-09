@@ -19,7 +19,10 @@ class CreatedUserEvent(BaseEvent):
     email: str
     username: str
 
-    __event_name__: str = "user_created"
+    __event_name__: str = "auth.user.created"
+
+    def get_partition_key(self) -> str:
+        return str(self.username)
 
 
 @dataclass(frozen=True)
@@ -28,7 +31,11 @@ class VerifiedUserEvent(BaseEvent):
     username: str
     email: str
 
-    __event_name__: str = "user.verified"
+    __event_name__: str = "auth.user.verified"
+
+    def get_partition_key(self) -> str:
+        return str(self.user_id)
+
 
 
 class UserPermissions(BaseModel):

@@ -26,14 +26,12 @@ async def get_notifications(
         )
     )
 
-
 @router.get("/unread_count", status_code=status.HTTP_200_OK)
 async def get_unread_notifications_count(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 ) -> NotificationUnreadCountDTO:
     return await mediator.handle_query(GetUnreadNotificationsCountQuery(user_id=int(user_jwt_data.id)))
-
 
 @router.patch("/{notification_id}/read", status_code=status.HTTP_200_OK)
 async def mark_notification_as_read(
@@ -49,7 +47,6 @@ async def mark_notification_as_read(
             user_jwt_data=user_jwt_data
         )
     )
-
 
 @router.patch("/read_all", status_code=status.HTTP_200_OK)
 async def mark_all_notifications_as_read(

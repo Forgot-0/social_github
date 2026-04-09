@@ -142,6 +142,20 @@ class LiveKitServiceException(ApplicationException):
 
 
 @dataclass(kw_only=True)
+class LiveKitUnauthorizedException(ApplicationException):
+    code: str = "LIVEKIT_UNAUTHORIZED"
+    status: int = 502
+
+    @property
+    def message(self) -> str:
+        return "LiveKit unauthorized"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {}
+
+
+@dataclass(kw_only=True)
 class NoActiveCallException(ApplicationException):
     chat_id: int
     code: str = "NO_ACTIVE_CALL"

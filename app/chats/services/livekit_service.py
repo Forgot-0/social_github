@@ -203,7 +203,6 @@ class LiveKitService:
             )
             return []
 
-
     def receive_webhook(self, raw_body: str, auth_header: str) -> lk_api.WebhookEvent:
         try:
             receiver = lk_api.WebhookReceiver(lk_api.TokenVerifier(

@@ -15,6 +15,11 @@ class UploadedAvatarsEvent(BaseEvent):
     profile_id: int
     versions: dict[int, dict[str, str]]
 
+    __event_name__ = "profiles.avatar.uploaded"
+
+    def get_partition_key(self) -> str:
+        return str(self.profile_id)
+
 
 @dataclass(frozen=True)
 class UploadedAvatarsEventHandler(BaseEventHandler[UploadedAvatarsEvent, None]):
