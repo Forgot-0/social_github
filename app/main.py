@@ -224,7 +224,9 @@ def init_app() -> FastAPI:
         redirect_slashes=False
     )
 
-    PrometheusFastApiInstrumentator().instrument(
+    PrometheusFastApiInstrumentator(
+        excluded_handlers=[r"^/health$", r"^/metrics$"]
+    ).instrument(
         app,
         latency_lowr_buckets=(0.1, 0.5, 1, 1.5, 2, 2.5, 3)
     ).expose(app, should_gzip=True, tags=["core"])

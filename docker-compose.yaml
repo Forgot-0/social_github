@@ -36,6 +36,23 @@ services:
     networks:
       - app-network
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.3
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: analytics
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./monitoring/clickhouse/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+
   consumers:
     build:
       context: .
