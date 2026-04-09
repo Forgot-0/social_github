@@ -9,7 +9,7 @@ from app.profiles.config import profile_config
 router = KafkaRouter()
 
 @router.subscriber(profile_config.USER_TOPIC, group_id=app_config.GROUP_ID)
-async def questions_processor(msg: dict, mediator: FromDishka[BaseMediator]):
+async def create_profile(msg: dict, mediator: FromDishka[BaseMediator]):
     user_id = msg.get("user_id")
     username = msg.get("username")
     if user_id is None or username is None:

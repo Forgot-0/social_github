@@ -68,7 +68,7 @@ class AppConfig(BaseConfig):
 
     BROKER_URL: str = ""
     GROUP_ID: str = ""
-    ANALYTICS_KAFKA_TOPIC: str = "analytics.events"
+    ANALYTICS_KAFKA_TOPIC: str = "ANALYTIC"
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

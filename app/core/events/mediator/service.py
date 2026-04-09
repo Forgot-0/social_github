@@ -30,3 +30,4 @@ class MediatorEventBus(BaseEventBus):
                 topic=app_config.ANALYTICS_KAFKA_TOPIC,
                 event=event
             )
+            print("SEND EVENT")

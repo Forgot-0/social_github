@@ -24,6 +24,10 @@ class SendedMessageEvent(BaseEvent):
     forwarded_from_chat_id: int | None = None
     forwarded_from_message_id: int | None = None
 
+    __event_name__ = "chats.message.sent"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 @dataclass(frozen=True)
 class SendedMessageEventHandler(BaseEventHandler[SendedMessageEvent, None]):
