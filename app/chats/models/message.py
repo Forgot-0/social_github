@@ -9,9 +9,9 @@ from app.chats.config import chat_config
 from app.chats.exceptions import MessageTooLongException
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.events.event import BaseEvent
+from app.chats.models.attachment import MessageAttachment
 
 if TYPE_CHECKING:
-    from app.chats.models.attachment import MessageAttachment
     from app.chats.models.chat import Chat
 
 

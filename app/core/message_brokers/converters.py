@@ -8,7 +8,7 @@ from app.core.events.event import BaseEvent
 
 def convert_event_to_broker_message(event: BaseEvent) -> bytes:
     data = asdict(event)
-    data["type"] = event.get_name()
+    data["event_name"] = event.get_name()
     return orjson.dumps(data)
 
 def convert_event_to_json(event: BaseEvent) -> dict[str, Any]:
