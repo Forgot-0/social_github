@@ -28,8 +28,10 @@ class CreatedPositionEvent(BaseEvent):
     project_id: int
     required_skills: list[str]
 
-    __event_name__: str = "positions.created"
+    __event_name__: str = "projects.position.created"
 
+    def get_partition_key(self) -> str:
+        return str(self.project_id)
 
 class ProjectVisibility(Enum):
     private = "private"
@@ -56,7 +58,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     slug: Mapped[str] = mapped_column(String(project_config.MAX_LEN_SLUG), nullable=False, index=True)
 
     small_description: Mapped[str] = mapped_column(String(length=256), nullable=True)
-    full_description: Mapped[str] = mapped_column(Text, nullable=False)
+    full_description: Mapped[str] = mapped_column(Text(1024), nullable=False)
 
     visibility: Mapped[ProjectVisibility] = mapped_column(
         SAEnum(ProjectVisibility), nullable=False, server_default=ProjectVisibility.public.name
