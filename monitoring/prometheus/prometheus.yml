@@ -14,9 +14,10 @@ scrape_configs:
       - targets: ['app:8000']
     metrics_path: '/metrics'
 
-  - job_name: 'queue'
+  - job_name: 'consumers'
     static_configs:
-      - targets: ['queue_worker:9001']
+      - targets: ['consumers:9002']
+    metrics_path: '/metrics'
 
   - job_name: 'redis'
     static_configs:

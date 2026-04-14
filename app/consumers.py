@@ -3,7 +3,11 @@ from contextlib import asynccontextmanager
 
 from dishka.integrations.faststream import FastStreamProvider, setup_dishka
 from faststream import ContextRepo, FastStream
+from faststream.asgi import AsgiFastStream
 from faststream.kafka import KafkaBroker
+from faststream.kafka.prometheus import KafkaPrometheusMiddleware
+from prometheus_client import CollectorRegistry, make_asgi_app
+import structlog
 
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
@@ -33,10 +37,25 @@ def setup_router(broker: KafkaBroker) -> None:
     broker.include_router(analytics.router)
 
 
-def init_app() -> FastStream:
+def init_app() -> AsgiFastStream:
     configure_logging()
-    broker = KafkaBroker(app_config.BROKER_URL, client_id=app_config.GROUP_ID)
-    app = FastStream(broker, lifespan=lifespan)
+    registry = CollectorRegistry()
+    log = structlog.get_logger("main")
+    broker = KafkaBroker(
+        app_config.BROKER_URL,
+        client_id=app_config.GROUP_ID,
+        middlewares=(
+            KafkaPrometheusMiddleware(registry=registry),
+        ),
+        logger=log
+    )
+    app = AsgiFastStream(
+        broker,
+        asgi_routes=[
+            ("/metrics", make_asgi_app(registry)),
+        ],
+        logger=log
+    )
 
     setup_router(broker)
     container = create_container(FastStreamProvider())

@@ -9,7 +9,7 @@ pip install locust faker
 ---
 
 ## Запуск
-
+"--no-configure-logging"
 ### UI-режим (рекомендуется для начала)
 ```bash
 locust -f locustfile.py \

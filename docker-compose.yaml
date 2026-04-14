@@ -63,9 +63,10 @@ services:
       context: .
       target: production
     container_name: consumers
+    hostname: consumers
     env_file:
       - .env
-    command: ["faststream", "run", "app.consumers:app", "--workers", "2"]
+    command: ["faststream", "run", "app.consumers:app", "--host", "0.0.0.0", "--port", "9002",  "--workers", "2"]
     depends_on:
       kafka:
         condition: service_healthy

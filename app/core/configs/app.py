@@ -26,7 +26,7 @@ class AppConfig(BaseConfig):
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
-    SQL_ECHO: bool = True
+    SQL_ECHO: bool = False
 
     @computed_field
     @property

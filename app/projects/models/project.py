@@ -50,7 +50,6 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         Index("idx_projects_tags", "tags", postgresql_using="gin"),
     )
 
-
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     owner_id: Mapped[int] = mapped_column(BigInteger, index=True)
 

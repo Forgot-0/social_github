@@ -10,7 +10,6 @@ from app.core.message_brokers.base import BaseMessageBroker
 from app.core.services.queues.taskiq.init import broker
 
 container = create_container(TaskiqProvider())
-
 setup_dishka(container=container, broker=broker)
 configure_logging()
 

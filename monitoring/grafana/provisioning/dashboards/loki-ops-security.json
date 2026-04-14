@@ -29,73 +29,17 @@
   "liveNow": false,
   "panels": [
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "P8E80F9AEF21F6940"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
+      "collapsed": false,
       "gridPos": {
-        "h": 4,
-        "w": 6,
+        "h": 1,
+        "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 1,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "P8E80F9AEF21F6940"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time({event=\"log\", container_name=\"app\"} | json level=`message.level` | level =~ `warning|error|critical` [5m]))",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Warning+Error volume (app)",
-      "type": "stat"
+      "id": 10,
+      "panels": [],
+      "title": "Row title",
+      "type": "row"
     },
     {
       "datasource": {
@@ -114,82 +58,18 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 0.2
               },
               {
                 "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "P8E80F9AEF21F6940"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time({event=\"log\", container_name=\"app\"} | json path=`message.path`, status_code=`message.status_code` | path =~ `.*/auth.*` | status_code =~ `401|403` [15m]))",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Auth 401/403 in 15m",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "P8E80F9AEF21F6940"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
                 "value": 1
-              },
-              {
-                "color": "red",
-                "value": 3
               }
             ]
           },
-          "unit": "short"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -197,9 +77,9 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 0
+        "y": 1
       },
-      "id": 3,
+      "id": 8,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -212,6 +92,9 @@
           "fields": "",
           "values": false
         },
+        "text": {
+          "titleSize": 1
+        },
         "textMode": "auto"
       },
       "pluginVersion": "9.5.2",
@@ -221,13 +104,13 @@
             "type": "loki",
             "uid": "P8E80F9AEF21F6940"
           },
-          "editorMode": "builder",
-          "expr": "sum(count_over_time({event=\"log\", container_name=\"app\"} | json text=`message.event` | text =~ `.*(Validation|exception|Uncown|Uncaught).*` [10m]))",
+          "editorMode": "code",
+          "expr": "quantile_over_time(\r\n  0.95,\r\n  {event=\"log\", container_name=\"app\"}\r\n  | json text=\"message.event\", processing_time=\"message.processing_time\"\r\n  | text = \"request\"\r\n  | unwrap processing_time [15m]\r\n)",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Exceptions in 10m",
+      "title": "p95 processing time",
       "type": "stat"
     },
     {
@@ -266,7 +149,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 0
+        "y": 1
       },
       "id": 4,
       "options": {
@@ -290,8 +173,8 @@
             "type": "loki",
             "uid": "P8E80F9AEF21F6940"
           },
-          "editorMode": "builder",
-          "expr": "quantile_over_time(0.99, {event=\"log\", container_name=\"app\"} | json text=`message.event`, processing_time=`message.processing_time` | text = `request` | unwrap processing_time [15m])",
+          "editorMode": "code",
+          "expr": "quantile_over_time(\r\n  0.99,\r\n  {event=\"log\", container_name=\"app\"}\r\n  | json text=\"message.event\", processing_time=\"message.processing_time\"\r\n  | text = \"request\"\r\n  | unwrap processing_time [15m]\r\n)",
           "queryType": "range",
           "refId": "A"
         }
@@ -300,93 +183,17 @@
       "type": "stat"
     },
     {
-      "datasource": {},
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
+      "collapsed": false,
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 1,
+        "w": 24,
         "x": 0,
-        "y": 4
+        "y": 5
       },
-      "id": 5,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "P8E80F9AEF21F6940"
-          },
-          "editorMode": "code",
-          "expr": "sum by (container_name) (count_over_time({event=\"log\", container_name=~\"app|db|redis|queue_worker|scheduler|kafka\"} [5m]))",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Log throughput by container",
-      "type": "timeseries"
+      "id": 9,
+      "panels": [],
+      "title": "logs",
+      "type": "row"
     },
     {
       "datasource": {
@@ -396,37 +203,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
             },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "filterable": false,
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -441,43 +226,79 @@
                 "value": 80
               }
             ]
-          },
-          "unit": "short"
+          }
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 4
+        "x": 0,
+        "y": 6
       },
-      "id": 6,
+      "id": 11,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
+        "showHeader": true,
+        "sortBy": []
       },
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
             "type": "loki",
             "uid": "P8E80F9AEF21F6940"
           },
-          "expr": "sum by (container_name) (count_over_time({event=\"log\",container_name=~\"app|db|redis|queue_worker|scheduler|kafka\"} |= \"error\" [5m]))",
+          "editorMode": "code",
+          "expr": "{container_name=\"app\", event=\"log\"} | json level=`message.level`, detail=\"message.detail\", request_id=\"message.request_id\", code=\"message.code\", title=\"message.title\" | unpack | level = `error`",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Error keyword hits by container",
-      "type": "timeseries"
+      "title": "Exception",
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "format": "json",
+            "jsonPaths": [],
+            "keepTime": false,
+            "replace": true,
+            "source": "labels"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "code": false,
+              "container_name": true,
+              "event": true,
+              "level": true
+            },
+            "indexByName": {
+              "code": 0,
+              "container_name": 2,
+              "detail": 3,
+              "event": 4,
+              "level": 5,
+              "request_id": 6,
+              "title": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -515,8 +336,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 12
+        "x": 12,
+        "y": 6
       },
       "id": 7,
       "options": {
@@ -529,12 +350,12 @@
           ],
           "show": false
         },
-        "frameIndex": 2,
+        "frameIndex": 0,
         "showHeader": true,
         "sortBy": [
           {
             "desc": true,
-            "displayName": "Value"
+            "displayName": "Time"
           }
         ]
       },
@@ -545,8 +366,8 @@
             "type": "loki",
             "uid": "P8E80F9AEF21F6940"
           },
-          "editorMode": "builder",
-          "expr": "topk(20, sum by(path, status_code) (count_over_time({event=\"log\", container_name=\"app\"} | json text=`message.event`, status_code=`message.status_code` | text = `request` | status_code =~ `4..|5..` [1h])))",
+          "editorMode": "code",
+          "expr": "topk(\r\n  10,\r\n  sum by (path, status_code) (\r\n    count_over_time(\r\n      {event=\"log\", container_name=\"app\"}\r\n      | json path=\"message.path\", status_code=\"message.status_code\", text=\"message.event\"\r\n      | text = \"request\"\r\n      | status_code =~ \"4..|5..\"\r\n      [1h]\r\n    )\r\n  )\r\n)",
           "queryType": "range",
           "refId": "A"
         }
@@ -555,27 +376,67 @@
       "type": "table"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 12,
+      "panels": [],
+      "title": "Metric",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "loki",
         "uid": "P8E80F9AEF21F6940"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 12
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 15
       },
-      "id": 8,
+      "id": 13,
       "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": true,
-        "showCommonLabels": true,
-        "showLabels": true,
-        "showTime": false,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
       },
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
@@ -583,16 +444,124 @@
             "uid": "P8E80F9AEF21F6940"
           },
           "editorMode": "builder",
-          "expr": "{event=\"log\", container_name=\"app\"} | json log_level=`message.level` | log_level =~ `error|critical`",
+          "expr": "sum(count_over_time({container_name=\"app\"} | json | unpack | message_event = `Register user` [24h]))",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Live error stream (app)",
-      "type": "logs"
+      "title": "Registrations (24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "{}"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "transparent",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failied login"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 4,
+        "y": 15
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "P8E80F9AEF21F6940"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container_name=\"app\"} |= `/auth/login` [24h]))",
+          "legendFormat": "Login",
+          "queryType": "range",
+          "refId": "Login user"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "P8E80F9AEF21F6940"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({container_name=\"app\"} |= `/auth/login` | json status = `message.status_code` | status =~ `4..|5..` [24h]))",
+          "hide": false,
+          "legendFormat": "Failied login",
+          "queryType": "range",
+          "refId": "Failied login"
+        }
+      ],
+      "title": "Login (24h)",
+      "type": "stat"
     }
   ],
-  "refresh": "30s",
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -622,6 +591,6 @@
   "timezone": "",
   "title": "Loki Operations & Security",
   "uid": "loki-ops-security",
-  "version": 6,
+  "version": 16,
   "weekStart": ""
 }
