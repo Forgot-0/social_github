@@ -11,5 +11,5 @@ datasources:
       defaultDatabase: analytics
       port: 8123
       server: clickhouse
-      username: default
+      username: Forgot
       protocol: http
