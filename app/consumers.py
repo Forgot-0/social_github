@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from dishka.integrations.faststream import FastStreamProvider, setup_dishka
-from faststream import ContextRepo, FastStream
+from faststream import ContextRepo
 from faststream.asgi import AsgiFastStream
 from faststream.kafka import KafkaBroker
 from faststream.kafka.prometheus import KafkaPrometheusMiddleware

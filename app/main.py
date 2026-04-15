@@ -1,6 +1,5 @@
 import logging
 from contextlib import asynccontextmanager
-import os
 from typing import Any
 
 import redis.asyncio as redis
@@ -123,7 +122,8 @@ def handle_validation_exeption(request: Request, exc: RequestValidationError) ->
         "Validation exception",
         exc_info=exc,
         extra={
-            "status": 422, "title": "Validation exception",
+            "status": 422,
+            "title": "Validation exception",
             "detail": jsonable_encoder(exc.errors()),
             "code": "VALIDATION",
         }
@@ -147,7 +147,8 @@ def handle_uncown_exception(request: Request, exc: Exception) -> ORJSONResponse:
         "Uncown exception",
         exc_info=exc,
         extra={
-            "status": 500, "title": "Uncown exception",
+            "status": 500,
+            "title": "Uncown exception",
             "detail": jsonable_encoder(exc),
             "code": "UNCOWN_EXCEPTION",
         }
