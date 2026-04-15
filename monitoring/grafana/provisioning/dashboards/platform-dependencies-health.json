@@ -21,6 +21,7 @@
       }
     ]
   },
+  "description": "",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -593,7 +594,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
           "mappings": [],
           "thresholds": {
@@ -627,7 +628,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -643,7 +644,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "builder",
-          "expr": "sum by(job) (up{job=~\"redis|postgres|kafka|fastapi|consumers\"})",
+          "expr": "up{job=~\"redis|postgres|kafka|fastapi|consumers\"}",
           "range": true,
           "refId": "A"
         }
@@ -743,6 +744,6 @@
   "timezone": "",
   "title": "Platform Dependencies Health",
   "uid": "platform-dependencies-health",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }

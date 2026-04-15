@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 25,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -222,8 +222,8 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"fastapi\"}[5m])) by (le))",
+          "editorMode": "builder",
+          "expr": "histogram_quantile(0.95, sum by(le) (rate(http_request_duration_seconds_bucket{job=\"fastapi\"}[5m])))",
           "range": true,
           "refId": "A"
         }
@@ -677,6 +677,6 @@
   "timezone": "",
   "title": "FastAPI SLI Overview",
   "uid": "fastapi-sli-overview",
-  "version": 9,
+  "version": 1,
   "weekStart": ""
 }

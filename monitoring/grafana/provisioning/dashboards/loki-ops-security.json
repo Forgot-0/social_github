@@ -60,6 +60,70 @@
                 "value": null
               },
               {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 15,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "P8E80F9AEF21F6940"
+          },
+          "editorMode": "builder",
+          "expr": "rate({container_name=\"app\"} |= `request` [5m])",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "RPS 5min",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
                 "color": "#EAB839",
                 "value": 0.2
               },
@@ -258,8 +322,8 @@
             "type": "loki",
             "uid": "P8E80F9AEF21F6940"
           },
-          "editorMode": "code",
-          "expr": "{container_name=\"app\", event=\"log\"} | json level=`message.level`, detail=\"message.detail\", request_id=\"message.request_id\", code=\"message.code\", title=\"message.title\" | unpack | level = `error`",
+          "editorMode": "builder",
+          "expr": "{container_name=\"app\", event=\"log\"} | json level=`message.level`, detail=\"message.detail\", request_id=\"message.request_id\", code=\"message.code\", title=\"message.title\" | unpack",
           "queryType": "range",
           "refId": "A"
         }
@@ -367,7 +431,7 @@
             "uid": "P8E80F9AEF21F6940"
           },
           "editorMode": "code",
-          "expr": "topk(\r\n  10,\r\n  sum by (path, status_code) (\r\n    count_over_time(\r\n      {event=\"log\", container_name=\"app\"}\r\n      | json path=\"message.path\", status_code=\"message.status_code\", text=\"message.event\"\r\n      | text = \"request\"\r\n      | status_code =~ \"4..|5..\"\r\n      [1h]\r\n    )\r\n  )\r\n)",
+          "expr": "topk(\r\n  10,\r\n  sum by (path, status_code) (\r\n    count_over_time(\r\n      {event=\"log\", container_name=\"app\"}\r\n      | json path=\"message.path\", status_code=\"message.status_code\", text=\"message.event\"\r\n      | text = \"request\"\r\n      | status_code =~ \"4..|5..\"\r\n      [15m]\r\n    )\r\n  )\r\n)",
           "queryType": "range",
           "refId": "A"
         }
@@ -405,10 +469,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -469,10 +529,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -591,6 +647,6 @@
   "timezone": "",
   "title": "Loki Operations & Security",
   "uid": "loki-ops-security",
-  "version": 16,
+  "version": 1,
   "weekStart": ""
 }
