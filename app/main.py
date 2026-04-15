@@ -122,7 +122,11 @@ def handle_validation_exeption(request: Request, exc: RequestValidationError) ->
     logger.error(
         "Validation exception",
         exc_info=exc,
-        extra={"error": exc.errors()}
+        extra={
+            "status": 422, "title": "Validation exception",
+            "detail": jsonable_encoder(exc.errors()),
+            "code": "VALIDATION",
+        }
     )
     return ORJSONResponse(
         status_code=422,
@@ -142,7 +146,11 @@ def handle_uncown_exception(request: Request, exc: Exception) -> ORJSONResponse:
     logger.error(
         "Uncown exception",
         exc_info=exc,
-        extra={"error": exc}
+        extra={
+            "status": 500, "title": "Uncown exception",
+            "detail": jsonable_encoder(exc),
+            "code": "UNCOWN_EXCEPTION",
+        }
     )
     return ORJSONResponse(
         status_code=500,
