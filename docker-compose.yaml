@@ -8,15 +8,23 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /prometheus
+    tmpfs:
+      - /prometheus
     command: >
-      gunicorn "app.main:init_app()"
+      sh -c "
+      rm -rf /prometheus/* &&
+      exec gunicorn 'app.main:init_app()'
       -k uvicorn.workers.UvicornWorker
       -w 4
+      -c gunicorn.conf.py
       --bind 0.0.0.0:8000
       --timeout 120
       --graceful-timeout 30
       --max-requests 10000
       --max-requests-jitter 1000
+      "
     depends_on:
       db:
         condition: service_healthy

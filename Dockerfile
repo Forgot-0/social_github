@@ -36,3 +36,4 @@ WORKDIR /app
 COPY ./ /app
 COPY alembic.ini /app/
 COPY migrations/ /app/migrations/
+COPY gunicorn.conf.py gunicorn.conf.py
