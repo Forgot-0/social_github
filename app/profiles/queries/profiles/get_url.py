@@ -6,6 +6,7 @@ from app.core.services.storage.dtos import ContentTypeFilter, UploadFilePost
 from app.core.services.storage.service import StorageService
 from app.profiles.config import profile_config
 from app.profiles.dtos.profiles import AvatarPresignResponse
+from app.profiles.repositories.profiles import ProfileRepository
 
 
 @dataclass(frozen=True)
@@ -20,8 +21,15 @@ class GetAvatrProfileUrlQuery(BaseQuery):
 @dataclass(frozen=True)
 class GetAvatrProfileUrlQueryHandler(BaseQueryHandler[GetAvatrProfileUrlQuery, AvatarPresignResponse]):
     storage_service: StorageService
+    profile_repository: ProfileRepository
 
     async def handle(self, query: GetAvatrProfileUrlQuery) -> AvatarPresignResponse:
+        return await self.profile_repository.cache(
+            AvatarPresignResponse, self._handle, ttl=90,
+            query=query
+        )
+
+    async def _handle(self, query: GetAvatrProfileUrlQuery) -> AvatarPresignResponse:
         key_base = f"avatars/{query.user_id}"
 
         result = await self.storage_service.upload_post_file(
@@ -38,4 +46,3 @@ class GetAvatrProfileUrlQueryHandler(BaseQueryHandler[GetAvatrProfileUrlQuery, A
             fields=result.fields,
             key_base=key_base
         )
-
