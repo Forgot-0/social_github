@@ -52,6 +52,9 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         stmt = (
             select(Chat)
             .join(ChatMember, ChatMember.chat_id == Chat.id)
+            .options(
+                selectinload(Chat.members).selectinload(ChatMember.role),
+            )
             .where(
                 ChatMember.user_id == user_id,
                 ChatMember.is_banned.is_(False),
@@ -93,9 +96,14 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         result = await self.session.execute(stmt)
         return result.scalar()
 
-    async def get_members(self, chat_id: int) -> list[ChatMember]:
+    async def get_members(self, chat_id: int, limit: int = 1000) -> list[ChatMember]:
+        if limit > 10000:
+            limit = 10000
+
         result = await self.session.execute(
-            select(ChatMember).where(ChatMember.chat_id == chat_id)
+            select(ChatMember)
+            .where(ChatMember.chat_id == chat_id)
+            .limit(limit)
         )
         return list(result.scalars().all())
 
@@ -112,6 +120,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         )
         self.session.add(member)
         await self.invalidate_cache(ChatKeys.chat_member_count(chat_id))
+        await self.invalidate_cache(ChatKeys.chat_members_ids(chat_id))
 
     async def get_member_count(self, chat_id: int) -> int:
         key = ChatKeys.chat_member_count(chat_id)

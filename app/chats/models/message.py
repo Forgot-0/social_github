@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum as PyEnum
+from html import escape
 from typing import TYPE_CHECKING, Optional, Self
 
 from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, Text
@@ -95,7 +96,15 @@ class Message(BaseModel, DateMixin):
     __table_args__ = (
         Index("ix_messages_chat_id_created", "chat_id", "created_at"),
         Index("ix_messages_chat_id_id", "chat_id", "id"),
-        Index("ix_messages_chat_not_deleted", "chat_id", "id", postgresql_where="is_deleted = false"),
+        Index("ix_messages_chat_not_deleted", "chat_id", "id", 
+              postgresql_where="is_deleted = false"),
+        Index("ix_messages_author_id", "author_id"),
+        Index("ix_messages_reply_to", "reply_to_id"),
+        Index("ix_messages_forwarded_from", "forwarded_from_message_id"),
+        Index("ix_messages_created_at", "created_at"),
+        Index("ix_messages_chat_created_not_deleted", 
+              "chat_id", "created_at",
+              postgresql_where="is_deleted = false"),
     )
 
     @classmethod
@@ -148,8 +157,18 @@ class Message(BaseModel, DateMixin):
         )
 
     def validate_content(self) -> None:
-        if self.content and len(self.content) > chat_config.MAX_MESSAGE_LENGTH:
+        if not self.content:
+            return
+
+        assert isinstance(self.content, str)
+
+        if len(self.content) > chat_config.MAX_MESSAGE_LENGTH:
             raise MessageTooLongException(
                 length=len(self.content),
-                max_length=chat_config.MAX_MESSAGE_LENGTH,
+                max_length=chat_config.MAX_MESSAGE_LENGTH
             )
+
+        self.content = escape(self.content, quote=True)
+
+        if self.content is not None and '\x00' in self.content:  # type: ignore
+            raise ValueError("Null bytes not allowed")

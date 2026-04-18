@@ -54,20 +54,3 @@ class ChatMember(BaseModel, DateMixin):
     def role_name(self) -> str | None:
         return self.role.name if self.role is not None else None
 
-
-# class MemberBan(BaseModel, DateMixin):
-#     __tablename__ = "ban_members"
-
-#     chat_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
-#     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-#     banned_by: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-
-#     reason: Mapped[str | None] = mapped_column(String(256), nullable=True)
-#     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-#     __table_args__ = (
-#         UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),
-#         Index("ix_ban_members_user_chat", "user_id", "chat_id"),
-#         Index("ix_ban_members_chat_user", "chat_id", "user_id"),
-#     )
-

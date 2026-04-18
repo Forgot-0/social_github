@@ -3,6 +3,7 @@ import re
 from dataclasses import asdict, dataclass
 from uuid import uuid4
 
+import magic
 import orjson
 from redis.asyncio import Redis
 
@@ -87,24 +88,36 @@ class ClaimedAttachment:
 
 
 @dataclass
-class AttachmentService:
+class UploadTokenManager:
     redis: Redis
-    storage_service: StorageService
 
-    def _pending_key(self, user_id: int, token: str) -> str:
-        return f"pending_upload:{user_id}:{token}"
+    async def create_pending_data(self, data: dict) -> None:
+        upload_token = data["upload_token"]
+        key = f"pending_upload:{data['user_id']}:{upload_token}"
+        await self.redis.setex(key, _UPLOAD_TOKEN_TTL, orjson.dumps(data))
 
-    def _download_cache_key(self, attachment_id: str) -> str:
-        return f"att_url:{attachment_id}"
+    async def get_pending_data(self, user_id: int, token: str) -> dict | None:
+        key = f"pending_upload:{user_id}:{token}"
+        raw = await self.redis.get(key)
+        if raw:
+            return orjson.loads(raw)
+        return None
 
-    async def create_upload_slot(
-        self,
-        chat_id: int,
-        user_id: int,
-        filename: str,
-        mime_type: str,
-        file_size: int,
-    ) -> UploadSlot:
+    async def claim_pending_data(self, user_id: int, token: str) -> dict | None:
+        key = f"pending_upload:{user_id}:{token}"
+        raw = await self.redis.getdel(key)
+        if raw:
+            return orjson.loads(raw)
+        return None
+
+    async def mark_success(self, user_id: int, token: str, data: dict) -> None:
+        key = f"pending_upload:{user_id}:{token}"
+        await self.redis.setex(key, _UPLOAD_TOKEN_TTL, orjson.dumps(data))
+
+
+@dataclass
+class MimeValidator:
+    def validate(self, mime_type: str, file_size: int) -> AttachmentType:
         if mime_type not in ALL_ALLOWED_MIMES:
             raise AttachmentValidationException(mime_type=f"MIME type not allowed: {mime_type}")
 
@@ -116,7 +129,25 @@ class AttachmentService:
                 mime_type=f"Invalid file size {file_size}. Max: {max_size} bytes"
             )
 
-        upload_token = str(uuid4())
+        return attachment_type
+
+
+@dataclass
+class UploadSlotFactory:
+    token_manager: UploadTokenManager
+    storage_service: StorageService
+    mime_validator: MimeValidator
+
+    async def create(
+        self,
+        chat_id: int,
+        user_id: int,
+        filename: str,
+        mime_type: str,
+        file_size: int,
+    ) -> UploadSlot:
+        attachment_type = self.mime_validator.validate(mime_type, file_size)
+
         safe_name = sanitize_filename(filename)
         s3_key = f"chats/{chat_id}/{uuid4()}/{safe_name}"
 
@@ -126,6 +157,7 @@ class AttachmentService:
             expires=_UPLOAD_TOKEN_TTL,
         )
 
+        upload_token = str(uuid4())
         pending = {
             "chat_id": chat_id,
             "user_id": user_id,
@@ -137,11 +169,8 @@ class AttachmentService:
             "attachment_type": attachment_type.value,
             "status": AttachmentStatus.PENDING.value
         }
-        await self.redis.setex(
-            self._pending_key(user_id, upload_token),
-            _UPLOAD_TOKEN_TTL,
-            orjson.dumps(pending),
-        )
+
+        await self.token_manager.create_pending_data(pending)
 
         logger.info(
             "Upload slot created",
@@ -155,6 +184,50 @@ class AttachmentService:
             expires_in=_UPLOAD_TOKEN_TTL,
         )
 
+
+@dataclass
+class AttachmentDownloadService:
+    storage_service: StorageService
+    redis: Redis
+
+    def _download_cache_key(self, attachment_id: str) -> str:
+        return f"att_url:{attachment_id}"
+
+    async def get_download_url(self, attachment_id: str, s3_key: str) -> str:
+        cache_key = self._download_cache_key(attachment_id)
+        cached = await self.redis.get(cache_key)
+        if cached:
+            return cached.decode()
+
+        url = await self.storage_service.generate_presigned_url(
+            bucket_name=chat_config.ATTACHMENT_BUCKET,
+            file_key=s3_key,
+            expires=_DOWNLOAD_URL_TTL,
+        )
+
+        await self.redis.setex(cache_key, _DOWNLOAD_CACHE_TTL, url)
+        return url
+
+    async def invalidate_download_cache(self, attachment_id: str) -> None:
+        await self.redis.delete(self._download_cache_key(attachment_id))
+
+
+@dataclass
+class AttachmentService:
+    token_manager: UploadTokenManager
+    slot_factory: UploadSlotFactory
+    download_service: AttachmentDownloadService
+
+    async def create_upload_slot(
+        self,
+        chat_id: int,
+        user_id: int,
+        filename: str,
+        mime_type: str,
+        file_size: int,
+    ) -> UploadSlot:
+        return await self.slot_factory.create(chat_id, user_id, filename, mime_type, file_size)
+
     async def claim_tokens(
         self,
         user_id: int,
@@ -164,12 +237,9 @@ class AttachmentService:
         claimed: list[ClaimedAttachment] = []
 
         for token in tokens:
-            key = self._pending_key(user_id, token)
-            raw = await self.redis.getdel(key)
-            if raw is None:
+            data = await self.token_manager.claim_pending_data(user_id, token)
+            if data is None:
                 raise InvalidUploadTokenException(token=token)
-
-            data = orjson.loads(raw)
 
             if data["user_id"] != user_id or data["chat_id"] != chat_id:
                 raise InvalidUploadTokenException(token=token)
@@ -191,8 +261,8 @@ class AttachmentService:
         return claimed
 
     async def mark_success(self, user_id: int, claimed: ClaimedAttachment) -> None:
-        key = self._pending_key(user_id, claimed.upload_token)
-        await self.redis.setex(key, _UPLOAD_TOKEN_TTL, orjson.dumps(asdict(claimed)))
+        data = asdict(claimed)
+        await self.token_manager.mark_success(user_id, claimed.upload_token, data)
 
     async def claim_tokens_for_message(
         self,
@@ -217,22 +287,23 @@ class AttachmentService:
         if success is False:
             raise AttachmentNotFoundException(attachment_id="")
 
+        for cl in claimed:
+            data = await self.slot_factory.storage_service.download_range(
+                bucket_name=chat_config.ATTACHMENT_BUCKET,
+                file_key=cl.s3_key,
+                offset=0,
+                length=1024
+            )
+            actual_mime = magic.from_buffer(data, mime=True)
+            if actual_mime != cl.mime_type:
+                raise AttachmentValidationException(
+                    mime_type=f"MIME type mismatch: expected {cl.mime_type}, got {actual_mime}"
+                )
+
         return claimed
 
     async def get_download_url(self, attachment_id: str, s3_key: str) -> str:
-        cache_key = self._download_cache_key(attachment_id)
-        cached = await self.redis.get(cache_key)
-        if cached:
-            return cached.decode()
-
-        url = await self.storage_service.generate_presigned_url(
-            bucket_name=chat_config.ATTACHMENT_BUCKET,
-            file_key=s3_key,
-            expires=_DOWNLOAD_URL_TTL,
-        )
-
-        await self.redis.setex(cache_key, _DOWNLOAD_CACHE_TTL, url)
-        return url
+        return await self.download_service.get_download_url(attachment_id, s3_key)
 
     async def invalidate_download_cache(self, attachment_id: str) -> None:
-        await self.redis.delete(self._download_cache_key(attachment_id))
+        await self.download_service.invalidate_download_cache(attachment_id)

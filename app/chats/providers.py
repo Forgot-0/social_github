@@ -29,7 +29,10 @@ from app.chats.events.messages.modified import ModifiedMessageEventHandler
 from app.chats.events.messages.sended import SendedMessageEvent, SendedMessageEventHandler
 from app.chats.models.chat import AddedChatMemberEvent, KickedChatMemberEvent, LeftChatMemberEvent
 from app.chats.models.message import DeletedMessageEvent, ModifiedMessageEvent
-from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler
+from app.chats.queries.attachments.get_url import (
+    GetAttachmentDownloadUrlQuery,
+    GetAttachmentDownloadUrlQueryHandler
+)
 from app.chats.queries.chats.get_by_id import GetChatByIdQuery, GetChatByIdQueryHandler
 from app.chats.queries.chats.get_cursor import GetChatsCursorQuery, GetChatsCursorQueryHandler
 from app.chats.queries.chats.presence import (
@@ -45,7 +48,10 @@ from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.attachment_service import AttachmentService
+from app.chats.services.attachment_service import (
+    AttachmentDownloadService, AttachmentService,
+    MimeValidator, UploadSlotFactory, UploadTokenManager
+)
 from app.chats.services.delivery import DeliveryTrackingService
 from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.presence import PresenceService
@@ -55,7 +61,6 @@ from app.core.events.event import EventRegisty
 from app.core.events.service import BaseEventBus
 from app.core.mediators.base import CommandRegisty, QueryRegistry
 from app.core.services.storage.aminio.policy import Policy
-from app.core.services.storage.service import StorageService
 from app.core.websockets.base import BaseConnectionManager
 
 
@@ -106,9 +111,11 @@ class ChatModuleProvider(Provider):
             event_bus=event_bus,
         )
 
-    @provide(scope=Scope.APP)
-    def attachment_service(self, redis: Redis, storage_service: StorageService) -> AttachmentService:
-        return AttachmentService(redis=redis, storage_service=storage_service)
+    attachment_services = provide_all(
+        UploadTokenManager, MimeValidator, UploadSlotFactory,
+        AttachmentDownloadService, AttachmentService,
+        scope=Scope.APP
+    )
 
     @provide(scope=Scope.APP)
     def presence_service(self, redis: Redis) -> PresenceService:

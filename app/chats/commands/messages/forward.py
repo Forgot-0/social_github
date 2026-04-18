@@ -65,6 +65,16 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, For
         if not source_msg or source_msg.chat_id != command.source_chat_id:
             raise NotFoundMessageException(message_id=command.source_message_id)
 
+        if source_msg.is_deleted:
+            raise NotFoundMessageException(message_id=command.source_message_id)
+
+        if not self.chat_access_service.can_update(
+            user_jwt_data=command.user_jwt_data,
+            memeber=source_member,
+            must_permissions={"message:read"},
+        ):
+            raise AccessDeniedChatException()
+
         target_chat = await self.chat_repository.get_by_id(command.target_chat_id)
         if not target_chat:
             raise NotFoundChatException(chat_id=command.target_chat_id)
