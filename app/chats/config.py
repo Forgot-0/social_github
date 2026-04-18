@@ -12,6 +12,8 @@ class ChatConfig(BaseConfig):
     WS_MAX_CONNECTIONS_PER_USER: int = 2
     RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
 
+    ATTACHMENT_BUCKET: str = "chat-attachments"
+
     CHAT_TOPIC: str = "CHATS"
 
     LIVEKIT_URL: str = "ws://localhost:7880"

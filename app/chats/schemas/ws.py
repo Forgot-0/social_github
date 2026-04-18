@@ -17,6 +17,8 @@ class WSEventType(str, Enum):
     TYPING_STOP = "typing_stop"
     PING = "ping"
 
+    ATTACHMENT_SUCCESS = "attachment_success"
+
     CALL_STARTED = "call_started"
     CALL_ENDED = "call_ended"
     CALL_JOINED = "call_joined"
@@ -75,3 +77,8 @@ class WSCallPayload(BaseModel):
     user_id: int | None = None
     username: str | None = None
     duration_seconds: int | None = None
+
+class AttachmentSuccessPlayload(BaseModel):
+    user_id: int
+    tokens: list[str]
+

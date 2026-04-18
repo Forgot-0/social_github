@@ -1,22 +1,23 @@
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from uuid import uuid4
 
 import orjson
 from redis.asyncio import Redis
 
+from app.chats.config import chat_config
 from app.chats.exceptions import (
     AttachmentLimitExceededException,
+    AttachmentNotFoundException,
     AttachmentValidationException,
     InvalidUploadTokenException,
 )
-from app.chats.models.attachment import AttachmentType
+from app.chats.models.attachment import AttachmentStatus, AttachmentType
 from app.core.services.storage.service import StorageService
 
 logger = logging.getLogger(__name__)
 
-ATTACHMENT_BUCKET = "chat-attachments"
 
 _UPLOAD_TOKEN_TTL = 3600
 _DOWNLOAD_URL_TTL = 300
@@ -77,10 +78,12 @@ class ClaimedAttachment:
     chat_id: int
     user_id: int
     s3_key: str
+    upload_token: str
     mime_type: str
     file_size: int
     original_filename: str
     attachment_type: AttachmentType
+    status: AttachmentStatus
 
 
 @dataclass
@@ -118,7 +121,7 @@ class AttachmentService:
         s3_key = f"chats/{chat_id}/{uuid4()}/{safe_name}"
 
         upload_url = await self.storage_service.upload_put_url(
-            bucket_name=ATTACHMENT_BUCKET,
+            bucket_name=chat_config.ATTACHMENT_BUCKET,
             file_key=s3_key,
             expires=_UPLOAD_TOKEN_TTL,
         )
@@ -127,10 +130,12 @@ class AttachmentService:
             "chat_id": chat_id,
             "user_id": user_id,
             "s3_key": s3_key,
+            "token": upload_token,
             "mime_type": mime_type,
             "file_size": file_size,
             "original_filename": filename,
             "attachment_type": attachment_type.value,
+            "status": AttachmentStatus.PENDING.value
         }
         await self.redis.setex(
             self._pending_key(user_id, upload_token),
@@ -150,7 +155,7 @@ class AttachmentService:
             expires_in=_UPLOAD_TOKEN_TTL,
         )
 
-    async def claim_tokens_for_message(
+    async def claim_tokens(
         self,
         user_id: int,
         chat_id: int,
@@ -167,7 +172,6 @@ class AttachmentService:
             data = orjson.loads(raw)
 
             if data["user_id"] != user_id or data["chat_id"] != chat_id:
-                await self.redis.setex(key, _UPLOAD_TOKEN_TTL, raw)
                 raise InvalidUploadTokenException(token=token)
 
             claimed.append(
@@ -177,20 +181,41 @@ class AttachmentService:
                     s3_key=data["s3_key"],
                     mime_type=data["mime_type"],
                     file_size=data["file_size"],
+                    upload_token=data["upload_token"],
                     original_filename=data["original_filename"],
                     attachment_type=AttachmentType(data["attachment_type"]),
+                    status=AttachmentStatus(data["status"])
                 )
             )
+
+        return claimed
+
+    async def mark_success(self, user_id: int, claimed: ClaimedAttachment) -> None:
+        key = self._pending_key(user_id, claimed.upload_token)
+        await self.redis.setex(key, _UPLOAD_TOKEN_TTL, orjson.dumps(asdict(claimed)))
+
+    async def claim_tokens_for_message(
+        self,
+        user_id: int,
+        chat_id: int,
+        tokens: list[str],
+    ) -> list[ClaimedAttachment]:
+        claimed = await self.claim_tokens(user_id=user_id, chat_id=chat_id, tokens=tokens)
 
         media_count = sum(
             1 for a in claimed if a.attachment_type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
         )
         file_count = sum(1 for a in claimed if a.attachment_type == AttachmentType.FILE)
 
+        success = all(True if a.status == AttachmentStatus.SUCCESS else False for a in claimed)
+
         if media_count > MAX_MEDIA_PER_MESSAGE:
             raise AttachmentLimitExceededException(count=media_count)
         if file_count > MAX_FILES_PER_MESSAGE:
             raise AttachmentLimitExceededException(count=file_count)
+
+        if success is False:
+            raise AttachmentNotFoundException(attachment_id="")
 
         return claimed
 
@@ -201,7 +226,7 @@ class AttachmentService:
             return cached.decode()
 
         url = await self.storage_service.generate_presigned_url(
-            bucket_name=ATTACHMENT_BUCKET,
+            bucket_name=chat_config.ATTACHMENT_BUCKET,
             file_key=s3_key,
             expires=_DOWNLOAD_URL_TTL,
         )

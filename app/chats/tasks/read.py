@@ -5,7 +5,6 @@ from dishka.integrations.taskiq import FromDishka, inject
 from redis.asyncio import Redis
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from taskiq import AsyncBroker
 
 from app.chats.keys import ChatKeys
 from app.chats.models.read_receipts import ReadReceipt
@@ -14,18 +13,6 @@ from app.core.services.queues.task import BaseTask
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 5000
-
-
-
-def register_chat_tasks(broker: AsyncBroker) -> None:
-    broker.register_task(
-        FlushReadReceiptsTask.run,
-        FlushReadReceiptsTask.get_name(),
-        labels={
-            "schedule": [{"cron": "*/5 * * * * *"}]
-        },
-    )
-
 
 @dataclass
 class FlushReadReceiptsTask(BaseTask):

@@ -45,7 +45,7 @@ from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.attachment_service import ATTACHMENT_BUCKET, AttachmentService
+from app.chats.services.attachment_service import AttachmentService
 from app.chats.services.delivery import DeliveryTrackingService
 from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.presence import PresenceService
@@ -64,7 +64,7 @@ class ChatModuleProvider(Provider):
 
     @decorate
     def register_attachment_bucket(self, bucket_policy: dict[str, Policy]) -> dict[str, Policy]:
-        bucket_policy[ATTACHMENT_BUCKET] = Policy.NONE
+        bucket_policy[chat_config.ATTACHMENT_BUCKET] = Policy.NONE
         return bucket_policy
 
     @provide(scope=Scope.APP)

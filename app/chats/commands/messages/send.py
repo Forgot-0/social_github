@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.config import chat_config
 from app.chats.events.messages.sended import SendedMessageEvent
 from app.chats.exceptions import (
     AccessDeniedChatException,
@@ -18,7 +19,7 @@ from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.attachment_service import ATTACHMENT_BUCKET, AttachmentService
+from app.chats.services.attachment_service import AttachmentService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
@@ -103,7 +104,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
                     uploader_id=user_id,
                     attachment_type=att.attachment_type,
                     s3_key=att.s3_key,
-                    bucket=ATTACHMENT_BUCKET,
+                    bucket=chat_config.ATTACHMENT_BUCKET,
                     mime_type=att.mime_type,
                     original_filename=att.original_filename,
                     file_size=att.file_size,

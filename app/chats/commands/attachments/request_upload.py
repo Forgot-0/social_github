@@ -22,6 +22,7 @@ from app.chats.services.attachment_service import (
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 
+
 logger = logging.getLogger(__name__)
 
 

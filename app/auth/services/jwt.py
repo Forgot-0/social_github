@@ -21,15 +21,6 @@ class AuthJWTManager(JWTManager):
 
     token_blacklist: TokenBlacklistRepository
 
-    def decode(self, token: str) -> dict[str, Any]:
-        try:
-            data = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
-        except ExpiredSignatureError as err:
-            raise ExpiredTokenException(token=token) from err
-        except JWTError as err:
-            raise InvalidTokenException(token=token) from err
-        return data
-
     def generate_payload(self, user_data: AuthUserJWTData, token_type: TokenType) -> dict[str, Any]:
         now = now_utc()
         payload = {

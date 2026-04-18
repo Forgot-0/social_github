@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.config import chat_config
 from app.chats.events.messages.sended import SendedMessageEvent
 from app.chats.exceptions import (
     AccessDeniedChatException,
@@ -18,7 +19,6 @@ from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.attachment_service import ATTACHMENT_BUCKET
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
@@ -29,12 +29,9 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class ForwardMessageCommand(BaseCommand):
     user_jwt_data: UserJWTData
-    # Откуда берём сообщение
     source_chat_id: int
     source_message_id: int
-    # Куда пересылаем
     target_chat_id: int
-    # Опциональный комментарий к пересланному сообщению
     comment: str | None = None
 
 
@@ -108,7 +105,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, For
                     uploader_id=src.uploader_id,
                     attachment_type=src.attachment_type,
                     s3_key=src.s3_key,
-                    bucket=ATTACHMENT_BUCKET,
+                    bucket=chat_config.ATTACHMENT_BUCKET,
                     mime_type=src.mime_type,
                     original_filename=src.original_filename,
                     file_size=src.file_size,

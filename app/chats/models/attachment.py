@@ -16,6 +16,10 @@ class AttachmentType(str, PyEnum):
     VIDEO = "video"
     FILE = "file"
 
+class AttachmentStatus(str, PyEnum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    ERROR = "error"
 
 class MessageAttachment(BaseModel, DateMixin):
     __tablename__ = "message_attachments"
