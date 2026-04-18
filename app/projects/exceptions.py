@@ -37,7 +37,7 @@ class NotFoundPositionException(ApplicationException):
 
 @dataclass(kw_only=True)
 class NotFoundMemberException(ApplicationException):
-    memebr_id: int
+    member_id: int
 
     code: str = "NOT_FOUND_MEMBER"
     status: int = 404
@@ -48,7 +48,7 @@ class NotFoundMemberException(ApplicationException):
 
     @property
     def detail(self) -> dict[str, int]:
-        return {"memebr_id": self.memebr_id}
+        return {"member_id": self.member_id}
 
 
 @dataclass(kw_only=True)

@@ -468,7 +468,7 @@ password: string   (обязательно)
 }
 ```
 
-> ⚠️ Поле называется `repeat_password` (не `password_repeat`).
+> ⚠️ Поле называется `repeat_password` (не `repeat_password`).
 
 **Валидация пароля** (8–128 символов):
 - минимум 1 заглавная буква `[A-Z]`

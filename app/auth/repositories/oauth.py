@@ -51,7 +51,7 @@ class OAuthCodeRepository:
     async def get_state(self, state: str) -> int | None:
         state = await self.client.get(f"state:{state}")
         if state is None:
-            raise OAuthStateNotFoundException()
+            return None
 
         return int(state)
 

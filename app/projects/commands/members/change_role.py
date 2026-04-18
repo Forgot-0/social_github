@@ -42,7 +42,7 @@ class ChangeRoleMemberCommandHandler(BaseCommandHandler[ChangeRoleMemberCommand,
 
         member = project.get_memeber_by_user_id(command.target_user_id)
         if member is None:
-            raise NotFoundMemberException(memebr_id=command.target_user_id)
+            raise NotFoundMemberException(member_id=command.target_user_id)
 
         role = await self.role_repository.get_by_id(command.role_id)
         if role is None:

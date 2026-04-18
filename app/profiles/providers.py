@@ -10,7 +10,7 @@ from app.profiles.commands.profiles.remove_contact import (
     RemoveContactToProfileCommandHandler,
 )
 from app.profiles.commands.profiles.update import UpdateProfileCommand, UpdateProfileCommandHandler
-from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatrCommand, UpdateProfileAvatrCommandHandler
+from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatarCommand, UpdateProfileAvatarCommandHandler
 from app.profiles.config import profile_config
 from app.profiles.events.avatars.uploaded import UploadedAvatarsEvent, UploadedAvatarsEventHandler
 from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery, GetProfileByIdQueryHandler
@@ -27,7 +27,7 @@ class ProfileModuleProvider(Provider):
 
     create_profile_handler = provide(CreateProfileCommandHanler)
     update_profile_handler = provide(UpdateProfileCommandHandler)
-    update_avatar_profile_handler = provide(UpdateProfileAvatrCommandHandler)
+    update_avatar_profile_handler = provide(UpdateProfileAvatarCommandHandler)
     add_contact_profile_handler = provide(AddContactToProfileCommandHandler)
     remove_contact_profile_handler = provide(RemoveContactToProfileCommandHandler)
 
@@ -41,7 +41,7 @@ class ProfileModuleProvider(Provider):
             UpdateProfileCommand, [UpdateProfileCommandHandler]
         )
         command_registry.register_command(
-            UpdateProfileAvatrCommand, [UpdateProfileAvatrCommandHandler]
+            UpdateProfileAvatarCommand, [UpdateProfileAvatarCommandHandler]
         )
         command_registry.register_command(
             AddContactToProfileCommand, [AddContactToProfileCommandHandler]

@@ -11,7 +11,7 @@ from app.profiles.commands.profiles.add_contact import AddContactToProfileComman
 from app.profiles.commands.profiles.create import CreateProfileCommand
 from app.profiles.commands.profiles.remove_contact import RemoveContactToProfileCommand
 from app.profiles.commands.profiles.update import UpdateProfileCommand
-from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatrCommand
+from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatarCommand
 from app.profiles.dtos.profiles import AvatarPresignResponse, ProfileDTO
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery
@@ -130,7 +130,7 @@ async def upload_avatar_complete(
     user_jwt_data: CurrentUserJWTData
 ) -> ORJSONResponse:
     await mediator.handle_command(
-        UpdateProfileAvatrCommand(
+        UpdateProfileAvatarCommand(
             key_base=profile_request.key_base,
             user_jwt_data=user_jwt_data
         )

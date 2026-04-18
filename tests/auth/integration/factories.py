@@ -196,7 +196,7 @@ class AuthCommandFactory:
             "username": username or f"user{uuid4().hex[:8]}",
             "email": email or f"test_{uuid4().hex[:8]}@example.com",
             "password": password,
-            "password_repeat": password,
+            "repeat_password": password,
         }
 
     @staticmethod

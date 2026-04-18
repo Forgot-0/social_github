@@ -20,7 +20,7 @@ class RegisterCommand(BaseCommand):
     username: str
     email: str
     password: str
-    password_repeat: str
+    repeat_password: str
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ class RegisterCommandHandler(BaseCommandHandler[RegisterCommand, UserDTO]):
         if user:
             raise DuplicateUserException(field="email", value=command.email)
 
-        if command.password != command.password_repeat:
+        if command.password != command.repeat_password:
             raise PasswordMismatchException
 
         role = await self.role_repository.get_with_permission_by_name(

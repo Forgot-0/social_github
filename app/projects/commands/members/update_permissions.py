@@ -40,7 +40,7 @@ class UpdateMemberPermissionsCommandHandler(BaseCommandHandler[UpdateMemberPermi
 
         member = project.get_memeber_by_user_id(command.target_user_id)
         if member is None:
-            raise NotFoundMemberException(memebr_id=command.target_user_id)
+            raise NotFoundMemberException(member_id=command.target_user_id)
 
         member.permissions_overrides = command.permissions_overrides
         await self.session.commit()

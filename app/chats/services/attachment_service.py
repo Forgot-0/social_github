@@ -46,7 +46,6 @@ ALLOWED_FILE_MIMES = frozenset({
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "text/plain", "text/csv",
-    "application/octet-stream",
 })
 ALL_ALLOWED_MIMES = ALLOWED_IMAGE_MIMES | ALLOWED_VIDEO_MIMES | ALLOWED_FILE_MIMES
 
@@ -286,19 +285,6 @@ class AttachmentService:
 
         if success is False:
             raise AttachmentNotFoundException(attachment_id="")
-
-        for cl in claimed:
-            data = await self.slot_factory.storage_service.download_range(
-                bucket_name=chat_config.ATTACHMENT_BUCKET,
-                file_key=cl.s3_key,
-                offset=0,
-                length=1024
-            )
-            actual_mime = magic.from_buffer(data, mime=True)
-            if actual_mime != cl.mime_type:
-                raise AttachmentValidationException(
-                    mime_type=f"MIME type mismatch: expected {cl.mime_type}, got {actual_mime}"
-                )
 
         return claimed
 

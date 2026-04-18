@@ -53,7 +53,7 @@ class DeletePermissionRoleCommandHandler(BaseCommandHandler[DeletePermissionRole
 
         await self.role_invalidation.invalidate_role(role.name)
         await self.session.commit()
-        logging.info("Delete permission to user", extra={
+        logger.info("Delete permission to user", extra={
             "role_name": command.role_name,
             "permission": role.permissions,
             "delete_permission_by": command.user_jwt_data.id

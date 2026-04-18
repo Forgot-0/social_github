@@ -10,17 +10,17 @@ from app.profiles.tasks import AvatarUploadTask
 logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
-class UpdateProfileAvatrCommand(BaseCommand):
+class UpdateProfileAvatarCommand(BaseCommand):
     key_base: str
     user_jwt_data: UserJWTData
 
 
 @dataclass(frozen=True)
-class UpdateProfileAvatrCommandHandler(BaseCommandHandler[UpdateProfileAvatrCommand, None]):
+class UpdateProfileAvatarCommandHandler(BaseCommandHandler[UpdateProfileAvatarCommand, None]):
     queue_service: QueueService
     profile_repository: ProfileRepository
 
-    async def handle(self, command: UpdateProfileAvatrCommand) -> None:
+    async def handle(self, command: UpdateProfileAvatarCommand) -> None:
         await self.queue_service.push(
             AvatarUploadTask, {
                 "user_id": int(command.user_jwt_data.id),
