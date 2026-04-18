@@ -27,7 +27,7 @@ class ChangeMemberRoleCommand(BaseCommand):
 class ChangeMemberRoleCommandHandler(BaseCommandHandler[ChangeMemberRoleCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
 
     async def handle(self, command: ChangeMemberRoleCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
@@ -37,7 +37,7 @@ class ChangeMemberRoleCommandHandler(BaseCommandHandler[ChangeMemberRoleCommand,
         if not target:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=command.target_user_id)
 
-        if not self.chat_access_servise.update_member(
+        if not self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,

@@ -23,11 +23,11 @@ from app.chats.commands.messages.send import SendMessageCommand, SendMessageComm
 from app.chats.config import chat_config
 from app.chats.events.members.added import AddedChatMemberEventHandler
 from app.chats.events.members.kicked import KickedChatMemberEventHandler
-from app.chats.events.members.leaved import LeavedChatMemberEventHandler
+from app.chats.events.members.leaved import LeftChatMemberEventHandler
 from app.chats.events.messages.deleted import DeletedMessageEventHandler
 from app.chats.events.messages.modified import ModifiedMessageEventHandler
 from app.chats.events.messages.sended import SendedMessageEvent, SendedMessageEventHandler
-from app.chats.models.chat import AddedChatMemberEvent, KickedChatMemberEvent, LeavedChatMemberEvent
+from app.chats.models.chat import AddedChatMemberEvent, KickedChatMemberEvent, LeftChatMemberEvent
 from app.chats.models.message import DeletedMessageEvent, ModifiedMessageEvent
 from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler
 from app.chats.queries.chats.get_by_id import GetChatByIdQuery, GetChatByIdQueryHandler
@@ -162,7 +162,7 @@ class ChatModuleProvider(Provider):
 
         AddedChatMemberEventHandler,
         KickedChatMemberEventHandler,
-        LeavedChatMemberEventHandler,
+        LeftChatMemberEventHandler,
         DeletedMessageEventHandler,
         ModifiedMessageEventHandler,
         SendedMessageEventHandler,
@@ -202,7 +202,7 @@ class ChatModuleProvider(Provider):
     def register_chat_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
         event_registry.subscribe(AddedChatMemberEvent, [AddedChatMemberEventHandler])
         event_registry.subscribe(KickedChatMemberEvent, [KickedChatMemberEventHandler])
-        event_registry.subscribe(LeavedChatMemberEvent, [LeavedChatMemberEventHandler])
+        event_registry.subscribe(LeftChatMemberEvent, [LeftChatMemberEventHandler])
         event_registry.subscribe(DeletedMessageEvent, [DeletedMessageEventHandler])
         event_registry.subscribe(ModifiedMessageEvent, [ModifiedMessageEventHandler])
         event_registry.subscribe(SendedMessageEvent, [SendedMessageEventHandler])

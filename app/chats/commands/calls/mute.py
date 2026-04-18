@@ -26,7 +26,7 @@ class MuteParticipantCommand(BaseCommand):
 @dataclass(frozen=True)
 class MuteParticipantCommandHandler(BaseCommandHandler[MuteParticipantCommand, None]):
     chat_repository: ChatRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
     livekit_service: LiveKitService
 
     async def handle(self, command: MuteParticipantCommand) -> None:
@@ -44,7 +44,7 @@ class MuteParticipantCommandHandler(BaseCommandHandler[MuteParticipantCommand, N
         if not target:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=command.target_user_id)
 
-        has_perm = self.chat_access_servise.update_member(
+        has_perm = self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,

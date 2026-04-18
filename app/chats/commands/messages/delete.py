@@ -30,7 +30,7 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
     session: AsyncSession
     chat_repository: ChatRepository
     message_repository: MessageRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
     event_bus: BaseEventBus
 
     async def handle(self, command: DeleteMessageCommand) -> None:
@@ -46,7 +46,7 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
 
         if (
             message.author_id != user_id and
-            not self.chat_access_servise.can_update(
+            not self.chat_access_service.can_update(
                 user_jwt_data=command.user_jwt_data,
                 memeber=member,
                 must_permissions={"message:delete"}

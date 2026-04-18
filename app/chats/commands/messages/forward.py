@@ -49,7 +49,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, For
     chat_repository: ChatRepository
     message_repository: MessageRepository
     attachment_repository: AttachmentRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
     event_bus: BaseEventBus
 
     async def handle(self, command: ForwardMessageCommand) -> ForwardMessageResult:
@@ -75,7 +75,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, For
         if not target_member:
             raise NotChatMemberException(chat_id=command.target_chat_id, user_id=user_id)
 
-        if not self.chat_access_servise.can_update(
+        if not self.chat_access_service.can_update(
             user_jwt_data=command.user_jwt_data,
             memeber=target_member,
             must_permissions={"message:send"},

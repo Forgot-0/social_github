@@ -31,10 +31,7 @@ class SystemMessageService:
 
         chat = await self.chat_repository.get_by_id(chat_id)
         if chat:
-            try:
-                chat.update_last_activity(message_id=msg.id, message_date=msg.created_at)
-            except Exception:
-                pass
+            chat.update_last_activity(message_id=msg.id, message_date=msg.created_at)
 
         await self.session.commit()
 

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.keys import ChatKeys
-from app.chats.models.chat import Chat, ChatType, CreadtedChatEvent
+from app.chats.models.chat import Chat, ChatType, CreatedChatEvent
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.livekit_service import LiveKitService
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -52,7 +52,7 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, int]):
         await self.livekit_service.create_room(slug=ChatKeys.chat_call_slug(chat.id))
 
         await self.event_bus.publish(
-            [CreadtedChatEvent(
+            [CreatedChatEvent(
                 chat_id=chat.id,
                 created_by=creator_id,
                 member_ids=all_member_ids,

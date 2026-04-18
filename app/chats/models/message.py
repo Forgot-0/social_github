@@ -34,7 +34,7 @@ class ModifiedMessageEvent(BaseEvent):
     message_id: int
     new_content: str
     chat_id: int
-    modefied_by: int
+    modified_by: int
 
     __event_name__ = "chats.message.modified"
 
@@ -129,13 +129,13 @@ class Message(BaseModel, DateMixin):
             instance.validate_content()
         return instance
 
-    def update_content(self, new_content: str, modefied_by: int) -> None:
+    def update_content(self, new_content: str, modified_by: int) -> None:
         self.content = new_content
         self.is_edited = True
         self.validate_content()
         self.register_event(
             ModifiedMessageEvent(
-                self.id, new_content, self.chat_id, modefied_by=modefied_by
+                self.id, new_content, self.chat_id, modified_by=modified_by
             )
         )
 

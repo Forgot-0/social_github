@@ -12,7 +12,7 @@ from app.core.services.auth.dto import UserJWTData
 
 
 @dataclass(frozen=True)
-class GetMessagesQuery(BaseQuery):
+class GetAttachmentsQuery(BaseQuery):
     user_jwt_data: UserJWTData
     chat_id: int
     limit: int = 30
@@ -21,13 +21,13 @@ class GetMessagesQuery(BaseQuery):
 
 
 @dataclass(frozen=True)
-class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPage]):
+class GetAttachmentsQueryHandler(BaseQueryHandler[GetAttachmentsQuery, MessageCursorPage]):
     chat_repository: ChatRepository
     message_repository: MessageRepository
     read_receipt_repository: ReadReceiptRepository
     attachment_repository: AttachmentRepository
 
-    async def handle(self, query: GetMessagesQuery) -> MessageCursorPage:
+    async def handle(self, query: GetAttachmentsQuery) -> MessageCursorPage:
         user_id = int(query.user_jwt_data.id)
 
         member = await self.chat_repository.get_member(query.chat_id, user_id)

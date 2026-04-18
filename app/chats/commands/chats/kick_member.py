@@ -29,7 +29,7 @@ class KickMemberCommand(BaseCommand):
 class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
     event_bus: BaseEventBus
 
     async def handle(self, command: KickMemberCommand) -> None:
@@ -41,7 +41,7 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
         if not target:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=command.target_user_id)
 
-        if not self.chat_access_servise.update_member(
+        if not self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,

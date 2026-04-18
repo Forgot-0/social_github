@@ -51,7 +51,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
     chat_repository: ChatRepository
     message_repository: MessageRepository
     attachment_repository: AttachmentRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
     attachment_service: AttachmentService
     event_bus: BaseEventBus
 
@@ -66,7 +66,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
         if not member:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
-        if not self.chat_access_servise.can_update(
+        if not self.chat_access_service.can_update(
             user_jwt_data=command.user_jwt_data,
             memeber=member,
             must_permissions={"message:send"},

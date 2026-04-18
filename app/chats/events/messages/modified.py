@@ -18,7 +18,7 @@ class ModifiedMessageEventHandler(BaseEventHandler[ModifiedMessageEvent, None]):
         payload = WSModifyMessagePayload(
             id=event.message_id,
             chat_id=event.chat_id,
-            author_id=event.modefied_by,
+            author_id=event.modified_by,
             content=event.new_content
         )
 

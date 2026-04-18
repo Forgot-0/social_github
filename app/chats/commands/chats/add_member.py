@@ -34,7 +34,7 @@ class AddMemberCommand(BaseCommand):
 class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
     connection_manager: BaseConnectionManager
     event_bus: BaseEventBus
 
@@ -48,7 +48,7 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         if not requester:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=requester_id)
 
-        if not self.chat_access_servise.can_update(
+        if not self.chat_access_service.can_update(
             user_jwt_data=command.user_jwt_data,
             memeber=requester,
             must_permissions={"member:invite"}

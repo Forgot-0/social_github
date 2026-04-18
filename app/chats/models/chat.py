@@ -21,7 +21,7 @@ class ChatType(str, PyEnum):
 
 
 @dataclass(frozen=True)
-class CreadtedChatEvent(BaseEvent):
+class CreatedChatEvent(BaseEvent):
     chat_id: int
     created_by: int
     name: str | None
@@ -39,7 +39,7 @@ class AddedChatMemberEvent(BaseEvent):
     user_id: int
     role_id: int
 
-    __event_name__ = "chats.memeber.added"
+    __event_name__ = "chats.member.added"
 
     def get_partition_key(self) -> str:
         return str(self.chat_id)
@@ -58,12 +58,12 @@ class KickedChatMemberEvent(BaseEvent):
 
 
 @dataclass(frozen=True)
-class LeavedChatMemberEvent(BaseEvent):
+class LeftChatMemberEvent(BaseEvent):
     chat_id: int
     user_id: int
     username: str
 
-    __event_name__ = "chats.memeber.leaved"
+    __event_name__ = "chats.member.left"
 
     def get_partition_key(self) -> str:
         return str(self.chat_id)

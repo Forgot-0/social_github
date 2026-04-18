@@ -7,7 +7,7 @@ import magic
 from app.chats.config import chat_config
 from app.chats.exceptions import AttachmentValidationException
 from app.chats.keys import ChatKeys
-from app.chats.schemas.ws import AttachmentSuccessPlayload, WSEventType
+from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
 from app.chats.services.attachment_service import AttachmentService
 from app.core.services.queues.task import BaseTask
 from app.core.services.storage.service import StorageService
@@ -44,12 +44,12 @@ class AttachmentProccessTask(BaseTask):
             )
 
             mime_type = magic.from_buffer(data, mime=True)
-            if not mime_type != cl.mime_type:
+            if mime_type != cl.mime_type:
                 raise AttachmentValidationException(mime_type=f"MIME type not allowed: {mime_type}")
 
             await attachment_service.mark_success(user_id=user_id, claimed=cl)
 
-        data = AttachmentSuccessPlayload(
+        data = AttachmentSuccessPayload(
             user_id=user_id, tokens=upload_tokens
         )
 

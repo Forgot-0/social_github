@@ -130,7 +130,7 @@ class AttachmentService:
             "chat_id": chat_id,
             "user_id": user_id,
             "s3_key": s3_key,
-            "token": upload_token,
+            "upload_token": upload_token,
             "mime_type": mime_type,
             "file_size": file_size,
             "original_filename": filename,

@@ -78,7 +78,7 @@ class WSCallPayload(BaseModel):
     username: str | None = None
     duration_seconds: int | None = None
 
-class AttachmentSuccessPlayload(BaseModel):
+class AttachmentSuccessPayload(BaseModel):
     user_id: int
     tokens: list[str]
 

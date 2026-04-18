@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
-from app.chats.models.chat import LeavedChatMemberEvent
+from app.chats.models.chat import LeftChatMemberEvent
 from app.chats.repositories.chat import ChatRepository
 from app.chats.schemas.ws import WSEventType
 from app.core.events.event import BaseEventHandler
@@ -11,12 +11,12 @@ from app.core.websockets.base import BaseConnectionManager
 
 
 @dataclass(frozen=True)
-class LeavedChatMemberEventHandler(BaseEventHandler[LeavedChatMemberEvent, None]):
+class LeftChatMemberEventHandler(BaseEventHandler[LeftChatMemberEvent, None]):
     connection_manager: BaseConnectionManager
     chat_repository: ChatRepository
     message_broker: BaseMessageBroker
 
-    async def __call__(self, event: LeavedChatMemberEvent) -> None:
+    async def __call__(self, event: LeftChatMemberEvent) -> None:
         member_ids = await self.chat_repository.get_member_user_ids(event.chat_id)
         await self.connection_manager.unbind_key_connections(
             source_key=ChatKeys.user_channel(event.user_id),

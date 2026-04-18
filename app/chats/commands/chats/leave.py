@@ -8,7 +8,7 @@ from app.chats.exceptions import (
     NotChatMemberException,
 )
 from app.chats.keys import ChatKeys
-from app.chats.models.chat import LeavedChatMemberEvent
+from app.chats.models.chat import LeftChatMemberEvent
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -46,7 +46,7 @@ class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
         await self.chat_repository.invalidate_cache(ChatKeys.chat_member_count(member.chat_id))
         await self.session.commit()
         await self.event_bus.publish(
-            [LeavedChatMemberEvent(
+            [LeftChatMemberEvent(
                 chat_id=member.chat_id,
                 user_id=user_id,
                 username=command.user_jwt_data.username

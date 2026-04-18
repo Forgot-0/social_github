@@ -43,7 +43,7 @@ class RequestAttachmentUploadCommand(BaseCommand):
 @dataclass(frozen=True)
 class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachmentUploadCommand, list[UploadSlotDTO]]):
     chat_repository: ChatRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
     attachment_service: AttachmentService
 
     async def handle(self, command: RequestAttachmentUploadCommand) -> list[UploadSlotDTO]:
@@ -55,7 +55,7 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
         if not member:
             raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
 
-        if not self.chat_access_servise.can_update(
+        if not self.chat_access_service.can_update(
             user_jwt_data=command.user_jwt_data,
             memeber=member,
             must_permissions={"message:send"},

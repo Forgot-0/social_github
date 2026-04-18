@@ -28,7 +28,7 @@ class UpdateChatCommand(BaseCommand):
 class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
-    chat_access_servise: ChatAccessService
+    chat_access_service: ChatAccessService
 
     async def handle(self, command: UpdateChatCommand) -> None:
         user_id = int(command.user_jwt_data.id)
@@ -39,7 +39,7 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, None]):
 
         member = await self.chat_repository.get_member(command.chat_id, user_id, with_role=True)
 
-        if not self.chat_access_servise.can_update(
+        if not self.chat_access_service.can_update(
             user_jwt_data=command.user_jwt_data,
             memeber=member,
             must_permissions={"chat:update"}
