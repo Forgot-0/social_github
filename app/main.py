@@ -97,7 +97,7 @@ def setup_router(app: FastAPI) -> None:
     app.include_router(notification_router_v1, prefix=app_config.API_V1_STR)
 
 
-def handle_application_exeption(request: Request, exc: ApplicationException) -> ORJSONResponse:
+def handle_application_exception(request: Request, exc: ApplicationException) -> ORJSONResponse:
     logger.error(
         "Application exception",
         exc_info=exc,
@@ -117,7 +117,7 @@ def handle_application_exeption(request: Request, exc: ApplicationException) -> 
         ),
     )
 
-def handle_validation_exeption(request: Request, exc: RequestValidationError) -> ORJSONResponse:
+def handle_validation_exception(request: Request, exc: RequestValidationError) -> ORJSONResponse:
     logger.error(
         "Validation exception",
         exc_info=exc,
@@ -142,7 +142,7 @@ def handle_validation_exeption(request: Request, exc: RequestValidationError) ->
         ),
     )
 
-def handle_uncown_exception(request: Request, exc: Exception) -> ORJSONResponse:
+def handle_unknown_exception(request: Request, exc: Exception) -> ORJSONResponse:
     logger.error(
         "Unknown exception",
         exc_info=exc,
@@ -150,14 +150,14 @@ def handle_uncown_exception(request: Request, exc: Exception) -> ORJSONResponse:
             "status": 500,
             "title": "Unknown exception",
             "detail": jsonable_encoder(exc),
-            "code": "UNCOWN_EXCEPTION",
+            "code": "UNKNOWN_EXCEPTION",
         }
     )
     return ORJSONResponse(
         status_code=500,
         content=ErrorResponse(
             error=ErrorDetail(
-                code="UNCOWN_EXCEPTION",
+                code="UNKNOWN_EXCEPTION",
                 message="Unknown exception",
             ),
             status=500,
@@ -248,8 +248,8 @@ def init_app() -> FastAPI:
     setup_middleware(app)
     setup_router(app)
 
-    app.add_exception_handler(Exception, handle_uncown_exception)
-    app.add_exception_handler(ApplicationException, handle_application_exeption) # type: ignore
-    app.add_exception_handler(RequestValidationError, handle_validation_exeption) # type: ignore
+    app.add_exception_handler(Exception, handle_unknown_exception)
+    app.add_exception_handler(ApplicationException, handle_application_exception) # type: ignore
+    app.add_exception_handler(RequestValidationError, handle_validation_exception) # type: ignore
     app.openapi = lambda: custom_openapi(app)
     return app
