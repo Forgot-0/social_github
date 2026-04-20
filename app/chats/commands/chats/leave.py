@@ -43,7 +43,10 @@ class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
                 raise AccessDeniedChatException()
 
         await self.session.delete(member)
-        await self.chat_repository.invalidate_cache(ChatKeys.chat_member_count(member.chat_id))
+        await self.chat_repository.invalidate_cache(
+            ChatKeys.chat_member_count(member.chat_id),
+            ChatKeys.chat_members_ids(command.chat_id)
+        )
         await self.session.commit()
         await self.event_bus.publish(
             [LeftChatMemberEvent(

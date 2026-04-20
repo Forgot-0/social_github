@@ -22,8 +22,6 @@ services:
       --bind 0.0.0.0:8000
       --timeout 120
       --graceful-timeout 30
-      --max-requests 10000
-      --max-requests-jitter 1000
       "
     depends_on:
       db:

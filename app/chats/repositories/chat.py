@@ -51,10 +51,6 @@ class ChatRepository(IRepository[Chat], CacheRepository):
     ) -> list[Chat]:
         stmt = (
             select(Chat)
-            .join(ChatMember, ChatMember.chat_id == Chat.id)
-            .options(
-                selectinload(Chat.members).selectinload(ChatMember.role),
-            )
             .where(
                 ChatMember.user_id == user_id,
                 ChatMember.is_banned.is_(False),

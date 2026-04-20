@@ -46,16 +46,7 @@ class GetChatsCursorQueryHandler(BaseQueryHandler[GetChatsCursorQuery, ChatListC
             rows = rows[:limit]
 
         items = [
-            ChatListItemDTO(
-                id=chat.id,
-                type=chat.type,
-                name=chat.name,
-                description=chat.description,
-                avatar_url=chat.avatar_url,
-                is_public=chat.is_public,
-                created_by=chat.created_by,
-                last_activity_at=chat.last_activity_at,
-            )
+            ChatListItemDTO.model_validate(chat.to_dict())
             for chat in rows
         ]
 
