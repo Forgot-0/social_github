@@ -582,7 +582,7 @@ docker build --build-arg ENV=production -t social-github:latest .
 | db | 5432 | PostgreSQL database |
 | redis | 6379 | Cache & task broker |
 | kafka | 9092 | Message broker |
-| minio | 9000/9001 | S3-compatible storage |
+| minio | 9000/9001 | S3-compatible storage (single node) |
 | clickhouse | 8123 | Analytics database |
 | consumers | 9002 | Kafka event consumer |
 | queue_worker | - | Task queue worker |
@@ -608,6 +608,7 @@ docker build --build-arg ENV=production -t social-github:latest .
 | redis-exporter | 9121 | Redis metrics |
 | postgres-exporter | 9187 | PostgreSQL metrics |
 | kafka-exporter | 9308 | Kafka metrics |
+| **minio-exporter** | **9290** | **MinIO storage metrics** |
 
 ### Common Docker Compose Commands
 
@@ -635,6 +636,30 @@ docker-compose exec app bash
 
 # View resource usage
 docker-compose stats
+```
+
+### MinIO Highload Configuration
+
+The project includes both single-node and distributed MinIO configurations for different load requirements:
+
+#### Single Node (Development)
+- **Service**: `minio`
+- **Ports**: 9000 (API), 9001 (Console)
+- **Use case**: Development, testing, low traffic
+- **Resources**: 2 CPU cores, 4GB RAM
+
+**Features enabled for highload**:
+- **Erasure Coding**: `EC:2` for standard storage, `EC:1` for reduced redundancy
+- **Compression**: Gzip compression for text-based files
+- **Connection Limits**: Up to 2000 concurrent connections per node
+- **Caching**: Intelligent caching with watermark management
+- **Prometheus Metrics**: Built-in metrics collection
+
+**Switching between configurations**:
+
+```bash
+# Use single node (default)
+docker-compose up -d minio
 ```
 
 ### Healthchecks
@@ -665,6 +690,7 @@ Metrics collected from:
 - PostgreSQL: pg_exporter (port 9187)
 - Redis: redis_exporter (port 9121)
 - Kafka: kafka_exporter (port 9308)
+- **MinIO**: minio-exporter (port 9290) - storage metrics, S3 operations, disk usage
 
 ### Grafana
 
@@ -679,6 +705,7 @@ Pre-configured dashboards:
 - Database Performance
 - Redis Cache Metrics
 - Kafka Broker Metrics
+- **MinIO Storage Dashboard** - bucket usage, S3 operations, disk I/O, cluster health
 
 ### Loki (Log Aggregation)
 

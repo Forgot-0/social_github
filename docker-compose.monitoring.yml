@@ -99,6 +99,23 @@ services:
     networks:
       - app-network
 
+  minio-exporter:
+    image: prometheuscommunity/minio-exporter:latest
+    container_name: minio-exporter
+    ports:
+      - "9290:9290"
+    environment:
+      - MINIO_SERVER=http://minio:9000
+      - MINIO_ACCESS_KEY=${STORAGE_ACCESS_KEY:-minio}
+      - MINIO_SECRET_KEY=${STORAGE_SECRET_KEY:-minio123}
+      - MINIO_SERVER_INSECURE=true
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
 
 volumes:
   grafana.data:

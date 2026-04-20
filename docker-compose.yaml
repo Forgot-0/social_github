@@ -95,7 +95,26 @@ services:
       MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:-minio}
       MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:-minio123}
       MINIO_API_CORS_ALLOW_ORIGIN: '*'
-      MINIO_BROWSER_REDIRECT_URL: "https://console.example.com"
+      MINIO_BROWSER_REDIRECT_URL: "https://console.windoweropu.store"
+      MINIO_PROMETHEUS_AUTH_TYPE: "public"
+      MINIO_PROMETHEUS_JOB_ID: "minio"
+      MINIO_REGION: "us-east-1"
+      MINIO_BROWSER: "on"
+      MINIO_DOMAIN: "storage.windoweropu.store"
+      MINIO_STORAGE_CLASS_STANDARD: "EC:2"
+      MINIO_STORAGE_CLASS_RRS: "EC:1"
+      MINIO_COMPRESSION: "gzip"
+      MINIO_COMPRESSION_EXTENSIONS: ".txt,.log,.json,.csv,.md"
+      MINIO_COMPRESSION_MIME_TYPES: "text/*,application/json,application/xml"
+      MINIO_MAX_CONNECTIONS: "1000"
+      MINIO_WRITE_QUORUM: "writeQuorum"
+      MINIO_READ_QUORUM: "readQuorum"
+      MINIO_CACHE_DRIVES: ""
+      MINIO_CACHE_EXCLUDE: ""
+      MINIO_CACHE_QUOTA: "80"
+      MINIO_CACHE_AFTER: "3"
+      MINIO_CACHE_WATERMARK_LOW: "70"
+      MINIO_CACHE_WATERMARK_HIGH: "80"
     volumes:
       - miniodata:/data
     healthcheck:
