@@ -34,9 +34,7 @@ class UserDeactivateSessionCommandHandler(BaseCommandHandler[UserDeactivateSessi
             session.user_id != int(command.user_jwt_data.id) and
             not self.rbac_manager.check_permission(command.user_jwt_data, {"user:update" })
         ):
-            raise AccessDeniedException(
-                need_permissions={"user:update", "user:owner"} - set(command.user_jwt_data.permissions)
-            )
+            raise NotFoundOrInactiveSessionException
 
         session.deactivate()
         await self.session.commit()

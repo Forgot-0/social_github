@@ -17,7 +17,7 @@ class InvalidTokenException(ApplicationException):
 
     @property
     def detail(self) -> dict[str, Any]:
-        return {"token": self.token}
+        return {}
 
 
 @dataclass(kw_only=True)
@@ -33,7 +33,7 @@ class ExpiredTokenException(ApplicationException):
 
     @property
     def detail(self) -> dict[str, Any]:
-        return {"token": self.token}
+        return {}
 
 @dataclass
 class NotAuthenticatedException(ApplicationException):

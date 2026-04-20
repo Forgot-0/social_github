@@ -121,9 +121,6 @@ class Message(BaseModel, DateMixin):
         if message_type == MessageType.REPLY and reply_to_id is None:
             raise ValueError("reply_to_id is required for REPLY messages")
 
-        if not content and not forwarded_from_message_id:
-            pass
-
         instance = cls(
             author_id=sender_id,
             chat_id=chat_id,

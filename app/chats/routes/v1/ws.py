@@ -59,13 +59,13 @@ async def websocket_endpoint(
 
     try:
         while True:
+            await rate_limit(websocket, context_key=str(user_id))
+
             try:
                 data = await asyncio.wait_for(websocket.receive_json(), timeout=45.0)
             except TimeoutError:
                 await presence_service.refresh(user_id)
                 continue
-
-            await rate_limit(websocket, context_key=str(user_id))
 
             async with container() as request_container:
                 ws_client_service = await request_container.get(ChatWebSocketClientService)

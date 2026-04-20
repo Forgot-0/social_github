@@ -28,13 +28,13 @@ class NotificationRepository(IRepository[Notification], CacheRepository):
         return result.scalar_one()
 
     async def mark_all_as_read(self, user_id: int) -> int:
-        result = await self.session.execute(
+        await self.session.execute(
             update(Notification)
             .where(Notification.user_id == user_id, Notification.is_read.is_(False))
             .values(is_read=True)
             .execution_options(synchronize_session=False)
         )
-        return int(len(result.scalars().all()) or 0)
+        return 0
 
     def apply_relationship_filters(self, stmt: Select, filters: NotificationFilter) -> Select:
         return stmt

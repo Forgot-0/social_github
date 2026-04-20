@@ -170,7 +170,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         if cached:
             return orjson.loads(cached)
         ids = await self._get_member_user_ids(chat_id)
-        await self.redis.setex(key, 30, orjson.dumps(ids))
+        await self.redis.setex(key, 300, orjson.dumps(ids))
         return ids
 
     async def _get_member_user_ids(self, chat_id: int, without_member: int | None=None) -> list[int]:

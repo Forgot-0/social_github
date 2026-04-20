@@ -24,7 +24,7 @@ class ConnectionManager(BaseConnectionManager):
         while True:
             await asyncio.sleep(self.heartbeat_interval)
 
-            all_sockets = set()
+            all_sockets: set[WebSocket] = set()
             for conns in self.connections_map.values():
                 all_sockets.update(conns)
 
