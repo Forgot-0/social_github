@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.events.messages.sended import SendedMessageEvent
 from app.chats.models.message import Message, MessageType
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
@@ -19,7 +20,6 @@ class SystemMessageService:
     event_bus: BaseEventBus
 
     async def send(self, chat_id: int, content: str) -> None:
-        from app.chats.events.messages.sended import SendedMessageEvent
 
         msg = Message.create(
             sender_id=None,

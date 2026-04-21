@@ -104,18 +104,12 @@ class ConnectionManager(BaseConnectionManager):
                 await websocket.close()
 
     async def publish(self, key: str, payload: dict) -> None:
-        if self.redis is None:
-            raise RuntimeError("Manager not started")
-
         await self.redis.publish(
             f"ws:{key}",
             orjson.dumps(payload),
         )
 
     async def publish_bulk(self, keys: list[str], payload: dict) -> None:
-        if not keys:
-            return
-
         serialized_payload = orjson.dumps(payload)
         unique_keys = tuple(dict.fromkeys(keys))
         for idx in range(0, len(unique_keys), _PUBLISH_BATCH_SIZE):
@@ -136,18 +130,13 @@ class ConnectionManager(BaseConnectionManager):
                     continue
 
                 asyncio.create_task(self._dispatch(message))
-        except:
-            raise
         finally:
             await pubsub.unsubscribe()
 
     async def _dispatch(self, message: dict) -> None:
         channel = message["channel"].decode().removeprefix("ws:")
-        try:
-            payload = orjson.loads(message["data"])
-            await self.send_json_all(channel, payload)
-        except Exception:
-            logger.exception("Dispatch error for channel %s", channel)
+        payload = orjson.loads(message["data"])
+        await self.send_json_all(channel, payload)
 
     async def shutdown(self) -> None:
         if self.heartbeat_task and not self.heartbeat_task.done():

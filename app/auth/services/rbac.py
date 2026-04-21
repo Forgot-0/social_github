@@ -12,17 +12,9 @@ from app.core.services.auth.exceptions import AccessDeniedException
 
 @dataclass
 class AuthRBACManager:
-    """
-    RBAC-менеджер — проверяет роли, пермишены и уровень безопасности.
-    Методы сохраняют прежнюю семантику: в случае нарушения — выбрасывают исключения,
-    либо возвращают булево значение для простых проверок.
-    """
-
-    # Эти поля инициализируются в __post_init__ (нужно, чтобы использовать Enums)
     system_roles: set[str] = field(init=False)
     protected_permissions: set[str] = field(init=False)
 
-    # ограничения на имя роли
     ROLE_NAME_MIN_LEN: int = field(init=False, default=3)
     ROLE_NAME_MAX_LEN: int = field(init=False, default=24)
     SYSTEM_PREFIXES: tuple = field(init=False, default=("system_", "admin_"))
