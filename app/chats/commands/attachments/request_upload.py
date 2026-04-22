@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 
+from app.chats.config import chat_config
 from app.chats.dtos.attachments import UploadSlotDTO
 from app.chats.exceptions import (
     AccessDeniedChatException,
@@ -11,11 +12,6 @@ from app.chats.exceptions import (
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.chats.services.attachment_service import (
-    ALLOWED_FILE_MIMES,
-    ALLOWED_IMAGE_MIMES,
-    ALLOWED_VIDEO_MIMES,
-    MAX_FILES_PER_MESSAGE,
-    MAX_MEDIA_PER_MESSAGE,
     AttachmentService,
     AttachmentType,
 )
@@ -93,18 +89,17 @@ def _validate_upload_requests(uploads: list[UploadRequest]) -> None:
     if not uploads:
         raise AttachmentValidationException(mime_type="No uploads provided")
 
-    all_mimes = ALLOWED_IMAGE_MIMES | ALLOWED_VIDEO_MIMES | ALLOWED_FILE_MIMES
     media_count = 0
     file_count = 0
 
     for req in uploads:
-        if req.mime_type not in all_mimes:
+        if req.mime_type not in chat_config.ALL_ALLOWED_MIMES:
             raise AttachmentValidationException(mime_type=req.mime_type)
 
         att_type = AttachmentType.FILE
-        if req.mime_type in ALLOWED_IMAGE_MIMES:
+        if req.mime_type in chat_config.ALLOWED_IMAGE_MIMES:
             att_type = AttachmentType.IMAGE
-        elif req.mime_type in ALLOWED_VIDEO_MIMES:
+        elif req.mime_type in chat_config.ALLOWED_VIDEO_MIMES:
             att_type = AttachmentType.VIDEO
 
         if att_type == AttachmentType.FILE:
@@ -112,8 +107,8 @@ def _validate_upload_requests(uploads: list[UploadRequest]) -> None:
         else:
             media_count += 1
 
-    if media_count > MAX_MEDIA_PER_MESSAGE:
+    if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
         raise AttachmentLimitExceededException(count=media_count)
 
-    if file_count > MAX_FILES_PER_MESSAGE:
+    if file_count > chat_config.MAX_FILES_PER_MESSAGE:
         raise AttachmentLimitExceededException(count=file_count)
