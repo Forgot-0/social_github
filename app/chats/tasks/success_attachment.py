@@ -31,7 +31,7 @@ class AttachmentProccessTask(BaseTask):
         storage_service: FromDishka[StorageService],
         connection_manager: FromDishka[BaseConnectionManager]
     ) -> None:
-        claimed = await attachment_service.claim_tokens(
+        claimed = await attachment_service.get_upload_slot(
             user_id=user_id, chat_id=chat_id, tokens=upload_tokens
         )
 

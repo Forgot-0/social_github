@@ -80,7 +80,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, SendMessa
 
         claimed = []
         if command.upload_tokens:
-            claimed = await self.attachment_service.claim_tokens_for_message(
+            claimed = await self.attachment_service.get_success_upload_slot(
                 user_id=user_id,
                 chat_id=command.chat_id,
                 tokens=list(command.upload_tokens),
