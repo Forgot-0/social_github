@@ -5,7 +5,6 @@ from dishka.integrations.taskiq import FromDishka, inject
 import magic
 
 from app.chats.config import chat_config
-from app.chats.exceptions import AttachmentValidationException, InvalidUploadTokenException
 from app.chats.keys import ChatKeys
 from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
 from app.chats.services.attachment_service import AttachmentService
@@ -31,30 +30,30 @@ class AttachmentProccessTask(BaseTask):
         storage_service: FromDishka[StorageService],
         connection_manager: FromDishka[BaseConnectionManager]
     ) -> None:
-        claimed = await attachment_service.get_upload_slot(
+        slots = await attachment_service.get_upload_slot(
             user_id=user_id, chat_id=chat_id, tokens=upload_tokens
         )
 
         failed_tokens = []
-        for cl in claimed:
+        for slot in slots:
             try:
                 data = await storage_service.download_range(
                     bucket_name=chat_config.ATTACHMENT_BUCKET,
-                    file_key=cl.s3_key,
+                    file_key=slot.s3_key,
                     offset=0, length=1024
                 )
                 mime_type = magic.from_buffer(data, mime=True)
 
-                if mime_type != cl.mime_type:
-                    logger.warning(f"MIME mismatch: {mime_type} vs {cl.mime_type}")
-                    failed_tokens.append(cl.upload_token)
+                if mime_type != slot.mime_type:
+                    logger.warning(f"MIME mismatch: {mime_type} vs {slot.mime_type}")
+                    failed_tokens.append(slot.upload_token)
                     continue
 
-                await attachment_service.mark_success(user_id=user_id, claimed=cl)
+                await attachment_service.mark_success(user_id=user_id, claimed=slot)
             except Exception as e:
-                logger.exception(f"Processing failed for token {cl.upload_token}", exc_info=e)
-                failed_tokens.append(cl.upload_token)
-        
+                logger.exception(f"Processing failed for token {slot.upload_token}", exc_info=e)
+                failed_tokens.append(slot.upload_token)
+
         try:
             successful_tokens = [t for t in upload_tokens if t not in failed_tokens]
             if successful_tokens:
