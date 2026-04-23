@@ -9,7 +9,7 @@ def register_chat_tasks(broker: AsyncBroker) -> None:
         FlushReadReceiptsTask.run,
         FlushReadReceiptsTask.get_name(),
         labels={
-            "schedule": [{"cron": "*/5 * * * * *"}]
+            "schedule": [{"cron": "*/5 * * * *"}]
         },
     )
 
