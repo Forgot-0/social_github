@@ -25,6 +25,14 @@ class AttachmentRepository(IRepository[MessageAttachment]):
         )
         return list(result.scalars().all())
 
+    async def get_by_ids(self, attachment_ids: list[UUID]) -> list[MessageAttachment]:
+        result = await self.session.execute(
+            select(MessageAttachment)
+            .where(MessageAttachment.id == attachment_ids)
+            .order_by(MessageAttachment.created_at)
+        )
+        return list(result.scalars().all())
+
     async def get_by_message_ids(self, message_ids: list[int]) -> dict[int, list[MessageAttachment]]:
         if not message_ids:
             return {}
@@ -38,14 +46,15 @@ class AttachmentRepository(IRepository[MessageAttachment]):
 
         grouped: dict[int, list[MessageAttachment]] = {}
         for att in rows:
+            assert att.message_id is not None
             grouped.setdefault(att.message_id, []).append(att)
         return grouped
 
-    async def create_bulk(self, attachments: list[MessageAttachment]) -> list[MessageAttachment]:
-        for attachment in attachments:
-            self.session.add(attachment)
-        await self.session.flush()
-        return attachments
+    async def create_bulk(self, attachments: list[MessageAttachment]) -> None:
+        self.session.add_all(attachments)
+
+    async def create(self, attachment: MessageAttachment) -> None:
+        self.session.add(attachment)
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

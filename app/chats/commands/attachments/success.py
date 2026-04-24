@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import logging
 
-from app.chats.services.attachment_service import AttachmentService
 from app.chats.tasks.success_attachment import AttachmentProccessTask
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData

@@ -26,7 +26,7 @@ class AttachmentDTO(BaseModel):
 
 
 class UploadSlotDTO(BaseModel):
-    upload_token: str
+    upload_token: UUID
     upload_url: str
     attachment_type: AttachmentType
     expires_in: int

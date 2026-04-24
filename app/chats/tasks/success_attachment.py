@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 import logging
+from uuid import UUID
 
 from dishka.integrations.taskiq import FromDishka, inject
 import magic
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
+from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
-from app.chats.services.attachment_service import AttachmentService
 from app.core.services.queues.task import BaseTask
 from app.core.services.storage.service import StorageService
 from app.core.websockets.base import BaseConnectionManager
@@ -26,12 +28,13 @@ class AttachmentProccessTask(BaseTask):
         chat_id: int,
         user_id: int,
         upload_tokens: list[str],
-        attachment_service: FromDishka[AttachmentService],
+        session: FromDishka[AsyncSession],
+        attachment_repository: FromDishka[AttachmentRepository],
         storage_service: FromDishka[StorageService],
         connection_manager: FromDishka[BaseConnectionManager]
     ) -> None:
-        slots = await attachment_service.get_upload_slot(
-            user_id=user_id, chat_id=chat_id, tokens=upload_tokens
+        slots = await attachment_repository.get_by_ids(
+            [UUID(attachment_id) for attachment_id in upload_tokens]
         )
 
         failed_tokens = []
@@ -46,14 +49,15 @@ class AttachmentProccessTask(BaseTask):
 
                 if mime_type != slot.mime_type:
                     logger.warning(f"MIME mismatch: {mime_type} vs {slot.mime_type}")
-                    failed_tokens.append(slot.upload_token)
+                    failed_tokens.append(slot.id)
                     continue
 
-                await attachment_service.mark_success(user_id=user_id, claimed=slot)
+                slot.mark_proccesed()
             except Exception as e:
-                logger.exception(f"Processing failed for token {slot.upload_token}", exc_info=e)
-                failed_tokens.append(slot.upload_token)
+                logger.exception(f"Processing failed for token {slot.id}", exc_info=e)
+                failed_tokens.append(slot.id)
 
+        await session.commit()
         try:
             successful_tokens = [t for t in upload_tokens if t not in failed_tokens]
             if successful_tokens:

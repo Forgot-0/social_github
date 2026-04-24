@@ -118,7 +118,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, For
                     bucket=chat_config.ATTACHMENT_BUCKET,
                     mime_type=src.mime_type,
                     original_filename=src.original_filename,
-                    file_size=src.file_size,
+                    file_size=src.size,
                     width=src.width,
                     height=src.height,
                     duration_seconds=src.duration_seconds,

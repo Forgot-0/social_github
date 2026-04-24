@@ -1,5 +1,9 @@
 import logging
 from dataclasses import dataclass
+import re
+from uuid import uuid4
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
 from app.chats.dtos.attachments import UploadSlotDTO
@@ -9,18 +13,17 @@ from app.chats.exceptions import (
     AttachmentValidationException,
     NotChatMemberException,
 )
+from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
+from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.attachment_service import (
-    AttachmentService,
-    AttachmentType,
-)
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.storage.service import StorageService
 
 
 logger = logging.getLogger(__name__)
-
+clean_filename = re.compile(r"[^\w.\-]")
 
 @dataclass(frozen=True)
 class UploadRequest:
@@ -38,9 +41,11 @@ class RequestAttachmentUploadCommand(BaseCommand):
 
 @dataclass(frozen=True)
 class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachmentUploadCommand, list[UploadSlotDTO]]):
+    session: AsyncSession
     chat_repository: ChatRepository
     chat_access_service: ChatAccessService
-    attachment_service: AttachmentService
+    attachment_repository: AttachmentRepository
+    storage_service: StorageService
 
     async def handle(self, command: RequestAttachmentUploadCommand) -> list[UploadSlotDTO]:
         user_id = int(command.user_jwt_data.id)
@@ -85,25 +90,33 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
         if file_count > chat_config.MAX_FILES_PER_MESSAGE:
             raise AttachmentLimitExceededException(count=file_count)
 
-
         slots = []
-        for req in command.uploads:
-            slot = await self.attachment_service.create_upload_slot(
-                chat_id=command.chat_id,
-                user_id=user_id,
-                filename=req.filename,
-                mime_type=req.mime_type,
-                file_size=req.file_size,
-            )
-            slots.append(
-                UploadSlotDTO(
-                    upload_token=slot.upload_token,
-                    upload_url=slot.upload_url,
-                    attachment_type=slot.attachment_type,
-                    expires_in=slot.expires_in,
-                )
+
+        for slot in command.uploads:
+            new_file_name = clean_filename.sub("_", slot.filename.strip())[:200]
+            s3_key = f"chats/{command.chat_id}/{uuid4()}/{new_file_name}"
+
+            upload_url = await self.storage_service.upload_put_url(
+                bucket_name=chat_config.ATTACHMENT_BUCKET,
+                file_key=s3_key,
+                expires=chat_config.ATTACHMENT_UPLOAD_TOKEN_TTL,
             )
 
+            attachment = MessageAttachment.create(
+                chat_id=command.chat_id, uploader_id=user_id, attachment_type=att_type,
+                s3_key=s3_key, mime_type=slot.mime_type, original_filename=slot.filename,
+                size=slot.file_size
+            )
+            await self.attachment_repository.create(attachment)
+
+            slots.append(UploadSlotDTO(
+                upload_token=attachment.id,
+                upload_url=upload_url,
+                attachment_type=att_type,
+                expires_in=3600
+            ))
+
+        await self.session.commit()
         logger.info(
             "Upload slots created",
             extra={"chat_id": command.chat_id, "user_id": user_id, "count": len(slots)},
