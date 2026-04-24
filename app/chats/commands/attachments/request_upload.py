@@ -58,7 +58,33 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
         ):
             raise AccessDeniedChatException()
 
-        _validate_upload_requests(command.uploads)
+        if len(command.uploads) == 0:
+            raise
+
+        media_count = 0
+        file_count = 0
+
+        for req in command.uploads:
+            if req.mime_type not in chat_config.ALL_ALLOWED_MIMES:
+                raise AttachmentValidationException(mime_type=req.mime_type)
+
+            att_type = AttachmentType.FILE
+            if req.mime_type in chat_config.ALLOWED_IMAGE_MIMES:
+                att_type = AttachmentType.IMAGE
+            elif req.mime_type in chat_config.ALLOWED_VIDEO_MIMES:
+                att_type = AttachmentType.VIDEO
+
+            if att_type == AttachmentType.FILE:
+                file_count += 1
+            else:
+                media_count += 1
+
+        if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
+            raise AttachmentLimitExceededException(count=media_count)
+
+        if file_count > chat_config.MAX_FILES_PER_MESSAGE:
+            raise AttachmentLimitExceededException(count=file_count)
+
 
         slots = []
         for req in command.uploads:
@@ -83,32 +109,3 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
             extra={"chat_id": command.chat_id, "user_id": user_id, "count": len(slots)},
         )
         return slots
-
-
-def _validate_upload_requests(uploads: list[UploadRequest]) -> None:
-    if not uploads:
-        raise AttachmentValidationException(mime_type="No uploads provided")
-
-    media_count = 0
-    file_count = 0
-
-    for req in uploads:
-        if req.mime_type not in chat_config.ALL_ALLOWED_MIMES:
-            raise AttachmentValidationException(mime_type=req.mime_type)
-
-        att_type = AttachmentType.FILE
-        if req.mime_type in chat_config.ALLOWED_IMAGE_MIMES:
-            att_type = AttachmentType.IMAGE
-        elif req.mime_type in chat_config.ALLOWED_VIDEO_MIMES:
-            att_type = AttachmentType.VIDEO
-
-        if att_type == AttachmentType.FILE:
-            file_count += 1
-        else:
-            media_count += 1
-
-    if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
-        raise AttachmentLimitExceededException(count=media_count)
-
-    if file_count > chat_config.MAX_FILES_PER_MESSAGE:
-        raise AttachmentLimitExceededException(count=file_count)

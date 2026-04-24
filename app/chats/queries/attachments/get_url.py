@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from app.chats.config import chat_config
 from app.chats.dtos.attachments import AttachmentDownloadUrlDTO
 from app.chats.exceptions import (
     AttachmentNotFoundException,
@@ -8,7 +9,7 @@ from app.chats.exceptions import (
 )
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
-from app.chats.services.attachment_service import _DOWNLOAD_URL_TTL, AttachmentService
+from app.chats.services.attachment_service import AttachmentService
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
 
@@ -44,13 +45,13 @@ class GetAttachmentDownloadUrlQueryHandler(
         ):
             raise AttachmentNotFoundException(attachment_id=str(query.attachment_id))
 
-        url = await self.attachment_service.get_download_url(
-            attachment_id=str(query.attachment_id),
+        url = await self.attachment_service.get_attachemnt_url(
+            attachment_id=query.attachment_id,
             s3_key=attachment.s3_key,
         )
 
         return AttachmentDownloadUrlDTO(
             attachment_id=query.attachment_id,
             url=url,
-            expires_in=_DOWNLOAD_URL_TTL,
+            expires_in=chat_config.DOWNLOAD_URL_TTL,
         )

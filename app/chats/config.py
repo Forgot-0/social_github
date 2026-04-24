@@ -47,6 +47,7 @@ class ChatConfig(BaseConfig):
 
     MAX_FILE_SIZE: int = 100 * 1024 * 1024
     MAX_MEDIA_SIZE: int = 50 * 1024 * 1024
+    DOWNLOAD_URL_TTL: int = 300
 
     ATTACHMENT_UPLOAD_TOKEN_TTL: int = 3600
 

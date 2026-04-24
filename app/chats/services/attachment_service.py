@@ -1,6 +1,6 @@
 import re
 from dataclasses import asdict, dataclass
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import orjson
 from redis.asyncio import Redis
@@ -164,3 +164,14 @@ class AttachmentService:
         data = asdict(claimed)
         key = f"pending_upload:{user_id}:{claimed.upload_token}"
         await self.redis.setex(key, chat_config.ATTACHMENT_UPLOAD_TOKEN_TTL, orjson.dumps(data))
+
+
+    async def get_attachemnt_url(self, attachment_id: UUID, s3_key: str) -> str:
+        url = await self.redis.get(str(attachment_id))
+        if url is None:
+            url = await self.storage_service.generate_presigned_url(
+                chat_config.ATTACHMENT_BUCKET, file_key=s3_key, expires=chat_config.DOWNLOAD_URL_TTL
+            )
+            await self.redis.setex(name=f"attachment:{str(attachment_id)}", value=url, time=chat_config.DOWNLOAD_URL_TTL)
+
+        return url
