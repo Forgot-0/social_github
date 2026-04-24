@@ -1,10 +1,9 @@
 import logging
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import LiveKitServiceException
 from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
@@ -77,23 +76,6 @@ async def livekit_webhook(
                 },
             },
         )
-
-    # elif event_type == _EV_PARTICIPANT_JOINED:
-    #     await svc.send(
-    #         chat_id=chat_id,
-    #         content=f"📞 {participant_name} joined the call",
-    #     )
-    #     await connection_manager.publish(
-    #         ChatKeys.chat_channel(chat_id),
-    #         {
-    #             "type": WSEventType.CALL_JOINED,
-    #             "chat_id": chat_id,
-    #             "payload": {
-    #                 "user_id": int(identity) if identity.isdigit() else None,
-    #                 "username": participant_name,
-    #             },
-    #         },
-    #     )
 
     elif event_type == _EV_PARTICIPANT_LEFT:
         await svc.send(

@@ -42,7 +42,7 @@ from app.chats.queries.chats.presence import (
     GetMessageDeliveryQueryHandler,
 )
 from app.chats.queries.messages.get_detail import GetMessageReadDetailsQuery, GetMessageReadDetailsQueryHandler
-from app.chats.queries.messages.get_list import GetAttachmentsQuery, GetAttachmentsQueryHandler
+from app.chats.queries.messages.get_list import GetMessagesQuery, GetMessagesQueryHandler
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
@@ -152,7 +152,7 @@ class ChatModuleProvider(Provider):
 
         GetChatsCursorQueryHandler,
         GetChatByIdQueryHandler,
-        GetAttachmentsQueryHandler,
+        GetMessagesQueryHandler,
         GetMessageReadDetailsQueryHandler,
         GetChatPresenceQueryHandler,
         GetMessageDeliveryQueryHandler,
@@ -189,7 +189,7 @@ class ChatModuleProvider(Provider):
     def register_chat_queries(self, registry: QueryRegistry) -> QueryRegistry:
         registry.register_query(GetChatsCursorQuery, GetChatsCursorQueryHandler)
         registry.register_query(GetChatByIdQuery, GetChatByIdQueryHandler)
-        registry.register_query(GetAttachmentsQuery, GetAttachmentsQueryHandler)
+        registry.register_query(GetMessagesQuery, GetMessagesQueryHandler)
         registry.register_query(GetMessageReadDetailsQuery, GetMessageReadDetailsQueryHandler)
         registry.register_query(GetChatPresenceQuery, GetChatPresenceQueryHandler)
         registry.register_query(GetMessageDeliveryQuery, GetMessageDeliveryQueryHandler)

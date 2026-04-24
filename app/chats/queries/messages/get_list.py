@@ -12,7 +12,7 @@ from app.core.services.auth.dto import UserJWTData
 
 
 @dataclass(frozen=True)
-class GetAttachmentsQuery(BaseQuery):
+class GetMessagesQuery(BaseQuery):
     user_jwt_data: UserJWTData
     chat_id: int
     limit: int = 30
@@ -21,13 +21,13 @@ class GetAttachmentsQuery(BaseQuery):
 
 
 @dataclass(frozen=True)
-class GetAttachmentsQueryHandler(BaseQueryHandler[GetAttachmentsQuery, MessageCursorPage]):
+class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessageCursorPage]):
     chat_repository: ChatRepository
     message_repository: MessageRepository
     read_receipt_repository: ReadReceiptRepository
     attachment_repository: AttachmentRepository
 
-    async def handle(self, query: GetAttachmentsQuery) -> MessageCursorPage:
+    async def handle(self, query: GetMessagesQuery) -> MessageCursorPage:
         user_id = int(query.user_jwt_data.id)
 
         member = await self.chat_repository.get_member(query.chat_id, user_id)
@@ -35,20 +35,17 @@ class GetAttachmentsQueryHandler(BaseQueryHandler[GetAttachmentsQuery, MessageCu
             raise NotChatMemberException(chat_id=query.chat_id, user_id=user_id)
 
         limit = min(query.limit, 100)
-        rows = await self.message_repository.get_messages_cursor(
+        messages = await self.message_repository.get_messages_cursor(
             chat_id=query.chat_id,
             limit=limit,
             before_id=query.before_id,
         )
 
-        has_more = len(rows) > limit
+        has_more = len(messages) > limit
         if has_more:
-            rows = rows[:limit]
+            messages = messages[:limit]
 
-        next_cursor = rows[-1].id if (has_more and rows) else None
-
-        message_ids = [m.id for m in rows]
-        attachments_map = await self.attachment_repository.get_by_message_ids(message_ids)
+        next_cursor = messages[-1].id if (has_more and messages) else None
 
         read_cursors: dict[int, int] = {}
         if query.include_read_details:
@@ -58,17 +55,8 @@ class GetAttachmentsQueryHandler(BaseQueryHandler[GetAttachmentsQuery, MessageCu
                 user_ids=member_ids,
             )
 
-        items = []
-        for m in rows:
-            msg_dto = MessageDTO.model_validate(m.to_dict())
-            msg_dto.attachments = [
-                AttachmentDTO.model_validate(a.to_dict())
-                for a in attachments_map.get(m.id, [])
-            ]
-            items.append(msg_dto)
-
         return MessageCursorPage(
-            items=items,
+            items=[MessageDTO.model_validate(m.to_dict()) for m in messages],
             next_cursor=next_cursor,
             has_more=has_more,
             read_cursors=read_cursors,

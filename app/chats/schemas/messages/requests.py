@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.chats.models.message import MessageType
@@ -17,7 +19,7 @@ class SendMessageRequest(BaseModel):
     content: str | None = Field(default=None, max_length=4096)
     reply_to_id: int | None = Field(default=None)
     message_type: MessageType = MessageType.TEXT
-    upload_tokens: list[str] = Field(default_factory=list, max_length=11)
+    upload_tokens: list[UUID] = Field(default_factory=list, max_length=11)
 
     @model_validator(mode="after")
     def validate_content_or_attachments(self) -> "SendMessageRequest":
