@@ -253,7 +253,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "aiosmtplib"
@@ -329,7 +328,6 @@ files = [
 
 [package.dependencies]
 idna = ">=2.8"
-typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 trio = ["trio (>=0.32.0)"]
@@ -386,10 +384,7 @@ files = [
 ]
 
 [package.dependencies]
-cffi = [
-    {version = ">=1.0.1", markers = "python_version < \"3.14\""},
-    {version = ">=2.0.0b1", markers = "python_version >= \"3.14\""},
-]
+cffi = {version = ">=2.0.0b1", markers = "python_version >= \"3.14\""}
 
 [[package]]
 name = "astroid"
@@ -851,16 +846,10 @@ files = [
 
 [package.dependencies]
 certifi = "*"
-lz4 = [
-    {version = "*", markers = "python_version < \"3.14\""},
-    {version = ">=4.4.5", markers = "python_version >= \"3.14\""},
-]
+lz4 = {version = ">=4.4.5", markers = "python_version >= \"3.14\""}
 pytz = "*"
 urllib3 = ">=1.26"
-zstandard = [
-    {version = "*", markers = "python_version < \"3.14\""},
-    {version = ">=0.25.0", markers = "python_version >= \"3.14\""},
-]
+zstandard = {version = ">=0.25.0", markers = "python_version >= \"3.14\""}
 
 [package.extras]
 arrow = ["pyarrow (>=22.0) ; python_version >= \"3.14\"", "pyarrow ; python_version < \"3.14\""]
@@ -1109,11 +1098,7 @@ files = [
 [package.dependencies]
 fastar = ">=0.10.0"
 httpx = ">=0.27.0"
-pydantic = [
-    {version = ">=2.7.4", extras = ["email"], markers = "python_version < \"3.13\""},
-    {version = ">=2.8.0", extras = ["email"], markers = "python_version == \"3.13\""},
-    {version = ">=2.12.0", extras = ["email"], markers = "python_version >= \"3.14\""},
-]
+pydantic = {version = ">=2.12.0", extras = ["email"], markers = "python_version >= \"3.14\""}
 rich-toolkit = ">=0.19.7"
 rignore = ">=0.5.1"
 sentry-sdk = ">=2.20.0"
@@ -3025,7 +3010,6 @@ files = [
 
 [package.dependencies]
 pytest = ">=8.2,<10"
-typing-extensions = {version = ">=4.12", markers = "python_version < \"3.13\""}
 
 [package.extras]
 docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1)"]
@@ -3810,7 +3794,6 @@ files = [
 
 [package.dependencies]
 anyio = ">=3.6.2,<5"
-typing-extensions = {version = ">=4.10.0", markers = "python_version < \"3.13\""}
 
 [package.extras]
 full = ["httpx (>=0.27.0,<0.29.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.18)", "pyyaml"]
@@ -4123,7 +4106,7 @@ description = "Fast implementation of asyncio event loop on top of libuv"
 optional = false
 python-versions = ">=3.8.1"
 groups = ["main"]
-markers = "platform_python_implementation != \"PyPy\" and sys_platform != \"win32\" and sys_platform != \"cygwin\""
+markers = "sys_platform != \"win32\" and sys_platform != \"cygwin\" and platform_python_implementation != \"PyPy\""
 files = [
     {file = "uvloop-0.22.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:ef6f0d4cc8a9fa1f6a910230cd53545d9a14479311e87e3cb225495952eb672c"},
     {file = "uvloop-0.22.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:7cd375a12b71d33d46af85a3343b35d98e8116134ba404bd657b3b1d15988792"},
@@ -4752,5 +4735,5 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<3.15"
-content-hash = "6327f8a044b0b802339ae438d8037e2d4732a8aacd9b7b5dcdaa98d642fe2dcd"
+python-versions = ">=3.14,<3.15"
+content-hash = "0ccd04b009700c4c799766284cc5061a15d9d884865dea4725db41ce58cc58e1"
