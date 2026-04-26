@@ -25,7 +25,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "",
+    "/",
     summary="Creating a new role",
     description="Creates a new role with permissions",
     response_model=None,
@@ -55,7 +55,7 @@ async def create_role(
     )
 
 @router.get(
-    "",
+    "/",
     summary="Get a list of roles",
     description="Get a list of roles",
     responses={

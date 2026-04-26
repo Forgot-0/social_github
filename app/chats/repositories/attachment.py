@@ -17,6 +17,14 @@ class AttachmentRepository(IRepository[MessageAttachment]):
         )
         return result.scalar()
 
+    async def get_by_ids(self, attachment_ids: list[UUID]) -> list[MessageAttachment]:
+        result = await self.session.execute(
+            select(MessageAttachment)
+            .where(MessageAttachment.id == attachment_ids)
+            .order_by(MessageAttachment.created_at)
+        )
+        return list(result.scalars().all())
+
     async def create(self, attachment: MessageAttachment) -> None:
         self.session.add(attachment)
 

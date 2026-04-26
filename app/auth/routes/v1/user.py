@@ -193,7 +193,7 @@ async def delete_permissions_to_user(
 
 
 @router.get(
-    "",
+    "/",
     summary="Get a list of users",
     description="Get a list of users",
     status_code=status.HTTP_200_OK,

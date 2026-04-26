@@ -1,0 +1,32 @@
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel
+
+from app.chats.models.attachment import AttachmentStatus, AttachmentType
+
+
+class AttachmentDTO(BaseModel):
+    id: UUID
+    message_id: UUID | None
+    chat_id: UUID
+    uploader_id: int
+    attachment_type: AttachmentType
+    attachment_status: AttachmentStatus
+    s3_key: str
+    mime_type: str
+    original_filename: str
+    size: int
+
+    width: int | None
+    height: int | None
+    duration_seconds: int | None
+
+    created_at: datetime
+
+
+class AttachmentDownloadUrlDTO(BaseModel):
+    attachment_id: UUID
+    url: str
+    expires_in: int
+

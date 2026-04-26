@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import selectinload
@@ -11,7 +12,7 @@ from app.core.filters.base import BaseFilter
 @dataclass
 class MessageRepository(IRepository[Message]):
 
-    async def get_by_id(self, message_id: int) -> Message | None:
+    async def get_by_id(self, message_id: UUID) -> Message | None:
         result = await self.session.execute(
             select(Message).where(
                 Message.id == message_id,

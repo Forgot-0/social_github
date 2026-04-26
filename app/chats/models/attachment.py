@@ -1,6 +1,6 @@
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Self
-from uuid import UUID as PyUUID, uuid4
+from uuid import UUID as PyUUID, uuid7
 
 from sqlalchemy import UUID, BigInteger, Enum, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -25,8 +25,8 @@ class MessageAttachment(BaseModel, DateMixin):
     __tablename__ = "message_attachments"
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    message_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("messages.id", ondelete="CASCADE"),
+    message_id: Mapped[PyUUID | None] = mapped_column(
+        UUID, ForeignKey("messages.id", ondelete="CASCADE"),
         nullable=True, index=True,
     )
     chat_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
@@ -63,7 +63,7 @@ class MessageAttachment(BaseModel, DateMixin):
         original_filename: str, size: int,
     ) -> Self:
         instance = cls(
-            id=uuid4(),
+            id=uuid7(),
             chat_id=chat_id,
             message_id=None, uploader_id=uploader_id,
             attachment_type=attachment_type, s3_key=s3_key, mime_type=mime_type,

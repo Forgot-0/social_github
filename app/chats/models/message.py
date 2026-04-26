@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum as PyEnum
 from html import escape
 from typing import TYPE_CHECKING, Optional, Self
 from uuid import UUID as PyUUID, uuid7
 
 
-from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, Text
+from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
@@ -85,17 +84,17 @@ class Message(BaseModel, DateMixin):
     type: Mapped[MessageType] = mapped_column(
         SAEnum(MessageType), default=MessageType.TEXT, nullable=False
     )
-    content: Mapped[str | None] = mapped_column(Text)
+    content: Mapped[str | None] = mapped_column(String(chat_config.MAX_MESSAGE_LENGTH))
 
-    reply_to_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("messages.id"), nullable=True
+    reply_to_id: Mapped[PyUUID | None] = mapped_column(
+        UUID, ForeignKey("messages.id"), nullable=True
     )
 
-    forwarded_from_chat_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("chats.id", ondelete="SET NULL"), nullable=True
+    forwarded_from_chat_id: Mapped[PyUUID | None] = mapped_column(
+        UUID, ForeignKey("chats.id", ondelete="SET NULL"), nullable=True
     )
-    forwarded_from_message_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
+    forwarded_from_message_id: Mapped[PyUUID | None] = mapped_column(
+        UUID, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
     )
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -113,21 +112,23 @@ class Message(BaseModel, DateMixin):
     )
 
     __table_args__ = (
-        Index("ix_messages_chat_id_created", "chat_id", "created_at"),
-        Index("ix_messages_chat_not_deleted", "chat_id", "id", 
+        Index("ix_messages_chat_not_deleted", "chat_id", "seq", 
               postgresql_where="is_deleted = false"),
+        Index("ix_messages_chat_id_seq", "chat_id", "seq", unique=True)
     )
 
     @classmethod
     def create(
         cls,
         sender_id: int | None,
-        chat_id: int,
+        chat_id: PyUUID,
+        seq: int,
         content: str | None,
-        reply_to_id: int | None = None,
+        reply_to_id: PyUUID | None = None,
         message_type: MessageType = MessageType.TEXT,
-        forwarded_from_chat_id: int | None = None,
-        forwarded_from_message_id: int | None = None,
+        forwarded_from_chat_id: PyUUID | None = None,
+        forwarded_from_message_id: PyUUID | None = None,
+        attachments: list[MessageAttachment] | None = None,
     ) -> Self:
         if message_type == MessageType.REPLY and reply_to_id is None:
             raise 
@@ -136,6 +137,7 @@ class Message(BaseModel, DateMixin):
             id=uuid7(),
             author_id=sender_id,
             chat_id=chat_id,
+            seq=seq,
             content=content,
             reply_to_id=reply_to_id,
             type=message_type,
@@ -145,6 +147,17 @@ class Message(BaseModel, DateMixin):
 
         if message_type != MessageType.SYSTEM and content:
             instance.validate_content()
+
+        if attachments is not None:
+            instance.attachments.extend(attachments)
+
+        instance.register_event(SendedMessageEvent(
+            message_id=str(instance.id),
+            chat_id=str(instance.chat_id),
+            seq=instance.seq,
+            sender_id=instance.author_id
+        ))
+
         return instance
 
     def update_content(self, new_content: str, modified_by: int) -> None:

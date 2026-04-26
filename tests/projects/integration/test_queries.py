@@ -231,6 +231,7 @@ class TestGetApplicationsQuery:
         self,
         persisted_application: Application,
         handler: GetApplicationsQueryHandler,
+        make_user_jwt
     ) -> None:
         f = ApplicationFilter(
             project_id=persisted_application.project_id,
@@ -238,7 +239,7 @@ class TestGetApplicationsQuery:
         )
         f.set_pagination(Pagination(page=1, page_size=20))
 
-        result = await handler.handle(GetApplicationsQuery(filter=f))
+        result = await handler.handle(GetApplicationsQuery(filter=f, user_jwt_data=make_user_jwt))
 
         assert isinstance(result, PageResult)
         ids = [a.id for a in result.items]
@@ -249,6 +250,7 @@ class TestGetApplicationsQuery:
         self,
         persisted_application: Application,
         handler: GetApplicationsQueryHandler,
+        make_user_jwt
     ) -> None:
         f = ApplicationFilter(
             candidate_id=persisted_application.candidate_id,
@@ -256,7 +258,7 @@ class TestGetApplicationsQuery:
         )
         f.set_pagination(Pagination(page=1, page_size=20))
 
-        result = await handler.handle(GetApplicationsQuery(filter=f))
+        result = await handler.handle(GetApplicationsQuery(filter=f, user_jwt_data=make_user_jwt))
 
         ids = [a.id for a in result.items]
         assert persisted_application.id in ids
@@ -265,6 +267,7 @@ class TestGetApplicationsQuery:
     async def test_filter_by_wrong_project_returns_empty(
         self,
         handler: GetApplicationsQueryHandler,
+        make_user_jwt
     ) -> None:
         f = ApplicationFilter(
             project_id=999999,
@@ -272,6 +275,6 @@ class TestGetApplicationsQuery:
         )
         f.set_pagination(Pagination(page=1, page_size=20))
 
-        result = await handler.handle(GetApplicationsQuery(filter=f))
+        result = await handler.handle(GetApplicationsQuery(filter=f, user_jwt_data=make_user_jwt))
 
         assert result.total == 0

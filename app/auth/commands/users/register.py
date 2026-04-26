@@ -32,13 +32,14 @@ class RegisterCommandHandler(BaseCommandHandler[RegisterCommand, UserDTO]):
     hash_service: HashService
 
     async def handle(self, command: RegisterCommand) -> UserDTO:
-        if "@" in command.username:
-            user = await self.user_repository.get_by_email(command.username)
-        else:
-            user = await self.user_repository.get_by_username(command.username)
-
-        if user:
+        email_user = await self.user_repository.get_by_email(command.email)
+        if email_user is not None:
             raise DuplicateUserException(field="email", value=command.email)
+
+        username_user = await self.user_repository.get_by_username(command.username)
+
+        if username_user is not None:
+            raise DuplicateUserException(field="username", value=command.username)
 
         if command.password != command.repeat_password:
             raise PasswordMismatchException

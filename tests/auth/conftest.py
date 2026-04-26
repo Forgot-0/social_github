@@ -61,7 +61,7 @@ def oauth_code_repository(redis_client: Redis) -> OAuthCodeRepository:
 
 @pytest.fixture
 def hash_service() -> HashService:
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
     return HashService(pwd_context=pwd_context)
 
 

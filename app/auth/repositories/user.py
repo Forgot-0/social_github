@@ -16,7 +16,7 @@ class UserRepository(IRepository[User], CacheRepository):
 
     async def get_by_email(self, email: str) -> (User | None):
         result = await self.session.execute(User.select_not_deleted().where(User.email == email))
-        return result.scalars().first()
+        return result.scalar()
 
     async def get_with_roles_by_email(self, email: str) -> (User | None):
         result = await self.session.execute(
@@ -24,11 +24,11 @@ class UserRepository(IRepository[User], CacheRepository):
                 selectinload(User.permissions), selectinload(User.roles).selectinload(Role.permissions)
             ).where(User.email == email)
         )
-        return result.scalars().first()
+        return result.scalar()
 
     async def get_by_username(self, username: str) -> (User | None):
         result = await self.session.execute(User.select_not_deleted().where(User.username == username))
-        return result.scalars().first()
+        return result.scalar()
 
     async def get_with_roles_by_username(self, username: str) -> (User | None):
         result = await self.session.execute(
@@ -36,7 +36,7 @@ class UserRepository(IRepository[User], CacheRepository):
                 selectinload(User.permissions), selectinload(User.roles).selectinload(Role.permissions)
             ).where(User.username == username)
         )
-        return result.scalars().first()
+        return result.scalar()
 
     async def get_by_id(self, user_id: int) -> (User | None):
         result = await self.session.execute(User.select_not_deleted().where(User.id == user_id))

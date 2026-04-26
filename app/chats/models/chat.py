@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Self
-from uuid import UUID as PyUUID, uuid4
+from uuid import UUID as PyUUID, uuid7
 
 from sqlalchemy import UUID, BigInteger, Boolean, DateTime, Enum, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
-from app.chats.exceptions import MemberLimitExceededException
+from app.chats.exceptions import AccessDeniedChatException, MemberLimitExceededException
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.message import Message
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -70,6 +70,17 @@ class KickedChatMemberEvent(BaseEvent):
     def get_partition_key(self) -> str:
         return str(self.chat_id)
 
+@dataclass(frozen=True)
+class BannedChatMemberEvent(BaseEvent):
+    chat_id: str
+    requester_id: int
+    target_user_id: int
+    ban: bool
+
+    __event_name__ = "chats.member.kicked"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
 
 @dataclass(frozen=True)
 class LeftChatMemberEvent(BaseEvent):
@@ -85,7 +96,7 @@ class LeftChatMemberEvent(BaseEvent):
 class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "chats"
 
-    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, autoincrement=True)
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     seq_counter:Mapped[int] = mapped_column(BigInteger, default=0)
 
     type: Mapped[ChatType] = mapped_column(Enum(ChatType), nullable=False)
@@ -94,7 +105,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     avatar_s3_key: Mapped[str | None] = mapped_column(String(512))
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    member_count: Mapped[int] = mapped_column(Integer, default=2)
+    member_count: Mapped[int] = mapped_column(Integer, default=0)
 
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -120,7 +131,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
         instance = cls(
-            id=uuid4(),
+            id=uuid7(),
             created_by=created_by,
             type=chat_type,
             name=name,
@@ -193,6 +204,28 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         self.register_event(LeftChatMemberEvent(
             chat_id=str(self.id),
             user_id=user_id,
+        ))
+
+    def kick_member(self, target: int, requester_id: int) -> None:
+        if target == requester_id:
+            raise AccessDeniedChatException(chat_id=str(self.id), requester_id=requester_id)
+        self.member_count -= 1
+        self.register_event(KickedChatMemberEvent(
+            chat_id=str(self.id),
+            requester_id=requester_id,
+            target_user_id=target
+        ))
+
+    def ban_member(self, target: ChatMember, requester_id: int) -> None:
+        if target.user_id == requester_id:
+            raise AccessDeniedChatException(chat_id=str(self.id), requester_id=requester_id)
+
+        target.is_banned = not target.is_banned
+        self.register_event(BannedChatMemberEvent(
+            chat_id=str(self.id),
+            requester_id=requester_id,
+            target_user_id=target.user_id,
+            ban=target.is_banned
         ))
 
     def update_last_activity(self, message_id: int, message_date: datetime) -> None:

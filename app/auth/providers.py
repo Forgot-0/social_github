@@ -110,7 +110,7 @@ class AuthModuleProvider(Provider):
     @provide(scope=Scope.APP)
     def hash_service(self) -> HashService:
         return HashService(
-            CryptContext(schemes=["bcrypt"], deprecated="auto")
+            CryptContext(schemes=["argon2"], deprecated="auto")
         )
 
     @provide(scope=Scope.APP)
