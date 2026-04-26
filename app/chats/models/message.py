@@ -1,9 +1,12 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum as PyEnum
 from html import escape
 from typing import TYPE_CHECKING, Optional, Self
+from uuid import UUID as PyUUID, uuid7
 
-from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, Text
+
+from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
@@ -14,7 +17,6 @@ from app.chats.models.attachment import MessageAttachment
 
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
-
 
 class MessageStatus(PyEnum):
     sent = "sent"
@@ -31,10 +33,23 @@ class MessageType(str, PyEnum):
 
 
 @dataclass(frozen=True)
+class SendedMessageEvent(BaseEvent):
+    message_id: str
+    chat_id: str
+    seq: int
+    sender_id: int | None
+
+    __event_name__ = "chats.message.sent"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
+
+
+@dataclass(frozen=True)
 class ModifiedMessageEvent(BaseEvent):
-    message_id: int
-    new_content: str
-    chat_id: int
+    message_id: str
+    chat_id: str
+    seq: int
     modified_by: int
 
     __event_name__ = "chats.message.modified"
@@ -45,8 +60,9 @@ class ModifiedMessageEvent(BaseEvent):
 
 @dataclass(frozen=True)
 class DeletedMessageEvent(BaseEvent):
-    message_id: int
-    chat_id: int
+    message_id: str
+    chat_id: str
+    seq: int
     deleted_by: int
 
     __event_name__ = "chats.message.deleted"
@@ -58,10 +74,13 @@ class DeletedMessageEvent(BaseEvent):
 class Message(BaseModel, DateMixin):
     __tablename__ = "messages"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    chat_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False, primary_key=True)
+
+    chat_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
     )
+    seq: Mapped[int] = mapped_column(BigInteger, default=0)
+
     author_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     type: Mapped[MessageType] = mapped_column(
         SAEnum(MessageType), default=MessageType.TEXT, nullable=False
@@ -95,11 +114,7 @@ class Message(BaseModel, DateMixin):
 
     __table_args__ = (
         Index("ix_messages_chat_id_created", "chat_id", "created_at"),
-        Index("ix_messages_chat_id_id", "chat_id", "id"),
         Index("ix_messages_chat_not_deleted", "chat_id", "id", 
-              postgresql_where="is_deleted = false"),
-        Index("ix_messages_chat_created_not_deleted", 
-              "chat_id", "created_at",
               postgresql_where="is_deleted = false"),
     )
 
@@ -115,9 +130,10 @@ class Message(BaseModel, DateMixin):
         forwarded_from_message_id: int | None = None,
     ) -> Self:
         if message_type == MessageType.REPLY and reply_to_id is None:
-            raise ValueError("reply_to_id is required for REPLY messages")
+            raise 
 
         instance = cls(
+            id=uuid7(),
             author_id=sender_id,
             chat_id=chat_id,
             content=content,
@@ -137,7 +153,10 @@ class Message(BaseModel, DateMixin):
         self.validate_content()
         self.register_event(
             ModifiedMessageEvent(
-                self.id, new_content, self.chat_id, modified_by=modified_by
+                message_id=str(self.id),
+                chat_id=str(self.chat_id),
+                seq=self.seq,
+                modified_by=modified_by
             )
         )
 
@@ -145,7 +164,10 @@ class Message(BaseModel, DateMixin):
         self.is_deleted = True
         self.register_event(
             DeletedMessageEvent(
-                message_id=self.id, chat_id=self.chat_id, deleted_by=deleted_by
+                message_id=str(self.id),
+                chat_id=str(self.chat_id),
+                seq=self.seq,
+                deleted_by=deleted_by
             )
         )
 
@@ -164,4 +186,4 @@ class Message(BaseModel, DateMixin):
         self.content = escape(self.content, quote=True)
 
         if self.content is not None and '\x00' in self.content:  # type: ignore
-            raise ValueError("Null bytes not allowed")
+            raise 

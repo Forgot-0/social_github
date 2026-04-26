@@ -1,73 +1,58 @@
+from dataclasses import dataclass
 import logging
-from dataclasses import dataclass, field
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.keys import ChatKeys
-from app.chats.models.chat import Chat, ChatType, CreatedChatEvent
-from app.chats.repositories.chat import ChatRepository
 from app.chats.services.livekit_service import LiveKitService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
+from app.chats.dtos.chats import ChatDetailDTO
+from app.chats.models.chat import Chat, ChatType
+from app.chats.repositories.chat import ChatRepository
+
 
 logger = logging.getLogger(__name__)
 
 
-
 @dataclass(frozen=True)
 class CreateChatCommand(BaseCommand):
-    user_jwt_data: UserJWTData
+    name: str | None
+    description: str | None
     chat_type: ChatType
-    member_ids: set[int] = field(default_factory=set)
-    name: str | None = None
-    description: str | None = None
-    is_public: bool = False
+    member_ids: list[int]
+    is_public: bool
+    user_jwt_data: UserJWTData
 
 
 @dataclass(frozen=True)
-class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, int]):
+class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDetailDTO]):
     session: AsyncSession
     chat_repository: ChatRepository
-    livekit_service: LiveKitService
+    livekit_sevice: LiveKitService
     event_bus: BaseEventBus
 
-    async def handle(self, command: CreateChatCommand) -> int:
-        creator_id = int(command.user_jwt_data.id)
-
-        all_member_ids = list(command.member_ids)
-        if creator_id in all_member_ids:
-            all_member_ids.remove(creator_id)
-
+    async def handle(self, command: CreateChatCommand) -> ChatDetailDTO:
+        created_by = int(command.user_jwt_data.id)
         chat = Chat.create(
-            created_by=creator_id,
-            members_ids=all_member_ids,
-            chat_type=command.chat_type,
             name=command.name,
             description=command.description,
-            is_public=command.is_public
+            created_by=created_by,
+            members_ids=command.member_ids,
+            chat_type=command.chat_type,
+            is_public=command.is_public,
         )
         await self.chat_repository.create(chat)
         await self.session.commit()
-        await self.livekit_service.create_room(slug=ChatKeys.chat_call_slug(chat.id))
-
-        await self.event_bus.publish(
-            [CreatedChatEvent(
-                chat_id=chat.id,
-                created_by=creator_id,
-                member_ids=all_member_ids,
-                name=chat.name
-            )]
-        )
+        await self.event_bus.publish(chat.pull_events())
+        await self.livekit_sevice.create_room(str(chat.id))
 
         logger.info(
-            "Chat created",
-            extra={
-                "chat_id": chat.id,
-                "creator": creator_id,
-                "members": len(all_member_ids),
-                "chat_type": command.chat_type
-            },
+            "Create chat", extra={
+                "chat_id": str(chat.id),
+                "chat_type": command.chat_type.value,
+                "created_by": command.user_jwt_data.id,
+            }
         )
 
-        return chat.id
+        return ChatDetailDTO.model_validate(chat.to_dict())

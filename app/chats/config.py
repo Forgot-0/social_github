@@ -2,17 +2,18 @@ from app.core.configs.base import BaseConfig
 
 
 class ChatConfig(BaseConfig):
-    DEFAULT_PAGE_SIZE: int = 50
-    MAX_PAGE_SIZE: int = 200
-
-    MAX_MESSAGE_LENGTH: int = 4096
-    MAX_MEMBERS: int = 100
+    MAX_MEMBERS: int = 1_000
+    MAX_MESSAGE_LENGTH: int = 4_096
+    MAX_EDIT_WINDOW_HOURS: int = 48
+    MAX_EDIT_HISTORY: int = 20
+    MAX_REACTIONS_PER_MESSAGE: int = 20
+    MAX_SEARCH_RESULTS: int = 50
+    MAX_BULK_ADD_MEMBERS: int = 100
+    FAN_OUT_WRITE_THRESHOLD: int = 500
 
     WS_HEARTBEAT_INTERVAL: int = 30
     WS_MAX_CONNECTIONS_PER_USER: int = 2
     RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
-
-    ATTACHMENT_BUCKET: str = "chat-attachments"
 
     CHAT_TOPIC: str = "CHATS"
 
@@ -26,7 +27,7 @@ class ChatConfig(BaseConfig):
     ALLOWED_IMAGE_MIMES: frozenset[str] = frozenset({
     "image/jpeg", "image/png", "image/gif",
     "image/webp", "image/heic", "image/heif",
-})
+    })
     ALLOWED_VIDEO_MIMES: frozenset[str] = frozenset({
         "video/mp4", "video/webm",
         "video/quicktime", "video/x-msvideo",
@@ -49,7 +50,9 @@ class ChatConfig(BaseConfig):
     MAX_MEDIA_SIZE: int = 50 * 1024 * 1024
     DOWNLOAD_URL_TTL: int = 300
 
+    ATTACHMENT_BUCKET: str = "chat-attachments"
     ATTACHMENT_UPLOAD_TOKEN_TTL: int = 3600
+
 
 
 chat_config = ChatConfig()

@@ -10,7 +10,6 @@ from app.chats.exceptions import LiveKitServiceException
 
 logger = logging.getLogger(__name__)
 
-_MODERATOR_LEVEL_THRESHOLD = 8
 
 @dataclass
 class LiveKitService:
@@ -80,27 +79,6 @@ class LiveKitService:
         )
         return token.to_jwt()
 
-    def generate_join_token_for_role(
-        self,
-        slug: str,
-        user_id: str,
-        username: str,
-        role_level: int,
-        can_publish_override: bool | None = None,
-    ) -> str:
-        is_moderator = role_level >= _MODERATOR_LEVEL_THRESHOLD
-        can_publish = can_publish_override if can_publish_override is not None else (role_level > 1)
-
-        return self.generate_join_token(
-            slug=slug,
-            user_id=user_id,
-            username=username,
-            can_publish=can_publish,
-            can_subscribe=True,
-            can_publish_data=True,
-            room_admin=is_moderator,
-        )
-
     async def remove_participant(self, slug: str, identity: str) -> None:
         try:
             async with self._client() as client:
@@ -149,37 +127,6 @@ class LiveKitService:
                 extra={"slug": slug, "identity": identity, "error": str(exc)},
             )
             raise LiveKitServiceException(reason=str(exc)) from exc
-
-    async def set_participant_permissions(
-        self,
-        slug: str,
-        identity: str,
-        can_publish: bool,
-        can_subscribe: bool = True,
-        can_publish_data: bool = True,
-    ) -> None:
-        try:
-            async with self._client() as client:
-                await client.room.update_participant(
-                    lk_api.UpdateParticipantRequest(
-                        room=slug,
-                        identity=identity,
-                        permission=lk_api.ParticipantPermission(
-                            can_publish=can_publish,
-                            can_subscribe=can_subscribe,
-                            can_publish_data=can_publish_data,
-                        ),
-                    )
-                )
-            logger.info(
-                "LiveKit participant permissions updated",
-                extra={"slug": slug, "identity": identity, "can_publish": can_publish},
-            )
-        except Exception as exc:
-            logger.warning(
-                "Could not update LiveKit participant permissions",
-                extra={"slug": slug, "identity": identity, "error": str(exc)},
-            )
 
     async def list_participants(self, slug: str) -> list[LiveKitParticipantsDTO]:
         try:

@@ -29,7 +29,8 @@ class MessageAttachment(BaseModel, DateMixin):
         BigInteger, ForeignKey("messages.id", ondelete="CASCADE"),
         nullable=True, index=True,
     )
-    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    chat_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
     uploader_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
     attachment_type: Mapped[AttachmentType] = mapped_column(
@@ -57,7 +58,7 @@ class MessageAttachment(BaseModel, DateMixin):
 
     @classmethod
     def create(
-        cls, chat_id: int, uploader_id: int,
+        cls, chat_id: UUID, uploader_id: int,
         attachment_type: AttachmentType, s3_key: str, mime_type: str,
         original_filename: str, size: int,
     ) -> Self:

@@ -6,7 +6,7 @@ from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
 from app.core.utils import now_utc
 
-PRESENCE_TTL = chat_config.WS_HEARTBEAT_INTERVAL * 3
+PRESENCE_TTL = chat_config.WS_HEARTBEAT_INTERVAL
 
 
 @dataclass
@@ -24,9 +24,6 @@ class PresenceService:
 
     async def set_offline(self, user_id: int) -> None:
         await self.redis.zrem(ChatKeys.presence_last_seen_zset(), str(user_id))
-
-    async def refresh(self, user_id: int) -> None:
-        await self.set_online(user_id)
 
     async def is_online(self, user_id: int) -> bool:
         score = await self.redis.zscore(ChatKeys.presence_last_seen_zset(), str(user_id))

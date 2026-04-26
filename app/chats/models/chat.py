@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Self
+from uuid import UUID as PyUUID, uuid4
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Index, String
+from sqlalchemy import UUID, BigInteger, Boolean, DateTime, Enum, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
@@ -22,7 +23,7 @@ class ChatType(str, PyEnum):
 
 @dataclass(frozen=True)
 class CreatedChatEvent(BaseEvent):
-    chat_id: int
+    chat_id: str
     created_by: int
     name: str | None
     member_ids: list[int]
@@ -34,8 +35,21 @@ class CreatedChatEvent(BaseEvent):
 
 
 @dataclass(frozen=True)
+class UpdatedChatEvent(BaseEvent):
+    chat_id: str
+    updated_by: int
+    name: str | None
+    description: str | None
+    is_public: bool
+
+    __event_name__ = "chats.chat.updated"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
+
+@dataclass(frozen=True)
 class AddedChatMemberEvent(BaseEvent):
-    chat_id: int
+    chat_id: str
     user_id: int
     role_id: int
 
@@ -47,7 +61,7 @@ class AddedChatMemberEvent(BaseEvent):
 
 @dataclass(frozen=True)
 class KickedChatMemberEvent(BaseEvent):
-    chat_id: int
+    chat_id: str
     requester_id: int
     target_user_id: int
 
@@ -59,9 +73,8 @@ class KickedChatMemberEvent(BaseEvent):
 
 @dataclass(frozen=True)
 class LeftChatMemberEvent(BaseEvent):
-    chat_id: int
+    chat_id: str
     user_id: int
-    username: str
 
     __event_name__ = "chats.member.left"
 
@@ -72,15 +85,17 @@ class LeftChatMemberEvent(BaseEvent):
 class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "chats"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, autoincrement=True)
+    seq_counter:Mapped[int] = mapped_column(BigInteger, default=0)
+
     type: Mapped[ChatType] = mapped_column(Enum(ChatType), nullable=False)
     name: Mapped[str | None] = mapped_column(String(256))
     description: Mapped[str | None] = mapped_column(String(1024))
-    avatar_url: Mapped[str | None] = mapped_column(String(512))
+    avatar_s3_key: Mapped[str | None] = mapped_column(String(512))
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    member_count: Mapped[int] = mapped_column(Integer, default=2)
 
-    last_message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     members: Mapped[list["ChatMember"]] = relationship(back_populates="chat", lazy="noload")
@@ -105,6 +120,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
         instance = cls(
+            id=uuid4(),
             created_by=created_by,
             type=chat_type,
             name=name,
@@ -128,7 +144,30 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             for m_id in members_ids:
                 instance.add_member(m_id, role_id=6)
 
+        instance.register_event(
+            CreatedChatEvent(
+                chat_id=str(instance.id),
+                created_by=created_by,
+                name=name,
+                member_ids=members_ids
+            )
+        )
+
         return instance
+
+    def update(self, updated_by: int, name: str | None, description: str | None, is_public: bool) -> None:
+        self.name = name
+        self.description = description
+        self.is_public = is_public
+        self.register_event(
+            UpdatedChatEvent(
+                chat_id=str(self.id),
+                updated_by=updated_by,
+                name=name,
+                description=description,
+                is_public=is_public
+            )
+        )
 
     def add_member(self, member_id: int, role_id: int) -> None:
         self.members.append(
@@ -137,17 +176,27 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
                 role_id=role_id,
             )
         )
+        self.member_count += 1
         self.register_event(
             AddedChatMemberEvent(
-                chat_id=self.id,
+                chat_id=str(self.id),
                 user_id=member_id,
                 role_id=role_id,
             )
         )
 
+    def leave(self, user_id: int) -> None:
+        if self.created_by == user_id:
+            raise
+
+        self.member_count -= 1
+        self.register_event(LeftChatMemberEvent(
+            chat_id=str(self.id),
+            user_id=user_id,
+        ))
+
     def update_last_activity(self, message_id: int, message_date: datetime) -> None:
         if self.last_activity_at is not None and self.last_activity_at > message_date:
             return
 
-        self.last_message_id = message_id
         self.last_activity_at = message_date

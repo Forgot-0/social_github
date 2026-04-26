@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID as PyUUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy import UUID, BigInteger, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,7 +19,7 @@ class ChatMember(BaseModel, DateMixin):
 
     id:Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
-    chat_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
+    chat_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     role_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("chat_roles.id", ondelete="CASCADE"), index=True

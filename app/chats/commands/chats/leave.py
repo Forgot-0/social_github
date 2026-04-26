@@ -1,59 +1,49 @@
-import logging
 from dataclasses import dataclass
+import logging
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import (
-    AccessDeniedChatException,
-    NotChatMemberException,
-)
-from app.chats.keys import ChatKeys
-from app.chats.models.chat import LeftChatMemberEvent
-from app.chats.models.permission import ChatRolesEnum
+from app.chats.exceptions import NotChatMemberException, NotFoundChatException
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
+
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class LeaveChatCommand(BaseCommand):
+    chat_id: UUID
     user_jwt_data: UserJWTData
-    chat_id: int
 
 
 @dataclass(frozen=True)
 class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
+    access_service: ChatAccessService
     event_bus: BaseEventBus
 
     async def handle(self, command: LeaveChatCommand) -> None:
+        chat = await self.chat_repository.get_by_id(command.chat_id)
+        if chat is None:
+            raise NotFoundChatException(chat_id=str(command.chat_id))
+
         user_id = int(command.user_jwt_data.id)
 
-        member = await self.chat_repository.get_member(command.chat_id, user_id)
-        if not member:
-            raise NotChatMemberException(chat_id=command.chat_id, user_id=user_id)
+        member = await self.chat_repository.get_memebr_chat(command.chat_id, member_id=user_id)
+        if member is None:
+            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
 
-        if member.role_id == ChatRolesEnum.OWNER.value.id:
-            count = await self.chat_repository.get_member_count(command.chat_id)
-            if count > 1:
-                raise AccessDeniedChatException()
+        chat.leave(user_id=user_id)
+        await self.chat_repository.delete_member(member)
 
-        await self.session.delete(member)
-        await self.chat_repository.invalidate_cache(
-            ChatKeys.chat_member_count(member.chat_id),
-            ChatKeys.chat_members_ids(command.chat_id)
-        )
         await self.session.commit()
-        await self.event_bus.publish(
-            [LeftChatMemberEvent(
-                chat_id=member.chat_id,
-                user_id=user_id,
-                username=command.user_jwt_data.username
-            )]
+        await self.event_bus.publish(chat.pull_events())
+        logger.info(
+            "Leave chat", extra={"chat_id": str(chat.id), "leaved_id": user_id}
         )
-
-        logger.info("User left chat", extra={"chat_id": command.chat_id, "user_id": user_id})

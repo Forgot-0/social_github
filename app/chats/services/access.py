@@ -48,6 +48,9 @@ class ChatAccessService:
         if requester.is_banned:
             return False
 
+        if requester.id == target.id:
+            return False
+
         memeber_permissions = requester.effective_permissions()
         for perm in must_permissions:
             if not memeber_permissions.get(perm, False):

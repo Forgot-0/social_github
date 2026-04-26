@@ -6,7 +6,7 @@ from app.core.exceptions import ApplicationException
 
 @dataclass(kw_only=True)
 class NotFoundChatException(ApplicationException):
-    chat_id: int
+    chat_id: str
     code: str = "NOT_FOUND_CHAT"
     status: int = 404
 
@@ -21,7 +21,7 @@ class NotFoundChatException(ApplicationException):
 
 @dataclass(kw_only=True)
 class NotChatMemberException(ApplicationException):
-    chat_id: int
+    chat_id: str
     user_id: int
     code: str = "NOT_CHAT_MEMBER"
     status: int = 403
@@ -52,6 +52,9 @@ class NotFoundMessageException(ApplicationException):
 
 @dataclass(kw_only=True)
 class AccessDeniedChatException(ApplicationException):
+    chat_id: str
+    requester_id: int
+
     code: str = "CHAT_ACCESS_DENIED"
     status: int = 403
 
@@ -61,13 +64,13 @@ class AccessDeniedChatException(ApplicationException):
 
     @property
     def detail(self):
-        return {}
+        return {"chat_id": self.chat_id, "requester_id": self.requester_id}
 
 
 @dataclass(kw_only=True)
 class AlreadyMemberException(ApplicationException):
     user_id: int
-    chat_id: int
+    chat_id: str
     code: str = "ALREADY_CHAT_MEMBER"
     status: int = 409
 
@@ -82,7 +85,7 @@ class AlreadyMemberException(ApplicationException):
 
 @dataclass(kw_only=True)
 class DirectChatAlreadyExistsException(ApplicationException):
-    chat_id: int
+    chat_id: str
     code: str = "DIRECT_CHAT_EXISTS"
     status: int = 409
 
@@ -157,7 +160,7 @@ class LiveKitUnauthorizedException(ApplicationException):
 
 @dataclass(kw_only=True)
 class NoActiveCallException(ApplicationException):
-    chat_id: int
+    chat_id: str
     code: str = "NO_ACTIVE_CALL"
     status: int = 404
 
@@ -172,7 +175,7 @@ class NoActiveCallException(ApplicationException):
 
 @dataclass(kw_only=True)
 class ActiveCallExistsException(ApplicationException):
-    chat_id: int
+    chat_id: str
     code: str = "ACTIVE_CALL_EXISTS"
     status: int = 409
 
