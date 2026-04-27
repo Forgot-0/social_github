@@ -87,7 +87,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
             message_type=command.message_type,
             attachments=claimed,
         )
-        chat.update_last_activity(chat.seq_counter, message_date=msg.created_at)
+        chat.update_last_activity(message_date=msg.created_at)
 
         await self.message_repository.create(msg)
         await self.session.commit()

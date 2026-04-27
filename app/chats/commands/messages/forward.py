@@ -11,7 +11,7 @@ from app.chats.exceptions import (
     NotFoundChatException,
     NotFoundMessageException
 )
-from app.chats.models.attachment import AttachmentStatus, MessageAttachment
+from app.chats.models.attachment import AttachmentStatus
 from app.chats.models.message import Message, MessageType
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
@@ -110,7 +110,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             ),
             attachments=forward_attachments
         )
-        target_chat.update_last_activity(target_chat.seq_counter, forwarded_msg.created_at)
+        target_chat.update_last_activity(forwarded_msg.created_at)
         await self.message_repository.create(forwarded_msg)
         await self.session.commit()
         await self.event_bus.publish(forwarded_msg.pull_events())

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import Select, and_, func, or_, select
@@ -44,6 +45,34 @@ class ChatRepository(IRepository[Chat], CacheRepository):
 
     async def create(self, chat: Chat) -> None:
         self.session.add(chat)
+
+    async def get_chats(
+        self, user_id: int, limit: int,
+        last_activity_at: datetime | None=None, chat_id: UUID | None=None
+    ) -> list[Chat]:
+        stmt = select(Chat).where(
+            ChatMember.user_id==user_id,
+            ChatMember.is_banned.is_(False),
+            Chat.deleted_at.is_(None),
+        ).join(
+            ChatMember, ChatMember.chat_id == Chat.id
+        ).order_by(
+            Chat.last_activity_at.desc().nullslast(), Chat.id.desc()
+        ).limit(limit + 1)
+
+        if last_activity_at is not None and chat_id is not None:
+            stmt = stmt.where(
+            or_(
+                Chat.last_activity_at < last_activity_at,
+                and_(
+                    Chat.last_activity_at == last_activity_at,
+                    Chat.id < chat_id,
+                ),
+            )
+        )
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars())
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

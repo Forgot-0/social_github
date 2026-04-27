@@ -231,7 +231,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             ban=target.is_banned
         ))
 
-    def update_last_activity(self, message_id: int, message_date: datetime) -> None:
+    def update_last_activity(self, message_date: datetime) -> None:
         if self.last_activity_at is not None and self.last_activity_at > message_date:
             return
 
