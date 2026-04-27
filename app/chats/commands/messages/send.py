@@ -10,7 +10,8 @@ from app.chats.exceptions import (
     AccessDeniedChatException,
     AttachmentLimitExceededException,
     AttachmentNotFoundException,
-    NotFoundChatException
+    NotFoundChatException,
+    NotFoundMessageException
 )
 from app.chats.models.attachment import AttachmentStatus, AttachmentType
 from app.chats.models.message import Message, MessageType
@@ -51,13 +52,13 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
         user_id = int(command.user_jwt_data.id)
-        member = await self.chat_repository.get_memebr_chat(
+        member = await self.chat_repository.get_member_chat(
             chat_id=command.chat_id, member_id=user_id
         )
 
-        if not self.access_service.can_update(
+        if not self.access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
-            memeber=member,
+            member=member,
             must_permissions={"message:send"}
         ): raise AccessDeniedChatException(
             chat_id=str(command.chat_id), requester_id=user_id
@@ -68,36 +69,25 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
                 command.upload_tokens
             )
 
-        if claimed:
-            if len(command.upload_tokens) != len(claimed):
-                raise AttachmentNotFoundException(attachment_id="")
+        if claimed and len(command.upload_tokens) != len(claimed):
+            raise AttachmentNotFoundException(attachment_id="")
 
-            media_count = sum(
-                1 for a in claimed if a.attachment_type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
-            )
-            file_count = sum(1 for a in claimed if a.attachment_type == AttachmentType.FILE)
+        if command.reply_to_id is not None:
+            reply_msg = await self.message_repository.get_by_id(command.reply_to_id)
+            if reply_msg is None:
+                raise NotFoundMessageException(message_id=str(command.reply_to_id))
 
-            success = all(True if a.attachment_status == AttachmentStatus.SUCCESS else False for a in claimed)
-
-            if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
-                raise AttachmentLimitExceededException(count=media_count)
-            if file_count > chat_config.MAX_FILES_PER_MESSAGE:
-                raise AttachmentLimitExceededException(count=file_count)
-
-            if success is False:
-                raise AttachmentNotFoundException(attachment_id="")
-
+        chat.seq_counter += 1
         msg = Message.create(
             sender_id=user_id,
             chat_id=command.chat_id,
-            seq=chat.seq_counter+1,
+            seq=chat.seq_counter,
             content=command.content,
             reply_to_id=command.reply_to_id,
             message_type=command.message_type,
-            attachments=claimed
+            attachments=claimed,
         )
         chat.update_last_activity(chat.seq_counter, message_date=msg.created_at)
-        chat.seq_counter += 1
 
         await self.message_repository.create(msg)
         await self.session.commit()

@@ -39,13 +39,13 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDetailD
 
         user_id = int(command.user_jwt_data.id)
 
-        member = await self.chat_repository.get_memebr_chat(
+        member = await self.chat_repository.get_member_chat(
             chat_id=command.chat_id, member_id=user_id
         )
 
-        if not self.access_service.can_update(
+        if not self.access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
-            memeber=member,
+            member=member,
             must_permissions={"chat:update"}
         ): raise AccessDeniedChatException(
             chat_id=str(command.chat_id), requester_id=user_id

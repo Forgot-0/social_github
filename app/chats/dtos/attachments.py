@@ -30,3 +30,9 @@ class AttachmentDownloadUrlDTO(BaseModel):
     url: str
     expires_in: int
 
+class UploadSlotDTO(BaseModel):
+    upload_token: UUID
+    upload_url: str
+    attachment_type: AttachmentType
+    expires_in: int
+

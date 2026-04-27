@@ -9,10 +9,10 @@ from app.core.services.auth.rbac import RBACManager
 class ChatAccessService:
     rbac_manager: RBACManager
 
-    async def can_update(
+    async def has_permissions(
         self,
         user_jwt_data: UserJWTData,
-        memeber: ChatMember | None,
+        member: ChatMember | None,
         must_permissions: set[str]
     ) -> bool:
         if self.rbac_manager.check_permission(
@@ -20,12 +20,12 @@ class ChatAccessService:
         ): 
             return True
 
-        if memeber is None:
+        if member is None:
             return False
 
-        memeber_permissions = memeber.effective_permissions()
+        member_permissions = member.effective_permissions()
         for perm in must_permissions:
-            if not memeber_permissions.get(perm, False):
+            if not member_permissions.get(perm, False):
                 return False
 
         return True
@@ -51,9 +51,9 @@ class ChatAccessService:
         if requester.id == target.id:
             return False
 
-        memeber_permissions = requester.effective_permissions()
+        member_permissions = requester.effective_permissions()
         for perm in must_permissions:
-            if not memeber_permissions.get(perm, False):
+            if not member_permissions.get(perm, False):
                 return False
 
         if requester.role.level < target.role.level:

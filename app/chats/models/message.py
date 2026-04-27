@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING, Optional, Self
 from uuid import UUID as PyUUID, uuid7
 
 
-from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
+from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
-from app.chats.exceptions import MessageTooLongException
+from app.chats.exceptions import AttachmentLimitExceededException, AttachmentNotFoundException, MessageTooLongException
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.events.event import BaseEvent
-from app.chats.models.attachment import MessageAttachment
+from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
 
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
@@ -29,6 +29,7 @@ class MessageType(str, PyEnum):
     FILE = "file"
     SYSTEM = "system"
     REPLY = "reply"
+    FORWARD = "forward"
 
 
 @dataclass(frozen=True)
@@ -96,6 +97,7 @@ class Message(BaseModel, DateMixin):
     forwarded_from_message_id: Mapped[PyUUID | None] = mapped_column(
         UUID, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
     )
+    forwarded_from_author_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -128,6 +130,7 @@ class Message(BaseModel, DateMixin):
         message_type: MessageType = MessageType.TEXT,
         forwarded_from_chat_id: PyUUID | None = None,
         forwarded_from_message_id: PyUUID | None = None,
+        forwarded_from_author_id: int | None=None,
         attachments: list[MessageAttachment] | None = None,
     ) -> Self:
         if message_type == MessageType.REPLY and reply_to_id is None:
@@ -143,12 +146,14 @@ class Message(BaseModel, DateMixin):
             type=message_type,
             forwarded_from_chat_id=forwarded_from_chat_id,
             forwarded_from_message_id=forwarded_from_message_id,
+            forwarded_from_author_id=forwarded_from_author_id,
         )
 
         if message_type != MessageType.SYSTEM and content:
             instance.validate_content()
 
         if attachments is not None:
+            instance.validate_attachments()
             instance.attachments.extend(attachments)
 
         instance.register_event(SendedMessageEvent(
@@ -200,3 +205,20 @@ class Message(BaseModel, DateMixin):
 
         if self.content is not None and '\x00' in self.content:  # type: ignore
             raise 
+
+    def validate_attachments(self) -> None:
+
+        media_count = sum(
+            1 for a in self.attachments if a.attachment_type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
+        )
+        file_count = sum(1 for a in self.attachments if a.attachment_type == AttachmentType.FILE)
+
+        success = all(True if a.attachment_status == AttachmentStatus.SUCCESS else False for a in self.attachments)
+
+        if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
+            raise AttachmentLimitExceededException(count=media_count)
+        if file_count > chat_config.MAX_FILES_PER_MESSAGE:
+            raise AttachmentLimitExceededException(count=file_count)
+
+        if success is False:
+            raise AttachmentNotFoundException(attachment_id="")

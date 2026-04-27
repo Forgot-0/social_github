@@ -45,17 +45,17 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         if chat is None:
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
-        requester = await self.chat_repository.get_memebr_chat(command.chat_id, requester_id)
+        requester = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
         if not requester:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=requester_id)
 
-        if not self.chat_access_service.can_update(
+        if not self.chat_access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
-            memeber=requester,
+            member=requester,
             must_permissions={"member:invite"}
         ): raise AccessDeniedChatException(chat_id=str(chat.id), requester_id=requester_id)
 
-        existing = await self.chat_repository.get_memebr_chat(command.chat_id, command.target_user_id)
+        existing = await self.chat_repository.get_member_chat(command.chat_id, command.target_user_id)
         if existing:
             raise AlreadyMemberException(user_id=command.target_user_id, chat_id=str(command.chat_id))
 

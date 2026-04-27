@@ -28,7 +28,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         result = await self.session.execute(stmt)
         return result.scalar()
 
-    async def get_memebr_chat(self, chat_id: UUID, member_id: int, with_role=True) -> ChatMember | None:
+    async def get_member_chat(self, chat_id: UUID, member_id: int, with_role=True) -> ChatMember | None:
         stmt = select(ChatMember).where(
             ChatMember.chat_id == chat_id,
             ChatMember.user_id == member_id,

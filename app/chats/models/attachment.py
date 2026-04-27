@@ -49,6 +49,8 @@ class MessageAttachment(BaseModel, DateMixin):
     height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    source_attachment_id: Mapped[PyUUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+
     message: Mapped["Message"] = relationship(back_populates="attachments", lazy="noload")
 
     __table_args__ = (
@@ -58,9 +60,9 @@ class MessageAttachment(BaseModel, DateMixin):
 
     @classmethod
     def create(
-        cls, chat_id: UUID, uploader_id: int,
+        cls, chat_id: PyUUID, uploader_id: int,
         attachment_type: AttachmentType, s3_key: str, mime_type: str,
-        original_filename: str, size: int,
+        original_filename: str, size: int
     ) -> Self:
         instance = cls(
             id=uuid7(),
@@ -69,6 +71,18 @@ class MessageAttachment(BaseModel, DateMixin):
             attachment_type=attachment_type, s3_key=s3_key, mime_type=mime_type,
             original_filename=original_filename, size=size,
             attachment_status=AttachmentStatus.PENDING
+        )
+        return instance
+
+    def create_for_forward(self, chat_id: PyUUID) -> MessageAttachment:
+        instance = MessageAttachment(
+            id=uuid7(),
+            chat_id=chat_id,
+            uploader_id=self.uploader_id,
+            attachment_type=self.attachment_type, s3_key=self.s3_key, mime_type=self.mime_type,
+            original_filename=self.original_filename, size=self.size,
+            attachment_status=AttachmentStatus.SUCCESS,
+            source_attachment_id=self.id
         )
         return instance
 

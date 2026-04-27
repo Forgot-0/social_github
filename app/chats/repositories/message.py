@@ -12,13 +12,15 @@ from app.core.filters.base import BaseFilter
 @dataclass
 class MessageRepository(IRepository[Message]):
 
-    async def get_by_id(self, message_id: UUID) -> Message | None:
-        result = await self.session.execute(
-            select(Message).where(
-                Message.id == message_id,
-                Message.is_deleted.is_(False),
-            )
+    async def get_by_id(self, message_id: UUID, with_attachment: bool= False) -> Message | None:
+        stmt = select(Message).where(
+            Message.id == message_id,
+            Message.is_deleted.is_(False),
         )
+        if with_attachment:
+            stmt = stmt.options(selectinload(Message.attachments))
+
+        result = await self.session.execute(stmt)
         return result.scalar()
 
     async def create(self, message: Message) -> None:

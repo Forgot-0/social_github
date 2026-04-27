@@ -39,9 +39,9 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
         requester_id = int(command.user_jwt_data.id)
-        requester = await self.chat_repository.get_memebr_chat(command.chat_id, requester_id, with_role=True)
+        requester = await self.chat_repository.get_member_chat(command.chat_id, requester_id, with_role=True)
 
-        target = await self.chat_repository.get_memebr_chat(command.chat_id, command.target_user_id, with_role=True)
+        target = await self.chat_repository.get_member_chat(command.chat_id, command.target_user_id, with_role=True)
         if not target:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
 

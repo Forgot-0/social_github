@@ -38,9 +38,9 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
         requester_id = int(command.user_jwt_data.id)
-        requester = await self.chat_repository.get_memebr_chat(command.chat_id, member_id=requester_id)
+        requester = await self.chat_repository.get_member_chat(command.chat_id, member_id=requester_id)
 
-        target = await self.chat_repository.get_memebr_chat(command.chat_id, member_id=command.target_user_id)
+        target = await self.chat_repository.get_member_chat(command.chat_id, member_id=command.target_user_id)
         if not target:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
 

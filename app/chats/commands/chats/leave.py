@@ -35,7 +35,7 @@ class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
 
         user_id = int(command.user_jwt_data.id)
 
-        member = await self.chat_repository.get_memebr_chat(command.chat_id, member_id=user_id)
+        member = await self.chat_repository.get_member_chat(command.chat_id, member_id=user_id)
         if member is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
 

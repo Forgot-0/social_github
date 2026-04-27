@@ -54,7 +54,7 @@ class ProjectPermissionService:
         if not memeber_permissions.get("member:invite", False):
             return False
 
-        return memeber.role.level < role.level
+        return memeber.role.level > role.level
 
     def can_view(
         self,

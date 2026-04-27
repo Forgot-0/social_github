@@ -37,7 +37,7 @@ class NotChatMemberException(ApplicationException):
 
 @dataclass(kw_only=True)
 class NotFoundMessageException(ApplicationException):
-    message_id: int
+    message_id: str
     code: str = "NOT_FOUND_MESSAGE"
     status: int = 404
 
