@@ -181,6 +181,9 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         )
 
     def add_member(self, member_id: int, role_id: int) -> None:
+        if self.member_count >= chat_config.MAX_MEMBERS:
+            raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
+
         self.members.append(
             ChatMember(
                 user_id=member_id,

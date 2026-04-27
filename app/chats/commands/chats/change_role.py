@@ -35,7 +35,7 @@ class ChangeMemberRoleCommandHandler(BaseCommandHandler[ChangeMemberRoleCommand,
         requester = await self.chat_repository.get_member_chat(command.chat_id, requester_id, with_role=True)
 
         target = await self.chat_repository.get_member_chat(command.chat_id, command.target_user_id, with_role=True)
-        if not target:
+        if target is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
 
         if not self.chat_access_service.update_member(

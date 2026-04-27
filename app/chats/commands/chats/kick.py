@@ -41,7 +41,7 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
         requester = await self.chat_repository.get_member_chat(command.chat_id, member_id=requester_id)
 
         target = await self.chat_repository.get_member_chat(command.chat_id, member_id=command.target_user_id)
-        if not target:
+        if target is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
 
         if not self.chat_access_service.update_member(

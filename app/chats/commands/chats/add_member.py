@@ -46,7 +46,7 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
         requester = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
-        if not requester:
+        if requester is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=requester_id)
 
         if not self.chat_access_service.has_permissions(
@@ -58,9 +58,6 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         existing = await self.chat_repository.get_member_chat(command.chat_id, command.target_user_id)
         if existing:
             raise AlreadyMemberException(user_id=command.target_user_id, chat_id=str(command.chat_id))
-
-        if chat.member_count >= chat_config.MAX_MEMBERS:
-            raise MemberLimitExceededException(limit=chat_config.MAX_MEMBERS)
 
         chat.add_member(
             member_id=command.target_user_id,

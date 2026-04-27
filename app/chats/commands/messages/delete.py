@@ -36,11 +36,11 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
         user_id = int(command.user_jwt_data.id)
 
         message = await self.message_repository.get_by_id(command.message_id)
-        if not message or message.chat_id != command.chat_id:
+        if message is None or message.chat_id != command.chat_id:
             raise NotFoundMessageException(message_id=str(command.message_id))
 
         member = await self.chat_repository.get_member_chat(command.chat_id, user_id, with_role=True)
-        if not member:
+        if member is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
 
         if (

@@ -49,11 +49,11 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
         source_member = await self.chat_repository.get_member_chat(
             command.source_chat_id, user_id
         )
-        if not source_member:
+        if source_member is None:
             raise NotChatMemberException(chat_id=str(command.source_chat_id), user_id=user_id)
 
         source_msg = await self.message_repository.get_by_id(command.source_message_id, with_attachment=True)
-        if not source_msg or source_msg.chat_id != command.source_chat_id or source_msg.is_deleted:
+        if source_msg is None or source_msg.chat_id != command.source_chat_id or source_msg.is_deleted:
             raise NotFoundMessageException(message_id=str(command.source_message_id))
 
         if not self.chat_access_service.has_permissions(
@@ -64,11 +64,11 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             raise AccessDeniedChatException(chat_id=str(command.source_chat_id), requester_id=user_id)
 
         target_chat = await self.chat_repository.get_by_id(command.target_chat_id)
-        if not target_chat:
+        if target_chat is None:
             raise NotFoundChatException(chat_id=str(command.target_chat_id))
 
         target_member = await self.chat_repository.get_member_chat(command.target_chat_id, user_id)
-        if not target_member:
+        if target_member is None:
             raise NotChatMemberException(chat_id=str(command.target_chat_id), user_id=user_id)
 
         if not self.chat_access_service.has_permissions(

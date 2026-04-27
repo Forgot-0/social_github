@@ -35,7 +35,7 @@ class EditMessageCommandHandler(BaseCommandHandler[EditMessageCommand, MessageDT
         user_id = int(command.user_jwt_data.id)
 
         message = await self.message_repository.get_by_id(command.message_id)
-        if not message or message.chat_id != command.chat_id:
+        if message is None or message.chat_id != command.chat_id:
             raise NotFoundMessageException(message_id=str(command.message_id))
 
         if message.author_id != user_id or message.chat_id != command.chat_id:

@@ -42,13 +42,7 @@ class ChatAccessService:
         ): 
             return True
 
-        if requester is None:
-            return False
-
-        if requester.is_banned:
-            return False
-
-        if requester.id == target.id:
+        if requester is None or requester.is_banned or requester.id == target.id:
             return False
 
         member_permissions = requester.effective_permissions()
@@ -56,6 +50,4 @@ class ChatAccessService:
             if not member_permissions.get(perm, False):
                 return False
 
-        if requester.role.level < target.role.level:
-            return False
-        return True
+        return requester.role.level < target.role.level
