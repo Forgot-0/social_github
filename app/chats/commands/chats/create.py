@@ -7,7 +7,7 @@ from app.chats.services.livekit_service import LiveKitService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.chats.dtos.chats import ChatDetailDTO
+from app.chats.dtos.chats import ChatDTO
 from app.chats.models.chat import Chat, ChatType
 from app.chats.repositories.chat import ChatRepository
 
@@ -26,13 +26,13 @@ class CreateChatCommand(BaseCommand):
 
 
 @dataclass(frozen=True)
-class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDetailDTO]):
+class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
     session: AsyncSession
     chat_repository: ChatRepository
     livekit_sevice: LiveKitService
     event_bus: BaseEventBus
 
-    async def handle(self, command: CreateChatCommand) -> ChatDetailDTO:
+    async def handle(self, command: CreateChatCommand) -> ChatDTO:
         created_by = int(command.user_jwt_data.id)
         chat = Chat.create(
             name=command.name,
@@ -55,4 +55,4 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDetailD
             }
         )
 
-        return ChatDetailDTO.model_validate(chat.to_dict())
+        return ChatDTO.model_validate(chat.to_dict())

@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
+from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
 
@@ -49,13 +50,19 @@ class ChatRepository(IRepository[Chat], CacheRepository):
     async def get_chats(
         self, user_id: int, limit: int,
         last_activity_at: datetime | None=None, chat_id: UUID | None=None
-    ) -> list[Chat]:
-        stmt = select(Chat).where(
+    ) -> list[tuple[Chat, ChatMember, ReadReceipt | None]]:
+        stmt = select(Chat, ChatMember, ReadReceipt).where(
             ChatMember.user_id==user_id,
             ChatMember.is_banned.is_(False),
             Chat.deleted_at.is_(None),
         ).join(
-            ChatMember, ChatMember.chat_id == Chat.id
+            ChatMember, and_(ChatMember.chat_id == Chat.id, ChatMember.user_id==user_id)
+        ).outerjoin(
+            ReadReceipt,
+            and_(
+                ReadReceipt.chat_id == Chat.id,
+                ReadReceipt.user_id == user_id,
+            ),
         ).order_by(
             Chat.last_activity_at.desc().nullslast(), Chat.id.desc()
         ).limit(limit + 1)
@@ -72,7 +79,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         )
 
         result = await self.session.execute(stmt)
-        return list(result.scalars())
+        return list(*result.all())
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.dtos.chats import ChatDetailDTO
+from app.chats.dtos.chats import ChatDTO
 from app.chats.exceptions import AccessDeniedChatException, NotFoundChatException
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
@@ -26,13 +26,13 @@ class UpdateChatCommand(BaseCommand):
 
 
 @dataclass(frozen=True)
-class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDetailDTO]):
+class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDTO]):
     sessions: AsyncSession
     chat_repository: ChatRepository
     access_service: ChatAccessService
     event_bus: BaseEventBus
 
-    async def handle(self, command: UpdateChatCommand) -> ChatDetailDTO:
+    async def handle(self, command: UpdateChatCommand) -> ChatDTO:
         chat = await self.chat_repository.get_by_id(chat_id=command.chat_id)
         if chat is None:
             raise NotFoundChatException(chat_id=str(command.chat_id))
@@ -61,4 +61,4 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDetailD
         await self.sessions.commit()
         await self.event_bus.publish(chat.pull_events())
 
-        return ChatDetailDTO.model_validate(chat.to_dict())
+        return ChatDTO.model_validate(chat.to_dict())
