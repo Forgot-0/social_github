@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, func, select
 from sqlalchemy.orm import selectinload
 
 from app.chats.models.message import Message
@@ -25,6 +25,52 @@ class MessageRepository(IRepository[Message]):
 
     async def create(self, message: Message) -> None:
         self.session.add(message)
+
+    async def get_messages(self, chat_id: UUID, last_message_seq: int | None, limit: int) -> list[Message]:
+        stmt = select(Message).where(
+            Message.chat_id == chat_id,
+            Message.is_deleted.is_(False),
+        ).options(selectinload(Message.reply_to), selectinload(Message.attachments), selectinload(Message.forwarded_from))
+
+        if last_message_seq is not None:
+            stmt = stmt.where(Message.seq < last_message_seq)
+
+        stmt = stmt.order_by(Message.seq.desc()).limit(limit + 1)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_message_context(
+        self,
+        chat_id: UUID,
+        target_seq: int,
+        limit: int = 20
+    ) -> list[Message]:
+        half = limit // 2
+
+        older_stmt = (
+            select(Message)
+            .where(and_(Message.chat_id == chat_id, Message.seq <= target_seq))
+            .order_by(Message.seq.desc())
+            .limit(half)
+            .options(selectinload(Message.attachments))
+        )
+
+        newer_stmt = (
+            select(Message)
+            .where(and_(Message.chat_id == chat_id, Message.seq > target_seq))
+            .order_by(Message.seq.asc())
+            .limit(half)
+            .options(selectinload(Message.attachments))
+        )
+
+        older_res = await self.session.execute(older_stmt)
+        newer_res = await self.session.execute(newer_stmt)
+
+        combined = list(older_res.scalars().all()) + list(newer_res.scalars().all())
+        combined.sort(key=lambda x: x.seq)
+
+        return combined
 
     async def soft_delete(self, message: Message) -> None:
         message.is_deleted = True

@@ -38,6 +38,7 @@ class SendedMessageEvent(BaseEvent):
     chat_id: str
     seq: int
     sender_id: int | None
+    message_type: str
 
     __event_name__ = "chats.message.sent"
 
@@ -160,7 +161,8 @@ class Message(BaseModel, DateMixin):
             message_id=str(instance.id),
             chat_id=str(instance.chat_id),
             seq=instance.seq,
-            sender_id=instance.author_id
+            sender_id=instance.author_id,
+            message_type=message_type
         ))
 
         return instance

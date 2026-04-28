@@ -21,10 +21,16 @@ class MessageDTO(BaseModel):
 
     attachments: list[AttachmentDTO] = Field(default_factory=list)
     reply_to: Optional["MessageDTO"] = Field(default=None)
+    forwarded_from: Optional["MessageDTO"] = Field(default=None)
 
 
 class ReadDetail(BaseModel):
     last_read_message_seq: int
     last_read_at: datetime
 
+
+class MessagesDTO(BaseModel):
+    messages: list[MessageDTO]
+    next_cursor: int | None
+    has_next: bool
 

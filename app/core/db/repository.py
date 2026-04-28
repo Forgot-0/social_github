@@ -145,11 +145,10 @@ class CacheRepository:
 
         if data is None:
             data = await func(*args, **kwargs)
-            cahed_data = data.model_dump_json()
-            await self.redis.setex(key, time=ttl, value=cahed_data)
+            cached_data = data.model_dump_json()
+            await self.redis.setex(key, time=ttl, value=cached_data)
             return data
         return type_model.model_validate_json(data)
-
 
     async def cache(
         self,

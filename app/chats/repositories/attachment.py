@@ -4,12 +4,12 @@ from uuid import UUID
 from sqlalchemy import Select, select
 
 from app.chats.models.attachment import MessageAttachment
-from app.core.db.repository import IRepository
+from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
 
 
 @dataclass
-class AttachmentRepository(IRepository[MessageAttachment]):
+class AttachmentRepository(IRepository[MessageAttachment], CacheRepository):
 
     async def get_by_id(self, attachment_id: UUID) -> MessageAttachment | None:
         result = await self.session.execute(
