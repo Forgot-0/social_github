@@ -11,6 +11,7 @@ from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.livekit_service import LiveKitService
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.websockets.base import BaseConnectionManager
 
@@ -31,6 +32,7 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
     livekit_service: LiveKitService
     connection_manager: BaseConnectionManager
     message_repository: MessageRepository
+    event_bus: BaseEventBus
 
     async def handle(self, command: JoinCallCommand) -> JoinTokenDTO:
         user_id = int(command.user_jwt_data.id)
@@ -58,7 +60,7 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
             message_type=MessageType.SYSTEM
         )
         chat.update_last_activity(msg.created_at)
-
+        await self.event_bus.publish(msg.pull_events())
         logger.info(
             "User joined call",
             extra={"chat_id": command.chat_id, "user_id": user_id, "slug": str(chat.id)},

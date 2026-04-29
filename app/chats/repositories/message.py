@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import Select, and_, func, select
+from sqlalchemy import Select, and_, select
 from sqlalchemy.orm import selectinload
 
 from app.chats.models.message import Message
@@ -30,7 +30,11 @@ class MessageRepository(IRepository[Message]):
         stmt = select(Message).where(
             Message.chat_id == chat_id,
             Message.is_deleted.is_(False),
-        ).options(selectinload(Message.reply_to), selectinload(Message.attachments), selectinload(Message.forwarded_from))
+        ).options(
+            selectinload(Message.reply_to),
+            selectinload(Message.attachments),
+            selectinload(Message.forwarded_from)
+        )
 
         if last_message_seq is not None:
             stmt = stmt.where(Message.seq < last_message_seq)
@@ -38,7 +42,7 @@ class MessageRepository(IRepository[Message]):
         stmt = stmt.order_by(Message.seq.desc()).limit(limit + 1)
 
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.scalars())
 
     async def get_message_context(
         self,
@@ -53,7 +57,11 @@ class MessageRepository(IRepository[Message]):
             .where(and_(Message.chat_id == chat_id, Message.seq <= target_seq))
             .order_by(Message.seq.desc())
             .limit(half)
-            .options(selectinload(Message.attachments))
+            .options(
+                selectinload(Message.reply_to),
+                selectinload(Message.attachments),
+                selectinload(Message.forwarded_from)
+            )
         )
 
         newer_stmt = (
@@ -61,14 +69,17 @@ class MessageRepository(IRepository[Message]):
             .where(and_(Message.chat_id == chat_id, Message.seq > target_seq))
             .order_by(Message.seq.asc())
             .limit(half)
-            .options(selectinload(Message.attachments))
+            .options(
+                selectinload(Message.reply_to),
+                selectinload(Message.attachments),
+                selectinload(Message.forwarded_from)
+            )
         )
 
         older_res = await self.session.execute(older_stmt)
         newer_res = await self.session.execute(newer_stmt)
 
         combined = list(older_res.scalars().all()) + list(newer_res.scalars().all())
-        combined.sort(key=lambda x: x.seq)
 
         return combined
 

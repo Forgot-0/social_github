@@ -47,6 +47,18 @@ class SendedMessageEvent(BaseEvent):
 
 
 @dataclass(frozen=True)
+class ReadedMessageEvent(BaseEvent):
+    chat_id: str
+    seq: int
+    reader_id: int
+
+    __event_name__ = "chats.message.readed"
+
+    def get_partition_key(self) -> str:
+        return str(self.chat_id)
+
+
+@dataclass(frozen=True)
 class ModifiedMessageEvent(BaseEvent):
     message_id: str
     chat_id: str
