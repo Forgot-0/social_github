@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import Select, and_, select
@@ -12,7 +13,7 @@ from app.core.filters.base import BaseFilter
 @dataclass
 class MessageRepository(IRepository[Message]):
 
-    async def get_by_id(self, message_id: UUID, with_attachment: bool= False) -> Message | None:
+    async def get_by_id(self, message_id: UUID, with_attachment: bool = False) -> Message | None:
         stmt = select(Message).where(
             Message.id == message_id,
             Message.is_deleted.is_(False),
@@ -26,7 +27,13 @@ class MessageRepository(IRepository[Message]):
     async def create(self, message: Message) -> None:
         self.session.add(message)
 
-    async def get_messages(self, chat_id: UUID, last_message_seq: int | None, limit: int) -> list[Message]:
+    async def get_paginated_chat_messages(
+        self,
+        chat_id: UUID,
+        cursor_seq: int | None,
+        limit: int,
+        direction: Literal["backward", "forward"] = "backward"
+    ) -> list[Message]:
         stmt = select(Message).where(
             Message.chat_id == chat_id,
             Message.is_deleted.is_(False),
@@ -36,10 +43,17 @@ class MessageRepository(IRepository[Message]):
             selectinload(Message.forwarded_from)
         )
 
-        if last_message_seq is not None:
-            stmt = stmt.where(Message.seq < last_message_seq)
+        if cursor_seq is not None:
+            if direction == "backward":
+                stmt = stmt.where(Message.seq < cursor_seq)
+                stmt = stmt.order_by(Message.seq.desc())
+            else:
+                stmt = stmt.where(Message.seq > cursor_seq)
+                stmt = stmt.order_by(Message.seq.asc())
+        else:
+            stmt = stmt.order_by(Message.seq.desc())
 
-        stmt = stmt.order_by(Message.seq.desc()).limit(limit + 1)
+        stmt = stmt.limit(limit + 1)
 
         result = await self.session.execute(stmt)
         return list(result.scalars())
@@ -82,9 +96,6 @@ class MessageRepository(IRepository[Message]):
         combined = list(older_res.scalars().all()) + list(newer_res.scalars().all())
 
         return combined
-
-    async def soft_delete(self, message: Message) -> None:
-        message.is_deleted = True
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

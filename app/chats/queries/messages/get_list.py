@@ -14,7 +14,7 @@ class GetMessagesQuery(BaseQuery):
     user_jwt_data: UserJWTData
     chat_id: UUID
     limit: int = 30
-    last_id: int | None = None
+    cursor_message_seq: int | None = None
 
 
 @dataclass(frozen=True)
@@ -30,10 +30,11 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessagesDTO]):
             raise NotChatMemberException(chat_id=str(query.chat_id), user_id=user_id)
 
         limit = min(query.limit, 100)
-        messages = await self.message_repository.get_messages(
+        messages = await self.message_repository.get_paginated_chat_messages(
             chat_id=query.chat_id,
-            last_message_seq=query.last_id,
+            cursor_seq=query.cursor_message_seq,
             limit=limit,
+            direction="backward"
         )
         return MessagesDTO(
             messages=[MessageDTO.model_validate(msg.to_dict()) for msg in messages[:-1]],
