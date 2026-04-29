@@ -50,4 +50,4 @@ class ChatAccessService:
             if not member_permissions.get(perm, False):
                 return False
 
-        return requester.role.level < target.role.level
+        return requester.role.level >= target.role.level

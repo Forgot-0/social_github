@@ -20,7 +20,7 @@ class AttachmentRepository(IRepository[MessageAttachment], CacheRepository):
     async def get_by_ids(self, attachment_ids: list[UUID]) -> list[MessageAttachment]:
         result = await self.session.execute(
             select(MessageAttachment)
-            .where(MessageAttachment.id == attachment_ids)
+            .where(MessageAttachment.id.in_(attachment_ids))
             .order_by(MessageAttachment.created_at)
         )
         return list(result.scalars().all())
