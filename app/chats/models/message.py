@@ -4,18 +4,22 @@ from html import escape
 from typing import TYPE_CHECKING, Optional, Self
 from uuid import UUID as PyUUID, uuid7
 
-
 from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
-from app.chats.exceptions import AttachmentLimitExceededException, AttachmentNotFoundException, MessageTooLongException
+from app.chats.exceptions import (
+    AttachmentLimitExceededException,
+    AttachmentNotFoundException,
+    MessageTooLongException
+)
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.events.event import BaseEvent
 from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
 
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
+
 
 class MessageStatus(PyEnum):
     sent = "sent"
@@ -227,7 +231,7 @@ class Message(BaseModel, DateMixin):
         )
         file_count = sum(1 for a in self.attachments if a.attachment_type == AttachmentType.FILE)
 
-        success = all(True if a.attachment_status == AttachmentStatus.SUCCESS else False for a in self.attachments)
+        success = all(a.attachment_status == AttachmentStatus.SUCCESS for a in self.attachments)
 
         if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
             raise AttachmentLimitExceededException(count=media_count)
