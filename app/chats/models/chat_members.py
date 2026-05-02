@@ -6,6 +6,7 @@ from sqlalchemy import UUID, BigInteger, Boolean, DateTime, ForeignKey, Index, U
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.chats.config import chat_config
 from app.chats.models.chat_roles import ChatRole
 from app.core.db.base_model import BaseModel, DateMixin
 
@@ -13,11 +14,10 @@ if TYPE_CHECKING:
     from app.chats.models.chat import Chat
 
 
-
 class ChatMember(BaseModel, DateMixin):
     __tablename__ = "chat_members"
 
-    id:Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
     chat_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -36,6 +36,8 @@ class ChatMember(BaseModel, DateMixin):
     __table_args__ = (
         UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),
         Index("ix_chat_members_user_chat", "user_id", "chat_id"),
+        Index("ix_chat_members_chat_active_user", "chat_id", "is_banned", "user_id"),
+        Index("ix_chat_members_chat_role_user", "chat_id", "role_id", "user_id"),
     )
 
     def effective_permissions(self) -> dict[str, bool]:
@@ -55,3 +57,25 @@ class ChatMember(BaseModel, DateMixin):
     def role_name(self) -> str | None:
         return self.role.name if self.role is not None else None
 
+    @property
+    def is_staff(self) -> bool:
+        if self.role is None:
+            return False
+        return self.role.level >= chat_config.CHAT_STAFF_MIN_ROLE_LEVEL
+
+    @property
+    def is_editor_or_above(self) -> bool:
+        if self.role is None:
+            return False
+        return self.role.level >= chat_config.CHAT_EDITOR_MIN_ROLE_LEVEL
+
+    @property
+    def is_channel_subscriber(self) -> bool:
+        return self.role_id == 6
+
+    @property
+    def is_channel_staff(self) -> bool:
+        return self.role_id in {1, 2, 3} or self.is_editor_or_above
+
+    def can_bypass_slow_mode(self) -> bool:
+        return self.is_staff or self.has_permission("slowmode:bypass")

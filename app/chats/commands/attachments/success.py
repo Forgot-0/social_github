@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 import logging
 
 from app.chats.tasks.success_attachment import AttachmentProccessTask
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SuccessUploadAttachmentsCommand(BaseCommand):
-    chat_id: int
+    chat_id: UUID
     upload_tokens: list[str]
     user_jwt_data: UserJWTData
 

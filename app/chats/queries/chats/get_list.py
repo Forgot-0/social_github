@@ -14,8 +14,8 @@ from app.core.services.auth.dto import UserJWTData
 class GetListChatUserQuery(BaseQuery):
     user_jwt_data: UserJWTData
     limit: int = 50
-    last_chat_id: UUID | None
-    last_activity_at: datetime | None
+    last_chat_id: UUID | None = None
+    last_activity_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -23,35 +23,44 @@ class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListCha
     chat_repository: ChatRepository
 
     async def handle(self, query: GetListChatUserQuery) -> ListChats:
-        chats = await self.chat_repository.get_chats(
+        limit = min(max(query.limit, 1), 100)
+        rows = await self.chat_repository.get_chats(
             user_id=int(query.user_jwt_data.id),
-            limit=query.limit,
+            limit=limit,
             last_activity_at=query.last_activity_at,
-            chat_id=query.last_chat_id
+            chat_id=query.last_chat_id,
         )
+        page = rows[:limit]
+
+        chats = []
+        for chat, member, read in page:
+            read_dto = ReadDetail.model_validate(read.to_dict()) if read is not None else None
+            chats.append(ChatDTO(
+                id=chat.id,
+                seq_counter=chat.seq_counter,
+                last_activity_at=chat.last_activity_at,
+                type=chat.type,
+                name=chat.name,
+                description=chat.description,
+                avatar_s3_key=chat.avatar_s3_key,
+                is_public=chat.is_public,
+                admin_only=chat.admin_only,
+                slow_mode_seconds=chat.slow_mode_seconds,
+                permissions=chat.permissions or {},
+                created_by=chat.created_by,
+                member_count=chat.member_count,
+                unread_count=(
+                    max(0, chat.seq_counter - read.last_read_message_seq)
+                    if read is not None
+                    else chat.seq_counter
+                ),
+                me=MemberChatDTO.model_validate(member.to_dict()),
+                last_read=read_dto,
+            ))
 
         return ListChats(
-            has_next=len(chats) > query.limit,
-            chats=[ChatDTO(
-                id=chat[0].id,
-                seq_counter=chat[0].seq_counter,
-                last_activity_at=chat[0].last_activity_at,
-                type=chat[0].type,
-                name=chat[0].name,
-                description=chat[0].description,
-                avatar_s3_key=chat[0].avatar_s3_key,
-                is_public=chat[0].is_public,
-                created_by=chat[0].created_by,
-                member_count=chat[0].member_count,
-                unread_count=(
-                    chat[0].seq_counter-chat[2].last_read_message_seq
-                    if chat[2] is not None
-                    else 99
-                ),
-                me=MemberChatDTO.model_validate(chat[1].to_dict()),
-                last_read=ReadDetail.model_validate(chat[2].to_dict() if chat[2] is not None else None)
-            ) for chat in chats],
-            next_date=chats[-1][0].last_activity_at,
-            next_chat_id=chats[-1][0].id
+            has_next=len(rows) > limit,
+            chats=chats,
+            next_date=page[-1][0].last_activity_at if len(rows) > limit and page else None,
+            next_chat_id=page[-1][0].id if len(rows) > limit and page else None,
         )
-

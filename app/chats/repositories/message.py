@@ -58,6 +58,30 @@ class MessageRepository(IRepository[Message]):
         result = await self.session.execute(stmt)
         return list(result.scalars())
 
+    async def get_chat_messages_after_seq(
+        self,
+        chat_id: UUID,
+        last_seq: int,
+        limit: int,
+    ) -> list[Message]:
+        stmt = (
+            select(Message)
+            .where(
+                Message.chat_id == chat_id,
+                Message.seq > last_seq,
+                Message.is_deleted.is_(False),
+            )
+            .order_by(Message.seq.asc())
+            .limit(limit + 1)
+            .options(
+                selectinload(Message.reply_to),
+                selectinload(Message.attachments),
+                selectinload(Message.forwarded_from),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
     async def get_message_context(
         self,
         chat_id: UUID,

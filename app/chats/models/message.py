@@ -11,7 +11,8 @@ from app.chats.config import chat_config
 from app.chats.exceptions import (
     AttachmentLimitExceededException,
     AttachmentNotFoundException,
-    MessageTooLongException
+    MessageTooLongException,
+    InvalidMessageException,
 )
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.events.event import BaseEvent
@@ -151,7 +152,7 @@ class Message(BaseModel, DateMixin):
         attachments: list[MessageAttachment] | None = None,
     ) -> Self:
         if message_type == MessageType.REPLY and reply_to_id is None:
-            raise 
+            raise InvalidMessageException(reason="reply_to_id is required for reply messages")
 
         instance = cls(
             id=uuid7(),
@@ -178,7 +179,7 @@ class Message(BaseModel, DateMixin):
             chat_id=str(instance.chat_id),
             seq=instance.seq,
             sender_id=instance.author_id,
-            message_type=message_type
+            message_type=message_type.value
         ))
 
         return instance
@@ -222,7 +223,7 @@ class Message(BaseModel, DateMixin):
         self.content = escape(self.content, quote=True)
 
         if self.content is not None and '\x00' in self.content:  # type: ignore
-            raise 
+            raise InvalidMessageException(reason="message content contains null byte")
 
     def validate_attachments(self) -> None:
 

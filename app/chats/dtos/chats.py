@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.chats.dtos.members import MemberChatDTO
 from app.chats.dtos.messages import ReadDetail
@@ -19,12 +19,15 @@ class ChatDTO(BaseModel):
     avatar_s3_key: str | None
 
     is_public: bool
+    admin_only: bool = False
+    slow_mode_seconds: int = 0
+    permissions: dict[str, bool] = Field(default_factory=dict)
     created_by: int
 
     member_count: int
-    unread_count: int
-    me: MemberChatDTO
-    last_read: ReadDetail | None
+    unread_count: int = 0
+    me: MemberChatDTO | None = None
+    last_read: ReadDetail | None = None
 
 
 class ChatDetaiDTO(BaseModel):
@@ -38,6 +41,9 @@ class ChatDetaiDTO(BaseModel):
     avatar_s3_key: str | None
 
     is_public: bool
+    admin_only: bool = False
+    slow_mode_seconds: int = 0
+    permissions: dict[str, bool] = Field(default_factory=dict)
     created_by: int
 
     member_count: int
@@ -48,5 +54,4 @@ class ListChats(BaseModel):
     has_next: bool
     chats: list[ChatDTO]
     next_date: datetime | None
-    next_chat_id: UUID
-
+    next_chat_id: UUID | None = None

@@ -44,14 +44,14 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
         if target is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
 
-        if not self.chat_access_service.update_member(
+        if not await self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,
             must_permissions={"member:kick"}
         ): raise AccessDeniedChatException(chat_id=str(chat.id), requester_id=requester_id)
 
-        chat.kick_member(target.id, requester_id=requester_id)
+        chat.kick_member(command.target_user_id, requester_id=requester_id)
 
         await self.chat_repository.delete_member(target)
         await self.session.commit()

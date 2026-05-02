@@ -9,7 +9,7 @@ from app.chats.exceptions import (
     AccessDeniedChatException,
     NotChatMemberException,
     NotFoundChatException,
-    NotFoundMessageException
+    NotFoundMessageException,
 )
 from app.chats.models.attachment import AttachmentStatus
 from app.chats.models.message import Message, MessageType
@@ -17,6 +17,7 @@ from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.access import ChatAccessService
+from app.chats.services.slow_mode import SlowModeService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
@@ -41,6 +42,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
     message_repository: MessageRepository
     attachment_repository: AttachmentRepository
     chat_access_service: ChatAccessService
+    slow_mode_service: SlowModeService
     event_bus: BaseEventBus
 
     async def handle(self, command: ForwardMessageCommand) -> MessageDTO:
@@ -56,7 +58,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
         if source_msg is None or source_msg.chat_id != command.source_chat_id or source_msg.is_deleted:
             raise NotFoundMessageException(message_id=str(command.source_message_id))
 
-        if not self.chat_access_service.has_permissions(
+        if not await self.chat_access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
             member=source_member,
             must_permissions={"message:read"},
@@ -71,12 +73,18 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
         if target_member is None:
             raise NotChatMemberException(chat_id=str(command.target_chat_id), user_id=user_id)
 
-        if not self.chat_access_service.has_permissions(
+        if not await self.chat_access_service.can_send_message(
             user_jwt_data=command.user_jwt_data,
+            chat=target_chat,
             member=target_member,
-            must_permissions={"message:send"},
         ):
             raise AccessDeniedChatException(chat_id=str(command.target_chat_id), requester_id=user_id)
+
+        await self.slow_mode_service.is_slow(
+            chat=target_chat,
+            user_id=user_id,
+            member=target_member,
+        )
 
         forward_attachments = []
         for attachment in source_msg.attachments:

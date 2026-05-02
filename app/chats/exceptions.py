@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from app.chats.config import chat_config
 from app.core.exceptions import ApplicationException
 
 
@@ -68,6 +69,37 @@ class AccessDeniedChatException(ApplicationException):
 
 
 @dataclass(kw_only=True)
+class SlowModeOutOfRangeException(ApplicationException):
+    seconds: int
+    code: str = "SLOW_MODE_OUT_OF_RANGE"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "slow_mode_seconds is out of allowed range"
+
+    @property
+    def detail(self) :
+        return {"seconds": self.seconds, "valid_range": [0, chat_config.MAX_SLOW_MODE_SECONDS]}
+
+
+@dataclass(kw_only=True)
+class SlowModeLimitException(ApplicationException):
+    chat_id: str
+    retry_after: int
+    code: str = "SLOW_MODE_LIMIT"
+    status: int = 429
+
+    @property
+    def message(self) -> str:
+        return "Slow mode is enabled for this chat"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"chat_id": self.chat_id, "retry_after": self.retry_after}
+
+
+@dataclass(kw_only=True)
 class AlreadyMemberException(ApplicationException):
     user_id: int
     chat_id: str
@@ -81,6 +113,21 @@ class AlreadyMemberException(ApplicationException):
     @property
     def detail(self):
         return {"user_id": self.user_id, "chat_id": self.chat_id}
+
+
+@dataclass(kw_only=True)
+class TooLongChatRoleNameException(ApplicationException):
+    role_name: str
+    code: str = "TOO_LONG_CHAT_ROLE_NAME"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Too long chat role name"
+
+    @property
+    def detail(self):
+        return {"role_name": self.role_name, "max_len": 32}
 
 
 @dataclass(kw_only=True)
@@ -246,3 +293,47 @@ class AttachmentNotFoundException(ApplicationException):
     @property
     def detail(self) -> dict[str, Any]:
         return {"attachment_id": self.attachment_id}
+
+
+@dataclass(kw_only=True)
+class IdempotencyConflictException(ApplicationException):
+    key: str
+    code: str = "IDEMPOTENCY_CONFLICT"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return "Request with this idempotency key is already being processed"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"key": self.key}
+
+
+@dataclass(kw_only=True)
+class InvalidMessageException(ApplicationException):
+    reason: str
+    code: str = "INVALID_MESSAGE"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Invalid message payload"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"reason": self.reason}
+
+
+@dataclass(kw_only=True)
+class EmptyAttachmentUploadRequestException(ApplicationException):
+    code: str = "EMPTY_ATTACHMENT_UPLOAD_REQUEST"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "At least one attachment upload must be requested"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {}

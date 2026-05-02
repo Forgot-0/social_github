@@ -40,7 +40,7 @@ class MarkAsReadCommandHandler(BaseCommandHandler[MarkAsReadCommand, None]):
         if not member:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
 
-        if not self.access_service.has_permissions(
+        if not await self.access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
             member=member,
             must_permissions={"message:read"}

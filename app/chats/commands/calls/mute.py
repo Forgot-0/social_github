@@ -45,7 +45,7 @@ class MuteParticipantCommandHandler(BaseCommandHandler[MuteParticipantCommand, N
         if target is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
 
-        if not self.chat_access_service.update_member(
+        if not await self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,

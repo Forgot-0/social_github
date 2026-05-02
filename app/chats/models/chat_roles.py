@@ -3,6 +3,7 @@ from typing import Self
 from sqlalchemy import JSON, BigInteger, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.chats.exceptions import TooLongChatRoleNameException
 from app.core.db.base_model import BaseModel
 
 
@@ -33,5 +34,5 @@ class ChatRole(BaseModel):
 
     def _validate_role_name(self, name: str) -> None:
         if len(name) > 32:
-            raise
+            raise TooLongChatRoleNameException(role_name=name)
 

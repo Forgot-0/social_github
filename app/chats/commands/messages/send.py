@@ -4,27 +4,26 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO
 from app.chats.exceptions import (
     AccessDeniedChatException,
-    AttachmentLimitExceededException,
     AttachmentNotFoundException,
     NotFoundChatException,
-    NotFoundMessageException
+    NotFoundMessageException,
 )
-from app.chats.models.attachment import AttachmentStatus, AttachmentType
 from app.chats.models.message import Message, MessageType
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.access import ChatAccessService
+from app.chats.services.slow_mode import SlowModeService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True, kw_only=True)
 class SendMessageCommand(BaseCommand):
@@ -44,6 +43,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
     access_service: ChatAccessService
     message_repository: MessageRepository
     attachment_repository: AttachmentRepository
+    slow_mode_sevice: SlowModeService
     event_bus: BaseEventBus
 
     async def handle(self, command: SendMessageCommand) -> MessageDTO:
@@ -56,16 +56,20 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
             chat_id=command.chat_id, member_id=user_id
         )
 
-        if not self.access_service.has_permissions(
+        if not await self.access_service.can_send_message(
             user_jwt_data=command.user_jwt_data,
+            chat=chat,
             member=member,
-            must_permissions={"message:send"}
-        ): raise AccessDeniedChatException(
-            chat_id=str(command.chat_id), requester_id=user_id
-        )
+        ):
+            raise AccessDeniedChatException(
+                chat_id=str(command.chat_id), requester_id=user_id
+            )
+
+        await self.slow_mode_sevice.is_slow(chat=chat, user_id=user_id, member=member)
+
         claimed = []
         if command.upload_tokens:
-            claimed= await self.attachment_repository.get_by_ids(
+            claimed = await self.attachment_repository.get_by_ids(
                 command.upload_tokens
             )
 
@@ -100,6 +104,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
                 "message_id": msg.id,
                 "author": user_id,
                 "attachments": len(claimed),
+                "fanout_strategy": chat.fanout_strategy.value,
             },
         )
         return MessageDTO.model_validate(msg.to_dict())

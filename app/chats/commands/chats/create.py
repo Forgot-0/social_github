@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,9 @@ class CreateChatCommand(BaseCommand):
     member_ids: list[int]
     is_public: bool
     user_jwt_data: UserJWTData
+    admin_only: bool = False
+    slow_mode_seconds: int = 0
+    permissions: dict[str, bool] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,9 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
             members_ids=command.member_ids,
             chat_type=command.chat_type,
             is_public=command.is_public,
+            admin_only=command.admin_only,
+            slow_mode_seconds=command.slow_mode_seconds,
+            permissions=command.permissions,
         )
         await self.chat_repository.create(chat)
         await self.session.commit()
@@ -52,6 +58,7 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
                 "chat_id": str(chat.id),
                 "chat_type": command.chat_type.value,
                 "created_by": command.user_jwt_data.id,
+                "fanout_strategy": chat.fanout_strategy.value,
             }
         )
 

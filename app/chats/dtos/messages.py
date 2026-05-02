@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.chats.models.message import MessageType
+
 from app.chats.dtos.attachments import AttachmentDTO
 
 
@@ -12,6 +14,7 @@ class MessageDTO(BaseModel):
     chat_id: UUID
     seq: int
     author_id: int | None
+    type: MessageType
     content: str | None
     reply_to_id: UUID | None
     forwarded_from_chat_id: UUID | None

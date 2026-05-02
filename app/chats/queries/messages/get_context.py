@@ -9,20 +9,20 @@ from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
 
 
-@dataclass(frozen=True)
-class GetMessagesQuery(BaseQuery):
+@dataclass(frozen=True, kw_only=True)
+class GetMessageContextQuery(BaseQuery):
     user_jwt_data: UserJWTData
     chat_id: UUID
-    limit: int = 30
-    cursor_message_seq: int | None = None
+    target_seq: int
+    limit: int = 40
 
 
 @dataclass(frozen=True)
-class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessagesDTO]):
+class GetMessageContextQueryHandler(BaseQueryHandler[GetMessageContextQuery, MessagesDTO]):
     chat_repository: ChatRepository
     message_repository: MessageRepository
 
-    async def handle(self, query: GetMessagesQuery) -> MessagesDTO:
+    async def handle(self, query: GetMessageContextQuery) -> MessagesDTO:
         user_id = int(query.user_jwt_data.id)
 
         member = await self.chat_repository.get_member_chat(query.chat_id, user_id, with_role=False)
@@ -30,16 +30,14 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessagesDTO]):
             raise NotChatMemberException(chat_id=str(query.chat_id), user_id=user_id)
 
         limit = min(max(query.limit, 1), 100)
-        messages = await self.message_repository.get_paginated_chat_messages(
+        messages = await self.message_repository.get_message_context(
             chat_id=query.chat_id,
-            cursor_seq=query.cursor_message_seq,
+            target_seq=query.target_seq,
             limit=limit,
-            direction="backward",
         )
-        page = messages[:limit]
-
+        messages = sorted(messages, key=lambda msg: msg.seq)
         return MessagesDTO(
-            messages=[MessageDTO.model_validate(msg.to_dict()) for msg in page],
-            has_next=len(messages) > limit,
-            next_cursor=page[-1].seq if len(messages) > limit and page else None,
+            messages=[MessageDTO.model_validate(msg.to_dict()) for msg in messages],
+            has_next=False,
+            next_cursor=None,
         )

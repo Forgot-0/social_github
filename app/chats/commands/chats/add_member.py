@@ -4,15 +4,12 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.config import chat_config
 from app.chats.exceptions import (
     AccessDeniedChatException,
     AlreadyMemberException,
-    MemberLimitExceededException,
     NotChatMemberException,
     NotFoundChatException,
 )
-from app.chats.keys import ChatKeys
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -49,7 +46,7 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         if requester is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=requester_id)
 
-        if not self.chat_access_service.has_permissions(
+        if not await self.chat_access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
             member=requester,
             must_permissions={"member:invite"}

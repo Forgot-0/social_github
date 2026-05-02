@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 from uuid import UUID
 
@@ -15,14 +15,17 @@ from app.core.services.auth.dto import UserJWTData
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True)
 class UpdateChatCommand(BaseCommand):
     chat_id: UUID
     name: str | None
     description: str | None
-    is_public: bool
-
+    is_public: bool | None
     user_jwt_data: UserJWTData
+    admin_only: bool | None = None
+    slow_mode_seconds: int | None = None
+    permissions: dict[str, bool] | None = None
 
 
 @dataclass(frozen=True)
@@ -43,19 +46,23 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDTO]):
             chat_id=command.chat_id, member_id=user_id
         )
 
-        if not self.access_service.has_permissions(
+        if not await self.access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
             member=member,
             must_permissions={"chat:update"}
-        ): raise AccessDeniedChatException(
-            chat_id=str(command.chat_id), requester_id=user_id
-        )
+        ):
+            raise AccessDeniedChatException(
+                chat_id=str(command.chat_id), requester_id=user_id
+            )
 
         chat.update(
             updated_by=user_id,
             name=command.name,
             description=command.description,
-            is_public=command.is_public
+            is_public=command.is_public,
+            admin_only=command.admin_only,
+            slow_mode_seconds=command.slow_mode_seconds,
+            permissions=command.permissions,
         )
 
         await self.sessions.commit()

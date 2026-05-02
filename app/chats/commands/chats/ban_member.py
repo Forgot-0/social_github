@@ -45,14 +45,15 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
         if target is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
 
-        if not self.chat_access_service.update_member(
+        if not await self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,
             must_permissions={"member:ban"}
         ): raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=requester_id)
 
-        chat.ban_member(target, requester_id)
+        target.is_banned = command.ban
+        chat.ban_member(command.target_user_id, requester_id, command.ban)
         await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
 

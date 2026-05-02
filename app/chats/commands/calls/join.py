@@ -60,6 +60,8 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
             message_type=MessageType.SYSTEM
         )
         chat.update_last_activity(msg.created_at)
+        await self.message_repository.create(msg)
+        await self.session.commit()
         await self.event_bus.publish(msg.pull_events())
         logger.info(
             "User joined call",

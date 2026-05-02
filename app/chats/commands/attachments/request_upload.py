@@ -11,9 +11,11 @@ from app.chats.exceptions import (
     AccessDeniedChatException,
     AttachmentLimitExceededException,
     AttachmentValidationException,
+    EmptyAttachmentUploadRequestException,
     NotChatMemberException,
+    NotFoundChatException,
 )
-from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
+from app.chats.models.attachment import AttachmentType, MessageAttachment
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
@@ -50,21 +52,25 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
     async def handle(self, command: RequestAttachmentUploadCommand) -> list[UploadSlotDTO]:
         user_id = int(command.user_jwt_data.id)
 
+        chat = await self.chat_repository.get_by_id(command.chat_id)
+        if chat is None:
+            raise NotFoundChatException(chat_id=str(command.chat_id))
+
         member = await self.chat_repository.get_member_chat(
             command.chat_id, user_id, with_role=True
         )
         if member is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
 
-        if not self.chat_access_service.has_permissions(
+        if not await self.chat_access_service.can_send_message(
             user_jwt_data=command.user_jwt_data,
+            chat=chat,
             member=member,
-            must_permissions={"message:send"},
         ):
             raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=user_id)
 
         if len(command.uploads) == 0:
-            raise
+            raise EmptyAttachmentUploadRequestException()
 
         media_count = 0
         file_count = 0
