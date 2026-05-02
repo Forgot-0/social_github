@@ -171,8 +171,8 @@ class Message(BaseModel, DateMixin):
             instance.validate_content()
 
         if attachments is not None:
-            instance.validate_attachments()
             instance.attachments.extend(attachments)
+            instance.validate_attachments()
 
         instance.register_event(SendedMessageEvent(
             message_id=str(instance.id),

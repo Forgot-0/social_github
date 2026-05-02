@@ -11,7 +11,9 @@ from app.chats.commands.chats.change_role import ChangeMemberRoleCommand, Change
 from app.chats.commands.chats.kick import KickMemberCommand, KickMemberCommandHandler
 from app.chats.dtos.members import ListMembers
 from app.chats.queries.chats.get_members import GetChatMembersQuery, GetChatMembersQueryHandler
-from app.chats.schemas.rest import AddMemberRequest, BanMemberRequest, BulkAddMemberRequest, BulkResult, ChangeMemberRoleRequest
+from app.chats.schemas.rest import (
+    AddMemberRequest, BanMemberRequest, BulkResult, ChangeMemberRoleRequest
+)
 from app.core.services.auth.depends import CurrentUserJWTData
 
 router = APIRouter()
@@ -54,28 +56,6 @@ async def add_member(
             role_id=payload.role_id,
         )
     )
-
-
-@router.post("/bulk", response_model=BulkResult)
-@inject
-async def bulk_add_members(
-    chat_id: UUID,
-    payload: BulkAddMemberRequest,
-    user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[AddMemberCommandHandler],
-) -> BulkResult:
-    processed = 0
-    for user_id in payload.user_ids:
-        await handler.handle(
-            AddMemberCommand(
-                user_jwt_data=user_jwt_data,
-                chat_id=chat_id,
-                target_user_id=user_id,
-                role_id=payload.role_id,
-            )
-        )
-        processed += 1
-    return BulkResult(processed=processed)
 
 
 @router.patch("/{user_id}/role", status_code=status.HTTP_204_NO_CONTENT)

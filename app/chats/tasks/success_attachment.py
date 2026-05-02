@@ -37,7 +37,7 @@ class AttachmentProccessTask(BaseTask):
             [UUID(attachment_id) for attachment_id in upload_tokens]
         )
 
-        failed_tokens = []
+        failed_tokens: list[str] = []
         for slot in slots:
             try:
                 data = await storage_service.download_range(
@@ -49,13 +49,13 @@ class AttachmentProccessTask(BaseTask):
 
                 if mime_type != slot.mime_type:
                     logger.warning(f"MIME mismatch: {mime_type} vs {slot.mime_type}")
-                    failed_tokens.append(slot.id)
+                    failed_tokens.append(str(slot.id))
                     continue
 
                 slot.mark_proccesed()
             except Exception as e:
                 logger.exception(f"Processing failed for token {slot.id}", exc_info=e)
-                failed_tokens.append(slot.id)
+                failed_tokens.append(str(slot.id))
 
         await session.commit()
         try:

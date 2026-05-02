@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from redis import Redis
+from redis.asyncio import Redis
 
 from app.chats.exceptions import SlowModeLimitException
 from app.chats.models.chat import Chat

@@ -34,16 +34,6 @@ class AddMemberRequest(BaseModel):
     role_id: int = Field(default=5, gt=0)
 
 
-class BulkAddMemberRequest(BaseModel):
-    user_ids: list[int] = Field(min_length=1, max_length=chat_config.MAX_BULK_ADD_MEMBERS)
-    role_id: int = Field(default=5, gt=0)
-
-    @field_validator("user_ids")
-    @classmethod
-    def unique_user_ids(cls, value: list[int]) -> list[int]:
-        return list(dict.fromkeys(int(user_id) for user_id in value))
-
-
 class ChangeMemberRoleRequest(BaseModel):
     role_id: int = Field(gt=0)
 

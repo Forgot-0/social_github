@@ -1,4 +1,4 @@
-from dishka import Provider, Scope, provide, provide_all
+from dishka import Provider, Scope, decorate, provide, provide_all
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -36,11 +36,33 @@ from app.chats.services.access import ChatAccessService
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.presence import PresenceService
+from app.chats.services.slow_mode import SlowModeService
 from app.chats.services.ws import ChatConnectionManager
+from app.core.events.event import EventRegisty
+from app.core.mediators.base import CommandRegisty, QueryRegistry
 from app.core.websockets.base import BaseConnectionManager
 
 
 class ChatModuleProvider(Provider):
+    @provide(scope=Scope.APP)
+    def connection_manager(self, redis: Redis) -> BaseConnectionManager:
+        return ChatConnectionManager(redis=redis)
+
+    @provide(scope=Scope.APP)
+    def delivery_router(
+        self, redis: Redis, marker: async_sessionmaker[AsyncSession]
+    ) -> ChatDeliveryRouter:
+        return ChatDeliveryRouter(redis=redis, session_factory=marker)
+
+    @provide(scope=Scope.REQUEST)
+    def livekit_service(self) -> LiveKitService:
+        return LiveKitService(
+            url=chat_config.LIVEKIT_URL,
+            api_key=chat_config.LIVEKIT_API_KEY,
+            api_secret=chat_config.LIVEKIT_API_SECRET,
+        )
+
+
     commands = provide_all(
         RequestAttachmentUploadCommandHandler,
         SuccessUploadAttachmentsCommandHandler,
@@ -81,23 +103,18 @@ class ChatModuleProvider(Provider):
         ReadReceiptRepository,
         ChatAccessService,
         PresenceService,
+        SlowModeService,
         scope=Scope.REQUEST,
     )
 
-    @provide(scope=Scope.APP)
-    def connection_manager(self, redis: Redis) -> BaseConnectionManager:
-        return ChatConnectionManager(redis=redis)
+    @decorate
+    def register_auth_command_handlers(self, command_registry: CommandRegisty) -> CommandRegisty:
+        ...
 
-    @provide(scope=Scope.APP)
-    def delivery_router(
-        self, redis: Redis, marker: async_sessionmaker[AsyncSession]
-    ) -> ChatDeliveryRouter:
-        return ChatDeliveryRouter(redis=redis, session_factory=marker)
+    @decorate
+    def register_auth_query_handlers(self, query_registry: QueryRegistry) -> QueryRegistry:
+        ...
 
-    @provide(scope=Scope.REQUEST)
-    def livekit_service(self) -> LiveKitService:
-        return LiveKitService(
-            url=chat_config.LIVEKIT_URL,
-            api_key=chat_config.LIVEKIT_API_KEY,
-            api_secret=chat_config.LIVEKIT_API_SECRET,
-        )
+    @decorate
+    def register_auth_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
+        ...
