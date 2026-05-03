@@ -47,7 +47,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
     event_bus: BaseEventBus
 
     async def handle(self, command: SendMessageCommand) -> MessageDTO:
-        chat = await self.chat_repository.get_by_id(command.chat_id)
+        chat = await self.chat_repository.get_by_id(command.chat_id, with_for_update=True)
         if chat is None:
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
@@ -69,9 +69,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
 
         claimed = []
         if command.upload_tokens:
-            claimed = await self.attachment_repository.get_by_ids(
-                command.upload_tokens
-            )
+            claimed = await self.attachment_repository.get_by_ids(command.upload_tokens)
 
         if claimed and len(command.upload_tokens) != len(claimed):
             raise AttachmentNotFoundException(attachment_id="")

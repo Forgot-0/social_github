@@ -33,7 +33,7 @@ class DeleteChatCommandHandler(BaseCommandHandler[DeleteChatCommand, None]):
         if chat is None:
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
-        member = await self.chat_repository.get_member_chat(command.chat_id, requester_id, with_role=True)
+        member = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
         if member is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=requester_id)
 

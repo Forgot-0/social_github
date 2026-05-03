@@ -65,7 +65,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
         ):
             raise AccessDeniedChatException(chat_id=str(command.source_chat_id), requester_id=user_id)
 
-        target_chat = await self.chat_repository.get_by_id(command.target_chat_id)
+        target_chat = await self.chat_repository.get_by_id(command.target_chat_id, with_for_update=True)
         if target_chat is None:
             raise NotFoundChatException(chat_id=str(command.target_chat_id))
 

@@ -57,7 +57,7 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
         member = await self.chat_repository.get_member_chat(
-            command.chat_id, user_id, with_role=True
+            command.chat_id, user_id
         )
         if member is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)

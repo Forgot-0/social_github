@@ -38,13 +38,13 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
         user_id = int(command.user_jwt_data.id)
         username = command.user_jwt_data.username
 
-        chat = await self.chat_repository.get_by_id(command.chat_id)
-        if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
-
         member = await self.chat_repository.get_member_chat(command.chat_id, user_id)
         if member is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
+
+        chat = await self.chat_repository.get_by_id(command.chat_id, with_for_update=True)
+        if chat is None:
+            raise NotFoundChatException(chat_id=str(command.chat_id))
 
         token = self.livekit_service.generate_join_token(
             slug=str(chat.id),

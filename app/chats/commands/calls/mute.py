@@ -34,13 +34,13 @@ class MuteParticipantCommandHandler(BaseCommandHandler[MuteParticipantCommand, N
         requester_id = int(command.user_jwt_data.id)
 
         requester = await self.chat_repository.get_member_chat(
-            command.chat_id, requester_id, with_role=True
+            command.chat_id, requester_id
         )
         if requester is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=requester_id)
 
         target = await self.chat_repository.get_member_chat(
-            command.chat_id, command.target_user_id, with_role=True
+            command.chat_id, command.target_user_id
         )
         if target is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
