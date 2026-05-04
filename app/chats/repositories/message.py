@@ -80,7 +80,7 @@ class MessageRepository(IRepository[Message]):
             )
         )
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.scalars())
 
     async def get_message_context(
         self,
