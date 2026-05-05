@@ -12,7 +12,9 @@ class ChatConfig(BaseConfig):
     MAX_REACTIONS_PER_MESSAGE: int = 20
     MAX_SEARCH_RESULTS: int = 50
     MAX_BULK_ADD_MEMBERS: int = 100
+
     FAN_OUT_WRITE_THRESHOLD: int = 500
+
     MAX_SLOW_MODE_SECONDS: int = 86_400
     CHAT_STAFF_MIN_ROLE_LEVEL: int = 80
     CHAT_EDITOR_MIN_ROLE_LEVEL: int = 80
@@ -25,7 +27,7 @@ class ChatConfig(BaseConfig):
     WS_ACTIVE_SUBSCRIPTION_TTL: int = 120
     WS_ACTIVE_SUBSCRIBER_SCAN_COUNT: int = 1_000
     WS_REPLAY_BATCH_SIZE: int = 500
-    WS_MAX_CLIENT_FRAME_BYTES: int = 65536
+    WS_MAX_CLIENT_FRAME_BYTES: int = 65_536
     RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
 
     CHAT_TOPIC: str = "chat-events"
@@ -46,13 +48,12 @@ class ChatConfig(BaseConfig):
     LIVEKIT_URL: str = "ws://localhost:7880"
     LIVEKIT_API_KEY: str = ""
     LIVEKIT_API_SECRET: str = ""
-
-    ROOM_TOKEN_TTL: int = 3600
+    ROOM_TOKEN_TTL: int = 3_600
     ROOM_MAX_PARTICIPANTS: int = 100
 
     ALLOWED_IMAGE_MIMES: frozenset[str] = frozenset({
-    "image/jpeg", "image/png", "image/gif",
-    "image/webp", "image/heic", "image/heif",
+        "image/jpeg", "image/png", "image/gif",
+        "image/webp", "image/heic", "image/heif",
     })
     ALLOWED_VIDEO_MIMES: frozenset[str] = frozenset({
         "video/mp4", "video/webm",
@@ -75,11 +76,9 @@ class ChatConfig(BaseConfig):
     MAX_FILE_SIZE: int = 100 * 1024 * 1024
     MAX_MEDIA_SIZE: int = 50 * 1024 * 1024
     DOWNLOAD_URL_TTL: int = 300
+    ATTACHMENT_UPLOAD_TOKEN_TTL: int = 3_600
 
     ATTACHMENT_BUCKET: str = "chat-attachments"
-    ATTACHMENT_UPLOAD_TOKEN_TTL: int = 3600
-
 
 
 chat_config = ChatConfig()
-
