@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import contextlib
 from dataclasses import dataclass, field
@@ -14,9 +12,6 @@ from starlette.websockets import WebSocketState
 from app.chats.config import chat_config
 from app.core.utils import now_utc
 
-
-def _utc_ts() -> str:
-    return now_utc().isoformat()
 
 
 @dataclass(slots=True)
@@ -84,14 +79,14 @@ class WSConnection:
                 if not self.try_send({
                     "type": "ws.ping",
                     "connection_id": self.connection_id,
-                    "ts": _utc_ts(),
+                    "ts": now_utc().isoformat(),
                 }):
                     await self.close(code=1013, reason="slow consumer")
                     return
         except asyncio.CancelledError:
             raise
         except Exception:
-            pass  # heartbeat errors are non-fatal; connection will be reaped by timeout
+            pass
 
     def touch(self) -> None:
         self.last_seen_at = now_utc()

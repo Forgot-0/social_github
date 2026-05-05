@@ -11,9 +11,9 @@ from app.chats.keys import ChatKeys
 from app.chats.models.attachment import AttachmentStatus
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
+from app.chats.services.ws import ChatConnectionManager
 from app.core.services.queues.task import BaseTask
 from app.core.services.storage.service import StorageService
-from app.core.websockets.base import BaseConnectionManager
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class AttachmentProccessTask(BaseTask):
         session: FromDishka[AsyncSession],
         attachment_repository: FromDishka[AttachmentRepository],
         storage_service: FromDishka[StorageService],
-        connection_manager: FromDishka[BaseConnectionManager],
+        connection_manager: FromDishka[ChatConnectionManager],
     ) -> None:
         slots = await attachment_repository.get_by_ids(
             [UUID(attachment_id) for attachment_id in upload_tokens]

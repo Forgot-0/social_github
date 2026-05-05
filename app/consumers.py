@@ -14,6 +14,7 @@ from app.core.di.container import create_container
 from app.core.log.init import configure_logging
 from app.core.message_brokers.base import BaseMessageBroker
 
+from app.chats.consumers import delivery as chat_delivery
 from app.profiles.consumers import user
 from app.analytics.consumers import analytics
 
@@ -29,10 +30,11 @@ async def lifespan(context: ContextRepo) :
 
     yield
 
-    await message_broker.stop()
+    await message_broker.close()
 
 
 def setup_router(broker: KafkaBroker) -> None:
+    broker.include_router(chat_delivery.router)
     broker.include_router(user.router)
     broker.include_router(analytics.router)
 

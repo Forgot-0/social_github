@@ -1,9 +1,14 @@
 from dishka import Provider, Scope, decorate, provide, provide_all
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.chats.commands.attachments.request_upload import RequestAttachmentUploadCommand, RequestAttachmentUploadCommandHandler
-from app.chats.commands.attachments.success import SuccessUploadAttachmentsCommand, SuccessUploadAttachmentsCommandHandler
+from app.chats.commands.attachments.request_upload import (
+    RequestAttachmentUploadCommand,
+    RequestAttachmentUploadCommandHandler
+)
+from app.chats.commands.attachments.success import (
+    SuccessUploadAttachmentsCommand,
+    SuccessUploadAttachmentsCommandHandler
+)
 from app.chats.commands.calls.join import JoinCallCommand, JoinCallCommandHandler
 from app.chats.commands.calls.mute import MuteParticipantCommand, MuteParticipantCommandHandler
 from app.chats.commands.chats.add_member import AddMemberCommand, AddMemberCommandHandler
@@ -37,7 +42,10 @@ from app.chats.models.message import (
     ReadedMessageEvent,
     SendedMessageEvent,
 )
-from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler
+from app.chats.queries.attachments.get_url import (
+    GetAttachmentDownloadUrlQuery,
+    GetAttachmentDownloadUrlQueryHandler
+)
 from app.chats.queries.chats.get_detail import GetChatDetailQuery, GetChatDetailQueryHandler
 from app.chats.queries.chats.get_list import GetListChatUserQuery, GetListChatUserQueryHandler
 from app.chats.queries.chats.get_members import GetChatMembersQuery, GetChatMembersQueryHandler
@@ -56,19 +64,12 @@ from app.chats.services.slow_mode import SlowModeService
 from app.chats.services.ws import ChatConnectionManager
 from app.core.events.event import EventRegisty
 from app.core.mediators.base import CommandRegisty, QueryRegistry
-from app.core.websockets.base import BaseConnectionManager
 
 
 class ChatModuleProvider(Provider):
     @provide(scope=Scope.APP)
-    def connection_manager(self, redis: Redis) -> BaseConnectionManager:
+    def chat_connection_manager(self, redis: Redis) -> ChatConnectionManager:
         return ChatConnectionManager(redis=redis)
-
-    @provide(scope=Scope.APP)
-    def delivery_router(
-        self, redis: Redis, marker: async_sessionmaker[AsyncSession]
-    ) -> ChatDeliveryRouter:
-        return ChatDeliveryRouter(redis=redis, session_factory=marker)
 
     @provide(scope=Scope.REQUEST)
     def livekit_service(self) -> LiveKitService:
@@ -77,6 +78,8 @@ class ChatModuleProvider(Provider):
             api_key=chat_config.LIVEKIT_API_KEY,
             api_secret=chat_config.LIVEKIT_API_SECRET,
         )
+
+    delivery_router = provide(ChatDeliveryRouter, scope=Scope.APP)
 
     commands = provide_all(
         RequestAttachmentUploadCommandHandler,

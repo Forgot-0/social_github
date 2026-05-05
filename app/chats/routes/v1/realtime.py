@@ -6,8 +6,8 @@ from fastapi import APIRouter
 from app.chats.dtos.members import MemberPresenceDTO
 from app.chats.schemas.rest import PresenceBatchRequest
 from app.chats.services.presence import PresenceService
+from app.chats.services.ws import ChatConnectionManager
 from app.core.services.auth.depends import CurrentUserJWTData
-from app.core.websockets.base import BaseConnectionManager
 
 router = APIRouter(route_class=DishkaRoute)
 
@@ -25,12 +25,12 @@ async def get_presence_batch(
 @router.get("/ws/status")
 async def websocket_gateway_status(
     _user_jwt_data: CurrentUserJWTData,
-    manager: FromDishka[BaseConnectionManager],
+    manager: FromDishka[ChatConnectionManager],
 ) -> dict[str, Any]:
     return {
-        "gateway_id": getattr(manager, "gateway_id", "unknown"),
-        "stream_key": getattr(manager, "stream_key", None),
-        "connections": len(getattr(manager, "connections_by_id", {})),
-        "users": len(getattr(manager, "connections_by_user", {})),
-        "subscribed_chats": len(getattr(manager, "subscriptions_by_chat", {})),
+        "gateway_id": manager.gateway_id,
+        "stream_key": manager.stream_key,
+        "connections": len(manager.connections_by_id),
+        "users": len(manager.connections_by_user),
+        "subscribed_chats": len(manager.subscriptions_by_chat),
     }

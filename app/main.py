@@ -17,6 +17,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from app.auth.routers import router_v1 as auth_router_v1
 from app.chats.routers import router_v1 as chat_router_v1
+from app.chats.services.ws import ChatConnectionManager
 from app.core.api.builder import create_response
 from app.core.api.schemas import ErrorDetail, ErrorResponse, ORJSONResponse
 from app.core.configs.app import app_config
@@ -28,7 +29,6 @@ from app.core.middlewares.context import ContextMiddleware
 from app.core.middlewares.log import LoggingMiddleware
 from app.core.routers import router as core_router
 from app.core.utils import now_utc
-from app.core.websockets.base import BaseConnectionManager
 from app.init_data import init_data
 from app.pre_start import pre_start
 from app.profiles.routers import router_v1 as profile_router_v1
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI) :
     message_broker: BaseMessageBroker = await app.state.dishka_container.get(BaseMessageBroker)
     await message_broker.start()
 
-    connection_manager = await app.state.dishka_container.get(BaseConnectionManager)
+    connection_manager = await app.state.dishka_container.get(ChatConnectionManager)
 
     scheduler = Scheduler()
     await scheduler.spawn(connection_manager.startup())

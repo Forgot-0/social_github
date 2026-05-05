@@ -10,10 +10,10 @@ from app.chats.models.message import Message, MessageType
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.livekit_service import LiveKitService
+from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.core.websockets.base import BaseConnectionManager
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
     session: AsyncSession
     chat_repository: ChatRepository
     livekit_service: LiveKitService
-    connection_manager: BaseConnectionManager
+    connection_manager: ChatConnectionManager
     message_repository: MessageRepository
     event_bus: BaseEventBus
 
