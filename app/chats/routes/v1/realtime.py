@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 from typing import Any
 
-from dishka.integrations.fastapi import FromDishka, inject
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter
 
 from app.chats.dtos.members import MemberPresenceDTO
@@ -11,11 +9,10 @@ from app.chats.services.presence import PresenceService
 from app.core.services.auth.depends import CurrentUserJWTData
 from app.core.websockets.base import BaseConnectionManager
 
-router = APIRouter()
+router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post("/presence", response_model=list[MemberPresenceDTO])
-@inject
 async def get_presence_batch(
     payload: PresenceBatchRequest,
     _user_jwt_data: CurrentUserJWTData,
@@ -26,7 +23,6 @@ async def get_presence_batch(
 
 
 @router.get("/ws/status")
-@inject
 async def websocket_gateway_status(
     _user_jwt_data: CurrentUserJWTData,
     manager: FromDishka[BaseConnectionManager],

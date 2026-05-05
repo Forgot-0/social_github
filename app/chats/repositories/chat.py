@@ -28,29 +28,54 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             Chat.id == chat_id,
             Chat.deleted_at.is_(None),
         )
-
         if with_for_update:
             stmt = stmt.with_for_update()
-
         if with_members:
-            stmt = stmt.options(selectinload(Chat.members))
+            stmt = stmt.options(selectinload(Chat.members).selectinload(ChatMember.role))
 
         result = await self.session.execute(stmt)
         return result.scalar()
 
-    async def get_member_chat(self, chat_id: UUID, member_id: int, with_role: bool = True) -> ChatMember | None:
+    async def create(self, chat: Chat) -> None:
+        self.session.add(chat)
+
+    async def get_member_chat(
+        self, chat_id: UUID, member_id: int, with_role: bool = True
+    ) -> ChatMember | None:
         stmt = select(ChatMember).where(
             ChatMember.chat_id == chat_id,
             ChatMember.user_id == member_id,
         )
         if with_role:
             stmt = stmt.options(selectinload(ChatMember.role))
-
         result = await self.session.execute(stmt)
         return result.scalar()
 
     async def delete_member(self, member: ChatMember) -> None:
         await self.session.delete(member)
+
+    async def get_chat_members(
+        self,
+        chat_id: UUID,
+        limit: int,
+        cursor_user_id: int | None = None,
+    ) -> list[ChatMember]:
+        conditions = [
+            ChatMember.chat_id == chat_id,
+            ChatMember.is_banned.is_(False),
+        ]
+        if cursor_user_id is not None:
+            conditions.append(ChatMember.user_id > cursor_user_id)
+
+        stmt = (
+            select(ChatMember)
+            .where(*conditions)
+            .options(selectinload(ChatMember.role))
+            .order_by(ChatMember.user_id.asc())
+            .limit(limit + 1)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def iter_member_ids(
         self,
@@ -82,9 +107,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             last_user_id = int(user_ids[-1])
 
     async def iter_channel_subscriber_ids(
-        self,
-        chat_id: UUID,
-        batch_size: int = 2_000,
+        self, chat_id: UUID, batch_size: int = 2_000
     ) -> AsyncIterator[list[int]]:
         async for batch in self.iter_member_ids(
             chat_id=chat_id,
@@ -94,9 +117,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             yield batch
 
     async def iter_channel_staff_ids(
-        self,
-        chat_id: UUID,
-        batch_size: int = 2_000,
+        self, chat_id: UUID, batch_size: int = 2_000
     ) -> AsyncIterator[list[int]]:
         async for batch in self.iter_member_ids(
             chat_id=chat_id,
@@ -104,29 +125,6 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             role_ids=ChatRolesEnum.channel_staff_role_ids(),
         ):
             yield batch
-
-    async def get_chat_members(
-        self,
-        chat_id: UUID,
-        limit: int,
-        cursor_user_id: int | None = None,
-    ) -> list[ChatMember]:
-        conditions = [
-            ChatMember.chat_id == chat_id,
-            ChatMember.is_banned.is_(False),
-        ]
-        if cursor_user_id is not None:
-            conditions.append(ChatMember.user_id > cursor_user_id)
-
-        stmt = (
-            select(ChatMember)
-            .where(*conditions)
-            .options(selectinload(ChatMember.role))
-            .order_by(ChatMember.user_id.asc())
-            .limit(limit + 1)
-        )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
 
     async def get_public_chats(
         self,
@@ -136,10 +134,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
     ) -> list[Chat]:
         stmt = (
             select(Chat)
-            .where(
-                Chat.is_public.is_(True),
-                Chat.deleted_at.is_(None),
-            )
+            .where(Chat.is_public.is_(True), Chat.deleted_at.is_(None))
             .order_by(Chat.last_activity_at.desc().nullslast(), Chat.id.desc())
             .limit(limit + 1)
         )
@@ -153,12 +148,8 @@ class ChatRepository(IRepository[Chat], CacheRepository):
                     ),
                 )
             )
-
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
-
-    async def create(self, chat: Chat) -> None:
-        self.session.add(chat)
 
     async def get_chats(
         self,
@@ -175,10 +166,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             )
             .outerjoin(
                 ReadReceipt,
-                and_(
-                    ReadReceipt.chat_id == Chat.id,
-                    ReadReceipt.user_id == user_id,
-                ),
+                and_(ReadReceipt.chat_id == Chat.id, ReadReceipt.user_id == user_id),
             )
             .where(
                 ChatMember.user_id == user_id,

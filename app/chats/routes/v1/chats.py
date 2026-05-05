@@ -1,36 +1,33 @@
-from __future__ import annotations
-
 from datetime import datetime
 from uuid import UUID
 
-from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, Query, status
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from fastapi import APIRouter, Query, status
 
-from app.chats.commands.chats.create import CreateChatCommand, CreateChatCommandHandler
-from app.chats.commands.chats.delete import DeleteChatCommand, DeleteChatCommandHandler
-from app.chats.commands.chats.join import JoinChatCommand, JoinChatCommandHandler
-from app.chats.commands.chats.leave import LeaveChatCommand, LeaveChatCommandHandler
-from app.chats.commands.chats.update import UpdateChatCommand, UpdateChatCommandHandler
+from app.chats.commands.chats.create import CreateChatCommand
+from app.chats.commands.chats.delete import DeleteChatCommand
+from app.chats.commands.chats.join import JoinChatCommand
+from app.chats.commands.chats.leave import LeaveChatCommand
+from app.chats.commands.chats.update import UpdateChatCommand
 from app.chats.dtos.chats import ChatDTO, ChatDetaiDTO, ListChats
-from app.chats.queries.chats.get_detail import GetChatDetailQuery, GetChatDetailQueryHandler
-from app.chats.queries.chats.get_list import GetListChatUserQuery, GetListChatUserQueryHandler
+from app.chats.queries.chats.get_detail import GetChatDetailQuery
+from app.chats.queries.chats.get_list import GetListChatUserQuery
 from app.chats.schemas.rest import CreateChatRequest, UpdateChatRequest
+from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
-from app.core.services.auth.dto import UserJWTData
 
-router = APIRouter()
+router = APIRouter(route_class=DishkaRoute)
 
 
-@router.get("", response_model=ListChats)
-@inject
+@router.get("")
 async def list_my_chats(
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[GetListChatUserQueryHandler],
+    mediator: FromDishka[BaseMediator],
     limit: int = Query(default=50, ge=1, le=100),
     last_chat_id: UUID | None = None,
     last_activity_at: datetime | None = None,
 ) -> ListChats:
-    return await handler.handle(
+    return await mediator.handle_query(
         GetListChatUserQuery(
             user_jwt_data=user_jwt_data,
             limit=limit,
@@ -40,14 +37,13 @@ async def list_my_chats(
     )
 
 
-@router.post("", response_model=ChatDTO, status_code=status.HTTP_201_CREATED)
-@inject
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_chat(
     payload: CreateChatRequest,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[CreateChatCommandHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> ChatDTO:
-    return await handler.handle(
+    chat, *_ = await mediator.handle_command(
         CreateChatCommand(
             name=payload.name,
             description=payload.description,
@@ -60,27 +56,26 @@ async def create_chat(
             user_jwt_data=user_jwt_data,
         )
     )
+    return chat
 
 
-@router.get("/{chat_id}", response_model=ChatDetaiDTO)
-@inject
+@router.get("/{chat_id}")
 async def get_chat_detail(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[GetChatDetailQueryHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> ChatDetaiDTO:
-    return await handler.handle(GetChatDetailQuery(user_jwt_data=user_jwt_data, chat_id=chat_id))
+    return await mediator.handle_query(GetChatDetailQuery(user_jwt_data=user_jwt_data, chat_id=chat_id))
 
 
 @router.patch("/{chat_id}", response_model=ChatDTO)
-@inject
 async def update_chat(
     chat_id: UUID,
     payload: UpdateChatRequest,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[UpdateChatCommandHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> ChatDTO:
-    return await handler.handle(
+    chat, *_ = await mediator.handle_command(
         UpdateChatCommand(
             chat_id=chat_id,
             name=payload.name,
@@ -92,33 +87,31 @@ async def update_chat(
             user_jwt_data=user_jwt_data,
         )
     )
+    return chat
 
 
 @router.delete("/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
-@inject
 async def delete_chat(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[DeleteChatCommandHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> None:
-    await handler.handle(DeleteChatCommand(user_jwt_data=user_jwt_data, chat_id=chat_id))
+    await mediator.handle_command(DeleteChatCommand(user_jwt_data=user_jwt_data, chat_id=chat_id))
 
 
 @router.post("/{chat_id}/join", status_code=status.HTTP_204_NO_CONTENT)
-@inject
 async def join_public_chat(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[JoinChatCommandHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> None:
-    await handler.handle(JoinChatCommand(user_jwt_data=user_jwt_data, chat_id=chat_id))
+    await mediator.handle_command(JoinChatCommand(user_jwt_data=user_jwt_data, chat_id=chat_id))
 
 
 @router.post("/{chat_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
-@inject
 async def leave_chat(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[LeaveChatCommandHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> None:
-    await handler.handle(LeaveChatCommand(chat_id=chat_id, user_jwt_data=user_jwt_data))
+    await mediator.handle_command(LeaveChatCommand(chat_id=chat_id, user_jwt_data=user_jwt_data))

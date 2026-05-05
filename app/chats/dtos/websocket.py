@@ -33,49 +33,54 @@ class WSConnection:
     send_queue: asyncio.Queue[bytes] = field(
         default_factory=lambda: asyncio.Queue(maxsize=chat_config.WS_SEND_QUEUE_SIZE)
     )
-    writer_task: asyncio.Task[None] | None = None
-    heartbeat_task: asyncio.Task[None] | None = None
-    closed: bool = False
+    writer_task: asyncio.Task[None] | None = field(default=None)
+    heartbeat_task: asyncio.Task[None] | None = field(default=None)
+    closed: bool = field(default=False)
 
     async def start(self) -> None:
-        await self.start_writer()
-        await self.start_heartbeat()
+        await self._start_writer()
+        await self._start_heartbeat()
 
-    async def start_writer(self) -> None:
+    async def _start_writer(self) -> None:
         if self.writer_task and not self.writer_task.done():
             return
         self.writer_task = asyncio.create_task(
-            self._writer_loop(),
-            name=f"ws:writer:{self.connection_id}",
+            self._writer_loop(), name=f"ws:writer:{self.connection_id}"
         )
 
-    async def start_heartbeat(self) -> None:
+    async def _start_heartbeat(self) -> None:
         if self.heartbeat_task and not self.heartbeat_task.done():
             return
         self.heartbeat_task = asyncio.create_task(
-            self._heartbeat_loop(),
-            name=f"ws:heartbeat:{self.connection_id}",
+            self._heartbeat_loop(), name=f"ws:heartbeat:{self.connection_id}"
         )
 
     async def _writer_loop(self) -> None:
         try:
-            while self.websocket.application_state == WebSocketState.CONNECTED:
-                payload = await self.send_queue.get()
+            while not self.closed and self.websocket.application_state == WebSocketState.CONNECTED:
+                try:
+                    payload = await asyncio.wait_for(
+                        self.send_queue.get(), timeout=5.0
+                    )
+                except asyncio.TimeoutError:
+                    continue
                 await self.websocket.send_text(payload.decode("utf-8"))
         except asyncio.CancelledError:
             raise
         except Exception:
-            await self.close(code=1011, reason="writer failed")
+            if not self.closed:
+                await self.close(code=1011, reason="writer error")
 
     async def _heartbeat_loop(self) -> None:
         try:
-            while self.websocket.application_state == WebSocketState.CONNECTED:
+            while not self.closed and self.websocket.application_state == WebSocketState.CONNECTED:
                 await asyncio.sleep(chat_config.WS_HEARTBEAT_INTERVAL)
-                idle_for = (now_utc() - self.last_seen_at).total_seconds()
-                if idle_for > chat_config.WS_HEARTBEAT_TIMEOUT:
+                if self.closed:
+                    return
+                idle = (now_utc() - self.last_seen_at).total_seconds()
+                if idle > chat_config.WS_HEARTBEAT_TIMEOUT:
                     await self.close(code=1001, reason="heartbeat timeout")
                     return
-
                 if not self.try_send({
                     "type": "ws.ping",
                     "connection_id": self.connection_id,
@@ -85,6 +90,8 @@ class WSConnection:
                     return
         except asyncio.CancelledError:
             raise
+        except Exception:
+            pass  # heartbeat errors are non-fatal; connection will be reaped by timeout
 
     def touch(self) -> None:
         self.last_seen_at = now_utc()
@@ -92,27 +99,27 @@ class WSConnection:
     def try_send(self, event: dict[str, Any]) -> bool:
         if self.closed:
             return False
-
-        payload = orjson.dumps(event)
         try:
-            self.send_queue.put_nowait(payload)
+            self.send_queue.put_nowait(orjson.dumps(event))
             return True
         except asyncio.QueueFull:
             return False
 
     async def close(self, code: int = 1000, reason: str = "") -> None:
+        if self.closed:
+            return
         self.closed = True
-        current_task = asyncio.current_task()
 
+        current = asyncio.current_task()
         for task in (self.writer_task, self.heartbeat_task):
-            if task and task is not current_task and not task.done():
+            if task and task is not current and not task.done():
                 task.cancel()
 
         if self.websocket.application_state == WebSocketState.CONNECTED:
-            with contextlib.suppress(RuntimeError):
+            with contextlib.suppress(RuntimeError, Exception):
                 await self.websocket.close(code=code, reason=reason[:120])
 
         for task in (self.writer_task, self.heartbeat_task):
-            if task and task is not current_task:
+            if task and task is not current:
                 with contextlib.suppress(asyncio.CancelledError, Exception):
                     await task

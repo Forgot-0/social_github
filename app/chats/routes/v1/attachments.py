@@ -1,33 +1,33 @@
-from __future__ import annotations
-
 from uuid import UUID
 
-from dishka.integrations.fastapi import FromDishka, inject
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, status
 
 from app.chats.commands.attachments.request_upload import (
     RequestAttachmentUploadCommand,
-    RequestAttachmentUploadCommandHandler,
     UploadRequest,
 )
-from app.chats.commands.attachments.success import SuccessUploadAttachmentsCommand, SuccessUploadAttachmentsCommandHandler
+from app.chats.commands.attachments.success import SuccessUploadAttachmentsCommand
 from app.chats.dtos.attachments import AttachmentDownloadUrlDTO, UploadSlotDTO
-from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler
+from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery
 from app.chats.schemas.rest import ConfirmAttachmentUploadRequest, RequestAttachmentUploadRequest
+from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 
-router = APIRouter()
+router = APIRouter(route_class=DishkaRoute)
 
 
-@router.post("/attachments/upload-requests", response_model=list[UploadSlotDTO], status_code=status.HTTP_201_CREATED)
-@inject
+@router.post(
+    "/attachments/upload-requests",
+    status_code=status.HTTP_201_CREATED
+)
 async def request_attachment_upload(
     chat_id: UUID,
     payload: RequestAttachmentUploadRequest,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[RequestAttachmentUploadCommandHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> list[UploadSlotDTO]:
-    return await handler.handle(
+    slotts, *_ = await mediator.handle_command(
         RequestAttachmentUploadCommand(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
@@ -38,16 +38,19 @@ async def request_attachment_upload(
         )
     )
 
+    return slotts
 
-@router.post("/attachments/upload-requests:confirm", status_code=status.HTTP_202_ACCEPTED)
-@inject
+@router.post(
+    "/attachments/upload-requests:confirm",
+    status_code=status.HTTP_202_ACCEPTED
+)
 async def confirm_attachment_upload(
     chat_id: UUID,
     payload: ConfirmAttachmentUploadRequest,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[SuccessUploadAttachmentsCommandHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> None:
-    await handler.handle(
+    await mediator.handle_command(
         SuccessUploadAttachmentsCommand(
             chat_id=chat_id,
             upload_tokens=[str(token) for token in payload.upload_tokens],
@@ -56,16 +59,18 @@ async def confirm_attachment_upload(
     )
 
 
-@router.get("/messages/{message_id}/attachments/{attachment_id}/download-url", response_model=AttachmentDownloadUrlDTO)
-@inject
+@router.get(
+    "/messages/{message_id}/attachments/{attachment_id}/download-url",
+    response_model=AttachmentDownloadUrlDTO
+)
 async def get_attachment_download_url(
     chat_id: UUID,
     message_id: UUID,
     attachment_id: UUID,
     user_jwt_data: CurrentUserJWTData,
-    handler: FromDishka[GetAttachmentDownloadUrlQueryHandler],
+    mediator: FromDishka[BaseMediator],
 ) -> AttachmentDownloadUrlDTO:
-    return await handler.handle(
+    return await mediator.handle_query(
         GetAttachmentDownloadUrlQuery(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
@@ -73,3 +78,4 @@ async def get_attachment_download_url(
             attachment_id=attachment_id,
         )
     )
+

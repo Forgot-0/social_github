@@ -13,7 +13,6 @@ class SlowModeService:
     redis: Redis
     access_service: ChatAccessService
 
-
     async def is_slow(self, chat: Chat, user_id: int, member: ChatMember | None) -> None:
         if chat.slow_mode_seconds <= 0 or self.access_service.can_bypass_slow_mode(member):
             return
@@ -29,6 +28,5 @@ class SlowModeService:
             return
 
         ttl = await self.redis.ttl(key)
-        retry_after = max(1, int(ttl if ttl and ttl > 0 else chat.slow_mode_seconds))
+        retry_after = max(1, int(ttl) if ttl and ttl > 0 else chat.slow_mode_seconds)
         raise SlowModeLimitException(chat_id=str(chat.id), retry_after=retry_after)
-
