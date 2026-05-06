@@ -1,0 +1,30 @@
+from dataclasses import dataclass
+
+from app.chats.dtos.websocket import WSConnection
+from app.chats.schemas.ws import WSClientOp
+from app.chats.services.ws import ChatConnectionManager
+from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.utils import now_utc
+
+
+@dataclass(frozen=True)
+class UnsubscribeCommand(BaseCommand):
+    conn: WSConnection
+    chat_id: str
+    op: WSClientOp = WSClientOp.UNSUBSCRIBE
+
+
+@dataclass(frozen=True)
+class UnsubscribeCommandHandler(BaseCommandHandler[UnsubscribeCommand, None]):
+    manager: ChatConnectionManager
+
+    async def handle(self, command: UnsubscribeCommand) -> None:
+        await self.manager.unsubscribe_chat(command.conn, command.chat_id)
+        event = {
+            "type": "ws.unsubscribed",
+            "chat_id": command.chat_id,
+            "payload": {},
+            "ts": now_utc().isoformat()
+        }
+        command.conn.try_send(event)
+
