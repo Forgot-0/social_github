@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import logging
 import os
 import re
@@ -68,7 +67,7 @@ class ChatConnectionManager:
         for conn in conns:
             await self.unregister(conn, close_code=1001, close_reason="server shutdown")
 
-        gateway_connections = await self.redis.smembers(gateway_route_key(self.gateway_id))  # type: ignore[misc]
+        gateway_connections = await self.redis.smembers(WebsocketKeys.gateway_route_key(self.gateway_id))  # type: ignore[misc]
         if gateway_connections:
             pipe = self.redis.pipeline(transaction=False)
             for cid in gateway_connections:
@@ -284,7 +283,6 @@ class ChatConnectionManager:
                         await self.unregister(conn)
                         continue
 
-                    with contextlib.suppress(Exception):
                         await self.set_route_users(conn)
 
                     subscriptions = subs_snapshot.get(conn.connection_id, set())
@@ -378,7 +376,7 @@ class ChatConnectionManager:
         )
 
     async def _enqueue_user_stream_delivery(self, user_id: int, event: dict[str, Any]) -> None:
-        routes: set[str] = await self.redis.smembers(user_route_key(user_id))  # type: ignore[misc]
+        routes: set[str] = await self.redis.smembers(WebsocketKeys.user_route_key(user_id))  # type: ignore[misc]
         gateways: set[str] = set()
         for raw in routes or ():
             gateway_id, _sep, connection_id = raw.partition(":")

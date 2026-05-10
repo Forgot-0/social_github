@@ -1,16 +1,13 @@
-from __future__ import annotations
-
 import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncIterator, Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
 import orjson
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.chats.config import chat_config
 from app.chats.dtos.delivery import build_ws_event, chunks, is_chat_domain_event
