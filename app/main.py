@@ -149,7 +149,7 @@ def handle_unknown_exception(request: Request, exc: Exception) -> ORJSONResponse
         extra={
             "status": 500,
             "title": "Unknown exception",
-            "detail": jsonable_encoder(exc),
+            "detail": str(exc),
             "code": "UNKNOWN_EXCEPTION",
         }
     )

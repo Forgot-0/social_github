@@ -62,4 +62,4 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
             }
         )
 
-        return ChatDTO.model_validate(chat.to_dict())
+        return ChatDTO.model_validate(chat)

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.chats.dtos.members import MemberChatDTO
 from app.chats.dtos.messages import ReadDetail
@@ -28,6 +28,8 @@ class ChatDTO(BaseModel):
     unread_count: int = 0
     me: MemberChatDTO | None = None
     last_read: ReadDetail | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChatDetaiDTO(BaseModel):

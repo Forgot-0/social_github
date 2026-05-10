@@ -30,7 +30,7 @@ class ChatMember(BaseModel, DateMixin):
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     permissions_overrides: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}")
 
-    chat: Mapped["Chat"] = relationship(back_populates="members", lazy="noload")
+    chat: Mapped["Chat"] = relationship("Chat", back_populates="members", lazy="noload")
     role: Mapped["ChatRole"] = relationship("ChatRole")
 
     __table_args__ = (

@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bullseye AS python-base
+FROM python:3.14-rc-slim AS python-base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -30,6 +30,8 @@ FROM python-base AS production
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl libmagic1 \
+ build-essential \
+ git \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

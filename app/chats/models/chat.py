@@ -205,6 +205,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             is_public=is_public,
             admin_only=admin_only,
             slow_mode_seconds=slow_mode_seconds,
+            member_count=0,
             permissions=permissions or {},
         )
 

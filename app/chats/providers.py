@@ -114,6 +114,11 @@ class ChatModuleProvider(Provider):
         scope=Scope.REQUEST,
     )
 
+    events = provide_all(
+        PublishChatEventHandler,
+        scope=Scope.REQUEST
+    )
+
     repositories_and_services = provide_all(
         ChatRepository,
         MessageRepository,

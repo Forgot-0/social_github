@@ -72,6 +72,10 @@ services:
     hostname: consumers
     env_file:
       - .env
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /prometheus
+    tmpfs:
+      - /prometheus
     command: ["faststream", "run", "app.consumers:app", "--host", "0.0.0.0", "--port", "9002",  "--workers", "2"]
     depends_on:
       kafka:
@@ -98,15 +102,13 @@ services:
       MINIO_PROMETHEUS_JOB_ID: "minio"
       MINIO_REGION: "us-east-1"
       MINIO_BROWSER: "on"
-      MINIO_DOMAIN: "storage.windoweropu.store"
-      MINIO_STORAGE_CLASS_STANDARD: "EC:2"
-      MINIO_STORAGE_CLASS_RRS: "EC:1"
+      # MINIO_DOMAIN: "storage.windoweropu.store"
+      # MINIO_STORAGE_CLASS_STANDARD: "EC:2"
+      # MINIO_STORAGE_CLASS_RRS: "EC:1"
       MINIO_COMPRESSION: "gzip"
       MINIO_COMPRESSION_EXTENSIONS: ".txt,.log,.json,.csv,.md"
       MINIO_COMPRESSION_MIME_TYPES: "text/*,application/json,application/xml"
       MINIO_MAX_CONNECTIONS: "1000"
-      MINIO_WRITE_QUORUM: "writeQuorum"
-      MINIO_READ_QUORUM: "readQuorum"
       MINIO_CACHE_DRIVES: ""
       MINIO_CACHE_EXCLUDE: ""
       MINIO_CACHE_QUOTA: "80"
