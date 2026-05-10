@@ -59,7 +59,7 @@ class WSConnection:
                     )
                 except asyncio.TimeoutError:
                     continue
-                await self.websocket.send_text(payload.decode("utf-8"))
+                await self.websocket.send_text(payload.decode())
         except asyncio.CancelledError:
             raise
         except Exception:

@@ -79,7 +79,7 @@ class ChatModuleProvider(Provider):
             api_secret=chat_config.LIVEKIT_API_SECRET,
         )
 
-    delivery_router = provide(ChatDeliveryRouter, scope=Scope.APP)
+    delivery_router = provide(ChatDeliveryRouter, scope=Scope.REQUEST)
 
     commands = provide_all(
         RequestAttachmentUploadCommandHandler,
