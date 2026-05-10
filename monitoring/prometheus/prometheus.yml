@@ -31,9 +31,14 @@ scrape_configs:
     static_configs:
       - targets: ['kafka-exporter:9308']
 
-  - job_name: 'minio'
+  - job_name: minio-cluster
+    metrics_path: /minio/v2/metrics/cluster
+    scheme: http
     static_configs:
-      - targets: ['minio-exporter:9290']
-    metrics_path: '/minio/v2/metrics/cluster'
-    params:
-      format: ['prometheus']
+      - targets: ['minio:9000']
+
+  - job_name: minio-bucket
+    metrics_path: /minio/v2/metrics/bucket
+    scheme: http
+    static_configs:
+      - targets: ['minio:9000']
