@@ -240,9 +240,9 @@ services:
       retries: 5
     restart: unless-stopped
     deploy:
-    resources:
-      limits:
-        memory: 2G
+      resources:
+        limits:
+          memory: 2G
 
       networks:
         - app-network
