@@ -59,9 +59,9 @@ async def get_json_user(websocket: WebSocket) -> dict[str, Any]:
 @inject
 async def websocket_gateway(
     websocket: WebSocket,
-    initial_chat_id: str | None,
-    initial_last_seq: int | None,
     container: FromDishka[AsyncContainer],
+    initial_chat_id: str | None=None,
+    initial_last_seq: int | None=None,
 ) -> None:
     token = get_ws_access_token(websocket)
     if not token:
