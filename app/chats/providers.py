@@ -105,6 +105,11 @@ class ChatModuleProvider(Provider):
         MarkAsReadCommandHandler,
         EditMessageCommandHandler,
         SendMessageCommandHandler,
+        PingCommandHandler,
+        PongCommandHandler,
+        ResumeCommandHandler,
+        SubscribeCommandHandler,
+        UnsubscribeCommandHandler,
         scope=Scope.REQUEST,
     )
 
