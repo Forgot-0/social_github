@@ -25,6 +25,11 @@ from app.chats.commands.messages.forward import ForwardMessageCommand, ForwardMe
 from app.chats.commands.messages.mark_read import MarkAsReadCommand, MarkAsReadCommandHandler
 from app.chats.commands.messages.modify import EditMessageCommand, EditMessageCommandHandler
 from app.chats.commands.messages.send import SendMessageCommand, SendMessageCommandHandler
+from app.chats.commands.websockets.ping import PingCommand, PingCommandHandler
+from app.chats.commands.websockets.pong import PongCommand, PongCommandHandler
+from app.chats.commands.websockets.resume import ResumeCommand, ResumeCommandHandler
+from app.chats.commands.websockets.subscribe import SubscribeCommand, SubscribeCommandHandler
+from app.chats.commands.websockets.unsubscribe import UnsubscribeCommand, UnsubscribeCommandHandler
 from app.chats.config import chat_config
 from app.chats.events.published import PublishChatEventHandler
 from app.chats.models.chat import (
@@ -150,6 +155,12 @@ class ChatModuleProvider(Provider):
         command_registry.register_command(MarkAsReadCommand, [MarkAsReadCommandHandler])
         command_registry.register_command(EditMessageCommand, [EditMessageCommandHandler])
         command_registry.register_command(SendMessageCommand, [SendMessageCommandHandler])
+
+        command_registry.register_command(PingCommand, [PingCommandHandler])
+        command_registry.register_command(PongCommand, [PongCommandHandler])
+        command_registry.register_command(ResumeCommand, [ResumeCommandHandler])
+        command_registry.register_command(SubscribeCommand, [SubscribeCommandHandler])
+        command_registry.register_command(UnsubscribeCommand, [UnsubscribeCommandHandler])
         return command_registry
 
     @decorate
