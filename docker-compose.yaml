@@ -275,7 +275,7 @@ volumes:
   kafka_data:
   kafka_secrets:
   miniodata:
-  clickhouse_data:
+  # clickhouse_data:
 
 
 networks:
