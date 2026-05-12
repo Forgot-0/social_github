@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
+from tests.support.http import api_path
 
 
 @pytest.mark.integration
@@ -20,7 +21,7 @@ class TestPermissionEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.post(
-            "/api/v1/permissions/",
+            api_path("permissions/"),
             headers=headers,
             json={"name": "test:permission"}
         )
@@ -37,7 +38,7 @@ class TestPermissionEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.get(
-            "/api/v1/permissions/",
+            api_path("permissions/"),
             headers=headers
         )
 
@@ -60,7 +61,7 @@ class TestPermissionEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.delete(
-            "/api/v1/permissions/deletable:test",
+            api_path("permissions/deletable:test"),
             headers=headers,
         )
 

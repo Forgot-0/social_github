@@ -31,4 +31,4 @@ async def project_permission_service(rbac_manager) -> ProjectPermissionService:
 @pytest_asyncio.fixture
 async def project_role_repository(db_session: AsyncSession) -> ProjectRoleRepository:
     return ProjectRoleRepository(session=db_session)
- 
+

@@ -2,6 +2,7 @@ from httpx import AsyncClient
 import pytest
 
 from app.auth.models.user import User
+from tests.support.http import api_path
 
 
 @pytest.mark.integration
@@ -19,7 +20,7 @@ class TestUserEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.get(
-            "/api/v1/users/",
+            api_path("users/"),
             headers=headers
         )
 
@@ -39,7 +40,7 @@ class TestUserEndpoints:
         headers = auth_headers(standard_user)
 
         response = await client.get(
-            "/api/v1/users/",
+            api_path("users/"),
             headers=headers
         )
 

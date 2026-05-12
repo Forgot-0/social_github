@@ -18,22 +18,27 @@ from tests.conftest import MockEventBus, MockMailService
 
 @pytest.mark.integration
 @pytest.mark.auth
-class TestResetPasswordCommand:
-
-    @pytest.mark.asyncio
-    async def test_send_reset_password_code_success(
+class TestSendResetPasswordCommand:
+    @pytest.fixture
+    def handler(
         self,
         user_repository: UserRepository,
-        standard_user: User,
+        mock_mail_service: MockMailService,
         token_blacklist_repository: TokenBlacklistRepository,
-        mock_mail_service: MockMailService
-    ) -> None:
-        handler = SendResetPasswordCommandHandler(
+    ) -> SendResetPasswordCommandHandler:
+        return SendResetPasswordCommandHandler(
             user_repository=user_repository,
             mail_service=mock_mail_service,
             token_repository=token_blacklist_repository,
         )
 
+    @pytest.mark.asyncio
+    async def test_send_reset_password_code_success(
+        self,
+        standard_user: User,
+        mock_mail_service: MockMailService,
+        handler: SendResetPasswordCommandHandler,
+    ) -> None:
         command = SendResetPasswordCommand(email=standard_user.email)
         await handler.handle(command)
 
@@ -43,21 +48,33 @@ class TestResetPasswordCommand:
     @pytest.mark.asyncio
     async def test_send_reset_password_nonexistent_user(
         self,
-        user_repository: UserRepository,
-        mock_mail_service: MockMailService,
-        token_blacklist_repository: TokenBlacklistRepository,
+        handler: SendResetPasswordCommandHandler,
     ) -> None:
-
-        handler = SendResetPasswordCommandHandler(
-            user_repository=user_repository,
-            mail_service=mock_mail_service,
-            token_repository=token_blacklist_repository,
-        )
-
         command = SendResetPasswordCommand(email="nonexistent@example.com")
 
         with pytest.raises(NotFoundUserException):
             await handler.handle(command)
+
+
+@pytest.mark.integration
+@pytest.mark.auth
+class TestResetPasswordCommand:
+    @pytest.fixture
+    def handler(
+        self,
+        db_session: AsyncSession,
+        user_repository: UserRepository,
+        mock_event_bus: MockEventBus,
+        token_blacklist_repository: TokenBlacklistRepository,
+        hash_service: HashService,
+    ) -> ResetPasswordCommandHandler:
+        return ResetPasswordCommandHandler(
+            session=db_session,
+            event_bus=mock_event_bus,
+            user_repository=user_repository,
+            token_repository=token_blacklist_repository,
+            hash_service=hash_service,
+        )
 
     @pytest.mark.asyncio
     async def test_reset_password_success(
@@ -66,8 +83,8 @@ class TestResetPasswordCommand:
         user_repository: UserRepository,
         hash_service: HashService,
         standard_user: User,
-        mock_event_bus: MockEventBus,
         token_blacklist_repository: TokenBlacklistRepository,
+        handler: ResetPasswordCommandHandler,
     ) -> None:
         reset_token = secrets.token_urlsafe(32)
         hashed_token = hashlib.sha256(reset_token.encode()).hexdigest()
@@ -75,15 +92,7 @@ class TestResetPasswordCommand:
         await token_blacklist_repository.add_token(
             hashed_token,
             user_id=standard_user.id,
-            expiration=timedelta(minutes=15)
-        )
-
-        handler = ResetPasswordCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            token_repository=token_blacklist_repository,
-            hash_service=hash_service,
+            expiration=timedelta(minutes=15),
         )
 
         new_password = "NewPassword123!"
@@ -104,21 +113,8 @@ class TestResetPasswordCommand:
     @pytest.mark.asyncio
     async def test_reset_password_invalid_token(
         self,
-        db_session: AsyncSession,
-        user_repository: UserRepository,
-        hash_service: HashService,
-        mock_event_bus: MockEventBus,
-        token_blacklist_repository: TokenBlacklistRepository,
+        handler: ResetPasswordCommandHandler,
     ) -> None:
-
-        handler = ResetPasswordCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            token_repository=token_blacklist_repository,
-            hash_service=hash_service,
-        )
-
         command = ResetPasswordCommand(
             token="invalid_token",
             password="NewPassword123!",
@@ -131,12 +127,9 @@ class TestResetPasswordCommand:
     @pytest.mark.asyncio
     async def test_reset_password_mismatch(
         self,
-        db_session: AsyncSession,
-        user_repository: UserRepository,
-        hash_service: HashService,
         standard_user: User,
-        mock_event_bus: MockEventBus,
         token_blacklist_repository: TokenBlacklistRepository,
+        handler: ResetPasswordCommandHandler,
     ) -> None:
         reset_token = secrets.token_urlsafe(32)
         hashed_token = hashlib.sha256(reset_token.encode()).hexdigest()
@@ -144,15 +137,7 @@ class TestResetPasswordCommand:
         await token_blacklist_repository.add_token(
             hashed_token,
             user_id=standard_user.id,
-            expiration=timedelta(minutes=15)
-        )
-
-        handler = ResetPasswordCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            token_repository=token_blacklist_repository,
-            hash_service=hash_service,
+            expiration=timedelta(minutes=15),
         )
 
         command = ResetPasswordCommand(
@@ -169,10 +154,9 @@ class TestResetPasswordCommand:
         self,
         db_session: AsyncSession,
         user_repository: UserRepository,
-        hash_service: HashService,
         standard_user: User,
-        mock_event_bus: MockEventBus,
-        token_blacklist_repository: TokenBlacklistRepository
+        token_blacklist_repository: TokenBlacklistRepository,
+        handler: ResetPasswordCommandHandler,
     ) -> None:
         reset_token = secrets.token_urlsafe(32)
         hashed_token = hashlib.sha256(reset_token.encode()).hexdigest()
@@ -180,15 +164,7 @@ class TestResetPasswordCommand:
         await token_blacklist_repository.add_token(
             hashed_token,
             user_id=standard_user.id,
-            expiration=timedelta(minutes=15)
-        )
-
-        handler = ResetPasswordCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            token_repository=token_blacklist_repository,
-            hash_service=hash_service,
+            expiration=timedelta(minutes=15),
         )
 
         new_password = "NewPassword123!"

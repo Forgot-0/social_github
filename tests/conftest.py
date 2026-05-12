@@ -251,14 +251,14 @@ async def di_container(
     await container.close()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def app(di_container: AsyncContainer) -> FastAPI:
     app = init_app()
     app.state.dishka_container = di_container
     return app
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client(app: FastAPI, redis_client: Redis) -> AsyncGenerator[AsyncClient, None]:
     await FastAPILimiter.init(redis_client)
     transport = ASGITransport(app=app)

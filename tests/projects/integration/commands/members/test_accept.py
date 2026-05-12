@@ -19,7 +19,7 @@ from app.projects.services.permission_service import ProjectPermissionService
 class TestAcceptInviteCommand:
 
     @pytest.fixture
-    def accept_handler(
+    def handler(
         self,
         db_session: AsyncSession,
         project_repository: ProjectRepository,
@@ -55,7 +55,7 @@ class TestAcceptInviteCommand:
         persisted_project: Project,
         user_jwt: UserJWTData,
         invite_handler: InviteMemberCommandHandler,
-        accept_handler: AcceptInviteCommandHandler,
+        handler: AcceptInviteCommandHandler,
         project_repository: ProjectRepository,
         make_user_jwt,
     ) -> None:
@@ -71,7 +71,7 @@ class TestAcceptInviteCommand:
             )
         )
 
-        await accept_handler.handle(
+        await handler.handle(
             AcceptInviteCommand(
                 user_jwt_data=invited_jwt,
                 project_id=persisted_project.id,
@@ -88,12 +88,12 @@ class TestAcceptInviteCommand:
         self,
         persisted_project: Project,
         make_user_jwt,
-        accept_handler: AcceptInviteCommandHandler,
+        handler: AcceptInviteCommandHandler,
     ) -> None:
         stranger_jwt = make_user_jwt(id="700", username="stranger")
 
         with pytest.raises(NotFoundProjectException):
-            await accept_handler.handle(
+            await handler.handle(
                 AcceptInviteCommand(
                     user_jwt_data=stranger_jwt,
                     project_id=persisted_project.id,

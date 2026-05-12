@@ -17,7 +17,6 @@ from app.auth.services.session import SessionManager
 from app.core.configs.app import app_config
 
 
-
 @pytest_asyncio.fixture
 async def user_repository(db_session: AsyncSession, redis_client) -> UserRepository:
     return UserRepository(session=db_session, redis=redis_client)
@@ -82,4 +81,3 @@ def rbac_manager() -> AuthRBACManager:
 @pytest.fixture
 def session_manager(session_repository: SessionRepository) -> SessionManager:
     return SessionManager(session_repository)
-

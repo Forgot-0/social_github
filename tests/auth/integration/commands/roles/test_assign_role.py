@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.roles.assign_role_to_user import AssignRoleCommand, AssignRoleCommandHandler
 from app.auth.commands.roles.remove_role_user import RemoveRoleCommand, RemoveRoleCommandHandler
-from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import NotFoundRoleException, NotFoundUserException
 from app.auth.models.user import User
 from app.auth.repositories.permission import PermissionRepository
@@ -13,29 +12,23 @@ from app.auth.repositories.user import UserRepository
 from app.auth.services.rbac import AuthRBACManager
 from app.core.services.auth.exceptions import AccessDeniedException
 from tests.auth.integration.factories import RoleFactory, UserFactory
+from tests.support.jwt import jwt_from_user
 
 
 @pytest.mark.integration
 @pytest.mark.auth
 class TestAssignRoleCommand:
-
-    @pytest.mark.asyncio
-    async def test_assign_role_success(
+    @pytest.fixture
+    def assign_role_handler(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
         role_repository: RoleRepository,
         user_repository: UserRepository,
         permission_repository: PermissionRepository,
+        rbac_manager: AuthRBACManager,
         token_blacklist_repository: TokenBlacklistRepository,
-        admin_user: User,
-        standard_user: User,
-    ) -> None:
-        test_role = RoleFactory.create(name="test_assignable_role", security_level=2)
-        db_session.add(test_role)
-        await db_session.commit()
-
-        handler = AssignRoleCommandHandler(
+    ) -> AssignRoleCommandHandler:
+        return AssignRoleCommandHandler(
             session=db_session,
             role_repository=role_repository,
             user_repository=user_repository,
@@ -44,7 +37,39 @@ class TestAssignRoleCommand:
             token_blacklist=token_blacklist_repository,
         )
 
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+    @pytest.fixture
+    def remove_role_handler(
+        self,
+        db_session: AsyncSession,
+        user_repository: UserRepository,
+        role_repository: RoleRepository,
+        permission_repository: PermissionRepository,
+        rbac_manager: AuthRBACManager,
+        token_blacklist_repository: TokenBlacklistRepository,
+    ) -> RemoveRoleCommandHandler:
+        return RemoveRoleCommandHandler(
+            session=db_session,
+            user_repository=user_repository,
+            role_repository=role_repository,
+            permission_repository=permission_repository,
+            rbac_manager=rbac_manager,
+            token_blacklist=token_blacklist_repository,
+        )
+
+    @pytest.mark.asyncio
+    async def test_assign_role_success(
+        self,
+        db_session: AsyncSession,
+        user_repository: UserRepository,
+        assign_role_handler: AssignRoleCommandHandler,
+        admin_user: User,
+        standard_user: User,
+    ) -> None:
+        test_role = RoleFactory.create(name="test_assignable_role", security_level=2)
+        db_session.add(test_role)
+        await db_session.commit()
+
+        user_jwt = jwt_from_user(admin_user)
 
         command = AssignRoleCommand(
             assign_to_user=standard_user.id,
@@ -52,7 +77,7 @@ class TestAssignRoleCommand:
             user_jwt_data=user_jwt,
         )
 
-        await handler.handle(command)
+        await assign_role_handler.handle(command)
         await db_session.commit()
 
         updated_user = await user_repository.get_user_with_permission_by_id(standard_user.id)
@@ -64,27 +89,14 @@ class TestAssignRoleCommand:
     async def test_assign_role_nonexistent_user(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        assign_role_handler: AssignRoleCommandHandler,
         admin_user: User,
     ) -> None:
         test_role = RoleFactory.create(name="test_role_ne", security_level=2)
         db_session.add(test_role)
         await db_session.commit()
 
-        handler = AssignRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = AssignRoleCommand(
             assign_to_user=99999,
@@ -93,30 +105,16 @@ class TestAssignRoleCommand:
         )
 
         with pytest.raises(NotFoundUserException):
-            await handler.handle(command)
+            await assign_role_handler.handle(command)
 
     @pytest.mark.asyncio
     async def test_assign_nonexistent_role(
         self,
-        db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        assign_role_handler: AssignRoleCommandHandler,
         admin_user: User,
         standard_user: User,
     ) -> None:
-        handler = AssignRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = AssignRoleCommand(
             assign_to_user=standard_user.id,
@@ -125,17 +123,13 @@ class TestAssignRoleCommand:
         )
 
         with pytest.raises(NotFoundRoleException):
-            await handler.handle(command)
+            await assign_role_handler.handle(command)
 
     @pytest.mark.asyncio
     async def test_assign_role_insufficient_permissions(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        assign_role_handler: AssignRoleCommandHandler,
         standard_user: User,
     ) -> None:
         test_role = RoleFactory.create(name="test_role_ip", security_level=2)
@@ -145,21 +139,12 @@ class TestAssignRoleCommand:
         another_user = UserFactory.create_verified(
             email="another@example.com",
             username="anotheruser",
-            roles={test_role}
+            roles={test_role},
         )
         db_session.add(another_user)
         await db_session.commit()
 
-        handler = AssignRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(standard_user)
+        user_jwt = jwt_from_user(standard_user)
 
         command = AssignRoleCommand(
             assign_to_user=another_user.id,
@@ -168,20 +153,16 @@ class TestAssignRoleCommand:
         )
 
         with pytest.raises(AccessDeniedException):
-            await handler.handle(command)
+            await assign_role_handler.handle(command)
 
     @pytest.mark.asyncio
     async def test_remove_role_success(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
         user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        remove_role_handler: RemoveRoleCommandHandler,
         admin_user: User,
     ) -> None:
-
         test_role = RoleFactory.create(name="removable_role", security_level=2)
         db_session.add(test_role)
         await db_session.flush()
@@ -189,21 +170,12 @@ class TestAssignRoleCommand:
         test_user = UserFactory.create_verified(
             email="hasrole@example.com",
             username="hasroleuser",
-            roles={test_role}
+            roles={test_role},
         )
         db_session.add(test_user)
         await db_session.commit()
 
-        handler = RemoveRoleCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = RemoveRoleCommand(
             remove_from_user=test_user.id,
@@ -211,7 +183,7 @@ class TestAssignRoleCommand:
             user_jwt_data=user_jwt,
         )
 
-        await handler.handle(command)
+        await remove_role_handler.handle(command)
         await db_session.commit()
 
         updated_user = await user_repository.get_user_with_permission_by_id(test_user.id)
@@ -224,11 +196,8 @@ class TestAssignRoleCommand:
     async def test_assign_multiple_roles(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
         user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        assign_role_handler: AssignRoleCommandHandler,
         admin_user: User,
         standard_user: User,
     ) -> None:
@@ -237,23 +206,14 @@ class TestAssignRoleCommand:
         db_session.add_all([role1, role2])
         await db_session.commit()
 
-        handler = AssignRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command1 = AssignRoleCommand(
             assign_to_user=standard_user.id,
             role_name="role_one",
             user_jwt_data=user_jwt,
         )
-        await handler.handle(command1)
+        await assign_role_handler.handle(command1)
         await db_session.commit()
 
         command2 = AssignRoleCommand(
@@ -261,7 +221,7 @@ class TestAssignRoleCommand:
             role_name="role_two",
             user_jwt_data=user_jwt,
         )
-        await handler.handle(command2)
+        await assign_role_handler.handle(command2)
         await db_session.commit()
 
         updated_user = await user_repository.get_user_with_permission_by_id(standard_user.id)
@@ -274,11 +234,7 @@ class TestAssignRoleCommand:
     async def test_remove_role_user_without_role(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        remove_role_handler: RemoveRoleCommandHandler,
         admin_user: User,
         standard_user: User,
     ) -> None:
@@ -286,16 +242,7 @@ class TestAssignRoleCommand:
         db_session.add(test_role)
         await db_session.commit()
 
-        handler = RemoveRoleCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = RemoveRoleCommand(
             remove_from_user=standard_user.id,
@@ -304,17 +251,14 @@ class TestAssignRoleCommand:
         )
 
         with pytest.raises(Exception):
-            await handler.handle(command)
+            await remove_role_handler.handle(command)
 
     @pytest.mark.asyncio
     async def test_assign_role_same_role_twice(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
         user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        assign_role_handler: AssignRoleCommandHandler,
         admin_user: User,
         standard_user: User,
     ) -> None:
@@ -322,16 +266,7 @@ class TestAssignRoleCommand:
         db_session.add(test_role)
         await db_session.commit()
 
-        handler = AssignRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = AssignRoleCommand(
             assign_to_user=standard_user.id,
@@ -339,10 +274,10 @@ class TestAssignRoleCommand:
             user_jwt_data=user_jwt,
         )
 
-        await handler.handle(command)
+        await assign_role_handler.handle(command)
         await db_session.commit()
 
-        await handler.handle(command)
+        await assign_role_handler.handle(command)
         await db_session.commit()
 
         updated_user = await user_repository.get_user_with_permission_by_id(standard_user.id)
@@ -355,11 +290,7 @@ class TestAssignRoleCommand:
     async def test_remove_role_insufficient_permissions(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        token_blacklist_repository: TokenBlacklistRepository,
+        remove_role_handler: RemoveRoleCommandHandler,
         standard_user: User,
     ) -> None:
         test_role = RoleFactory.create(name="removable_protected", security_level=2)
@@ -369,21 +300,12 @@ class TestAssignRoleCommand:
         target_user = UserFactory.create_verified(
             email="target@example.com",
             username="targetuser",
-            roles={test_role}
+            roles={test_role},
         )
         db_session.add(target_user)
         await db_session.commit()
 
-        handler = RemoveRoleCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(standard_user)
+        user_jwt = jwt_from_user(standard_user)
 
         command = RemoveRoleCommand(
             remove_from_user=target_user.id,
@@ -392,4 +314,4 @@ class TestAssignRoleCommand:
         )
 
         with pytest.raises(AccessDeniedException):
-            await handler.handle(command)
+            await remove_role_handler.handle(command)

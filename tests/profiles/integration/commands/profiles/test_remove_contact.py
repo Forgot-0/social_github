@@ -1,6 +1,5 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Callable
 
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException

@@ -1,5 +1,4 @@
 import pytest
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.users.register import RegisterCommand, RegisterCommandHandler
@@ -15,16 +14,16 @@ from tests.conftest import MockEventBus
 @pytest.mark.integration
 @pytest.mark.auth
 class TestRegisterCommand:
-    @pytest.mark.asyncio
-    async def test_register_new_user_success(
+    @pytest.fixture
+    def handler(
         self,
         db_session: AsyncSession,
         user_repository: UserRepository,
         role_repository: RoleRepository,
         hash_service: HashService,
         mock_event_bus: MockEventBus,
-    ) -> None:
-        handler = RegisterCommandHandler(
+    ) -> RegisterCommandHandler:
+        return RegisterCommandHandler(
             session=db_session,
             event_bus=mock_event_bus,
             user_repository=user_repository,
@@ -32,6 +31,13 @@ class TestRegisterCommand:
             hash_service=hash_service,
         )
 
+    @pytest.mark.asyncio
+    async def test_register_new_user_success(
+        self,
+        user_repository: UserRepository,
+        mock_event_bus: MockEventBus,
+        handler: RegisterCommandHandler,
+    ) -> None:
         cmd_data = AuthCommandFactory.create_register_command(
             username="newuser",
             email="new@example.com",
@@ -57,22 +63,9 @@ class TestRegisterCommand:
     @pytest.mark.asyncio
     async def test_register_duplicate_username(
         self,
-        db_session: AsyncSession,
-        mock_event_bus: MockEventBus,
-        user_repository: UserRepository,
-        role_repository: RoleRepository,
-        hash_service: HashService,
+        handler: RegisterCommandHandler,
         standard_user: User,
     ) -> None:
-
-        handler = RegisterCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            hash_service=hash_service,
-        )
-
         cmd_data = AuthCommandFactory.create_register_command(
             username=standard_user.username,
             email="different@example.com",
@@ -89,22 +82,9 @@ class TestRegisterCommand:
     @pytest.mark.asyncio
     async def test_register_duplicate_email(
         self,
-        db_session: AsyncSession,
-        mock_event_bus: MockEventBus,
-        user_repository: UserRepository,
-        role_repository: RoleRepository,
-        hash_service: HashService,
-        standard_user,
+        handler: RegisterCommandHandler,
+        standard_user: User,
     ) -> None:
-
-        handler = RegisterCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            hash_service=hash_service,
-        )
-
         cmd_data = AuthCommandFactory.create_register_command(
             username="differentuser",
             email=standard_user.email,
@@ -121,21 +101,8 @@ class TestRegisterCommand:
     @pytest.mark.asyncio
     async def test_register_password_mismatch(
         self,
-        db_session: AsyncSession,
-        user_repository: UserRepository,
-        role_repository: RoleRepository,
-        hash_service: HashService,
-        mock_event_bus: MockEventBus,
+        handler: RegisterCommandHandler,
     ) -> None:
-
-        handler = RegisterCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            hash_service=hash_service,
-        )
-
         command = RegisterCommand(
             username="testuser",
             email="test@example.com",
@@ -151,19 +118,8 @@ class TestRegisterCommand:
         self,
         db_session: AsyncSession,
         user_repository: UserRepository,
-        role_repository: RoleRepository,
-        hash_service: HashService,
-        mock_event_bus: MockEventBus,
+        handler: RegisterCommandHandler,
     ) -> None:
-
-        handler = RegisterCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            hash_service=hash_service,
-        )
-
         cmd_data = AuthCommandFactory.create_register_command()
         command = RegisterCommand(**cmd_data)
 
@@ -179,20 +135,10 @@ class TestRegisterCommand:
     async def test_register_password_is_hashed(
         self,
         db_session: AsyncSession,
-        mock_event_bus: MockEventBus,
         user_repository: UserRepository,
-        role_repository: RoleRepository,
         hash_service: HashService,
+        handler: RegisterCommandHandler,
     ) -> None:
-
-        handler = RegisterCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            role_repository=role_repository,
-            hash_service=hash_service,
-        )
-
         plain_password = "TestPass123!"
         cmd_data = AuthCommandFactory.create_register_command(password=plain_password)
         command = RegisterCommand(**cmd_data)

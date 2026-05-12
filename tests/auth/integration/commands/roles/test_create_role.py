@@ -2,7 +2,6 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.roles.create import CreateRoleCommand, CreateRoleCommandHandler
-from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import (
     DuplicateRoleException,
     InvalidRoleNameException,
@@ -14,30 +13,36 @@ from app.auth.repositories.permission import PermissionRepository
 from app.auth.repositories.role import RoleRepository
 from app.auth.services.rbac import AuthRBACManager
 from app.core.services.auth.exceptions import AccessDeniedException
-from tests.auth.integration.factories import RoleFactory, UserFactory
+from tests.support.jwt import jwt_from_user
 
 
 @pytest.mark.integration
 @pytest.mark.auth
 class TestCreateRoleCommand:
-
-    @pytest.mark.asyncio
-    async def test_create_role_success(
+    @pytest.fixture
+    def handler(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
         role_repository: RoleRepository,
         permission_repository: PermissionRepository,
-        admin_user: User,
-    ) -> None:
-        handler = CreateRoleCommandHandler(
+        rbac_manager: AuthRBACManager,
+    ) -> CreateRoleCommandHandler:
+        return CreateRoleCommandHandler(
             session=db_session,
             role_repository=role_repository,
             permission_repository=permission_repository,
             rbac_manager=rbac_manager,
         )
 
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+    @pytest.mark.asyncio
+    async def test_create_role_success(
+        self,
+        db_session: AsyncSession,
+        role_repository: RoleRepository,
+        handler: CreateRoleCommandHandler,
+        admin_user: User,
+    ) -> None:
+        user_jwt = jwt_from_user(admin_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -59,9 +64,8 @@ class TestCreateRoleCommand:
     async def test_create_role_with_permissions(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
         role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
         perm1 = Permission(name="post:create")
@@ -69,14 +73,7 @@ class TestCreateRoleCommand:
         db_session.add_all([perm1, perm2])
         await db_session.commit()
 
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -97,19 +94,10 @@ class TestCreateRoleCommand:
     async def test_create_role_duplicate_name(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command1 = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -135,20 +123,10 @@ class TestCreateRoleCommand:
     @pytest.mark.asyncio
     async def test_create_role_insufficient_permissions(
         self,
-        db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         standard_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(standard_user)
+        user_jwt = jwt_from_user(standard_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -164,20 +142,10 @@ class TestCreateRoleCommand:
     @pytest.mark.asyncio
     async def test_create_role_invalid_name(
         self,
-        db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -193,20 +161,10 @@ class TestCreateRoleCommand:
     @pytest.mark.asyncio
     async def test_create_role_nonexistent_permission(
         self,
-        db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -222,20 +180,10 @@ class TestCreateRoleCommand:
     @pytest.mark.asyncio
     async def test_create_role_security_level_too_high(
         self,
-        db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
-        standard_user: User
+        handler: CreateRoleCommandHandler,
+        standard_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(standard_user)
+        user_jwt = jwt_from_user(standard_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -251,20 +199,10 @@ class TestCreateRoleCommand:
     @pytest.mark.asyncio
     async def test_create_role_empty_name(
         self,
-        db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -280,20 +218,10 @@ class TestCreateRoleCommand:
     @pytest.mark.asyncio
     async def test_create_role_with_invalid_security_level(
         self,
-        db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -310,19 +238,11 @@ class TestCreateRoleCommand:
     async def test_create_role_preserves_description(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
         role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         description = "This is a detailed description of the editor role"
         command = CreateRoleCommand(
@@ -344,19 +264,11 @@ class TestCreateRoleCommand:
     async def test_create_multiple_roles_with_different_levels(
         self,
         db_session: AsyncSession,
-        rbac_manager: AuthRBACManager,
         role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
+        handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
-        handler = CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         roles_data = [
             ("viewer_role", "Can view content", 1),
@@ -379,5 +291,3 @@ class TestCreateRoleCommand:
             created_role = await role_repository.get_by_name(role_name)
             assert created_role is not None
             assert created_role.security_level == security_level
-
-

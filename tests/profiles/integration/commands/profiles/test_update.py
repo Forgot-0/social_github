@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Callable
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,25 +13,21 @@ from app.profiles.repositories.profiles import ProfileRepository
 from tests.profiles.integration.factories import ProfileCommandFactory
 
 
-
 @pytest.mark.integration
 @pytest.mark.profiles
 class TestUpdateProfileHandler:
-
     @pytest.fixture
-    def handler_factory(
+    def handler(
         self,
         db_session: AsyncSession,
         profile_repository: ProfileRepository,
         rbac_manager: RBACManager,
-    ) -> Callable[[], UpdateProfileCommandHandler]:
-        def _make() -> UpdateProfileCommandHandler:
-            return UpdateProfileCommandHandler(
-                session=db_session,
-                profile_repository=profile_repository,
-                rbac_manager=rbac_manager,
-            )
-        return _make
+    ) -> UpdateProfileCommandHandler:
+        return UpdateProfileCommandHandler(
+            session=db_session,
+            profile_repository=profile_repository,
+            rbac_manager=rbac_manager,
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -57,7 +53,7 @@ class TestUpdateProfileHandler:
         self,
         persisted_profile: Profile,
         user_jwt: UserJWTData,
-        handler_factory,
+        handler: UpdateProfileCommandHandler,
         profile_repository: ProfileRepository,
         payload,
         expected,
@@ -68,7 +64,6 @@ class TestUpdateProfileHandler:
             **payload,
         )
 
-        handler = handler_factory()
         await handler.handle(command)
 
         updated = await profile_repository.get_by_id(persisted_profile.id)
@@ -78,7 +73,11 @@ class TestUpdateProfileHandler:
         assert updated.skills == list(set(expected["skills"]))
 
     @pytest.mark.asyncio
-    async def test_not_found_raises(self, db_session: AsyncSession, handler_factory, user_jwt):
+    async def test_not_found_raises(
+        self,
+        handler: UpdateProfileCommandHandler,
+        user_jwt: UserJWTData,
+    ) -> None:
         command = UpdateProfileCommand(
             profile_id=999999,
             user_jwt_data=user_jwt,
@@ -86,9 +85,8 @@ class TestUpdateProfileHandler:
             display_name="x",
             bio=None,
             skills=None,
-            date_birthday=None
+            date_birthday=None,
         )
-        handler = handler_factory()
 
         with pytest.raises(NotFoundProfileException):
             await handler.handle(command)
@@ -98,16 +96,13 @@ class TestUpdateProfileHandler:
         self,
         persisted_profile: Profile,
         make_user_jwt,
-        handler_factory,
+        handler: UpdateProfileCommandHandler,
     ) -> None:
-
         command = UpdateProfileCommand(
             profile_id=persisted_profile.id,
             user_jwt_data=make_user_jwt(id="3", username="other_user"),
             **ProfileCommandFactory.update_command(display_name="bad"),
         )
-
-        handler = handler_factory()
 
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
@@ -117,18 +112,17 @@ class TestUpdateProfileHandler:
         self,
         persisted_profile: Profile,
         super_admin_user_jwt: UserJWTData,
-        handler_factory,
+        handler: UpdateProfileCommandHandler,
         profile_repository: ProfileRepository,
     ) -> None:
-
         command = UpdateProfileCommand(
             profile_id=persisted_profile.id,
             user_jwt_data=super_admin_user_jwt,
             **ProfileCommandFactory.update_command(
-                display_name="admin_updated", bio="ok", skills={"x"}, date_birthday=date(2005,2,25)),
+                display_name="admin_updated", bio="ok", skills={"x"}, date_birthday=date(2005, 2, 25)
+            ),
         )
 
-        handler = handler_factory()
         await handler.handle(command)
 
         updated = await profile_repository.get_by_id(persisted_profile.id)
@@ -136,4 +130,4 @@ class TestUpdateProfileHandler:
         assert updated.display_name == "admin_updated"
         assert updated.bio == "ok"
         assert updated.skills == ["x"]
-        assert updated.date_birthday == date(2005,2,25)
+        assert updated.date_birthday == date(2005, 2, 25)

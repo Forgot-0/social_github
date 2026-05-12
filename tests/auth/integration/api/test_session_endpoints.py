@@ -1,10 +1,10 @@
-
 from httpx import AsyncClient
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models.user import User
 from tests.auth.integration.factories import SessionFactory
+from tests.support.http import api_path
 
 
 @pytest.mark.integration
@@ -21,7 +21,7 @@ class TestSessionEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.get(
-            "/api/v1/sessions/",
+            api_path("sessions/"),
             headers=headers
         )
 
@@ -44,7 +44,7 @@ class TestSessionEndpoints:
         headers = auth_headers(standard_user)
 
         response = await client.delete(
-            f"/api/v1/sessions/{test_session.id}",
+            api_path(f"sessions/{test_session.id}"),
             headers=headers
         )
 

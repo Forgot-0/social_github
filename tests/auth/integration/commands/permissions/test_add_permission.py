@@ -5,7 +5,6 @@ from app.auth.commands.permissions.add_permission_user import (
     AddPermissionToUserCommand,
     AddPermissionToUserCommandHandler,
 )
-from app.auth.dtos.user import AuthUserJWTData
 from app.auth.exceptions import (
     NotFoundPermissionsException,
     NotFoundUserException,
@@ -17,29 +16,22 @@ from app.auth.repositories.session import TokenBlacklistRepository
 from app.auth.repositories.user import UserRepository
 from app.auth.services.rbac import AuthRBACManager
 from app.core.services.auth.exceptions import AccessDeniedException
+from tests.support.jwt import jwt_from_user
 
 
 @pytest.mark.integration
 @pytest.mark.auth
 class TestAddPermissionToUserCommand:
-    
-    @pytest.mark.asyncio
-    async def test_add_permission_to_user_success(
+    @pytest.fixture
+    def handler(
         self,
         db_session: AsyncSession,
         user_repository: UserRepository,
         permission_repository: PermissionRepository,
-        admin_user: User,
-        standard_user: User,
-        token_blacklist_repository: TokenBlacklistRepository,
         rbac_manager: AuthRBACManager,
-    ) -> None:
-
-        perm = Permission(name="custom:action")
-        db_session.add(perm)
-        await db_session.commit()
-
-        handler = AddPermissionToUserCommandHandler(
+        token_blacklist_repository: TokenBlacklistRepository,
+    ) -> AddPermissionToUserCommandHandler:
+        return AddPermissionToUserCommandHandler(
             session=db_session,
             user_repository=user_repository,
             permission_repository=permission_repository,
@@ -47,7 +39,20 @@ class TestAddPermissionToUserCommand:
             token_blacklist=token_blacklist_repository,
         )
 
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+    @pytest.mark.asyncio
+    async def test_add_permission_to_user_success(
+        self,
+        db_session: AsyncSession,
+        user_repository: UserRepository,
+        handler: AddPermissionToUserCommandHandler,
+        admin_user: User,
+        standard_user: User,
+    ) -> None:
+        perm = Permission(name="custom:action")
+        db_session.add(perm)
+        await db_session.commit()
+
+        user_jwt = jwt_from_user(admin_user)
 
         command = AddPermissionToUserCommand(
             user_jwt_data=user_jwt,
@@ -67,24 +72,11 @@ class TestAddPermissionToUserCommand:
     @pytest.mark.asyncio
     async def test_add_nonexistent_permission(
         self,
-        db_session: AsyncSession,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
+        handler: AddPermissionToUserCommandHandler,
         admin_user: User,
         standard_user: User,
-        token_blacklist_repository: TokenBlacklistRepository,
-        rbac_manager: AuthRBACManager,
     ) -> None:
-
-        handler = AddPermissionToUserCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = AddPermissionToUserCommand(
             user_jwt_data=user_jwt,
@@ -99,26 +91,14 @@ class TestAddPermissionToUserCommand:
     async def test_add_permission_to_nonexistent_user(
         self,
         db_session: AsyncSession,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
+        handler: AddPermissionToUserCommandHandler,
         admin_user: User,
-        token_blacklist_repository: TokenBlacklistRepository,
-        rbac_manager: AuthRBACManager,
     ) -> None:
-
         perm = Permission(name="test:perm")
         db_session.add(perm)
         await db_session.commit()
 
-        handler = AddPermissionToUserCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = AddPermissionToUserCommand(
             user_jwt_data=user_jwt,
@@ -134,28 +114,17 @@ class TestAddPermissionToUserCommand:
         self,
         db_session: AsyncSession,
         user_repository: UserRepository,
-        permission_repository: PermissionRepository,
+        handler: AddPermissionToUserCommandHandler,
         admin_user: User,
         standard_user: User,
-        token_blacklist_repository: TokenBlacklistRepository,
-        rbac_manager: AuthRBACManager,
     ) -> None:
-
         perm1 = Permission(name="action:create")
         perm2 = Permission(name="action:edit")
         perm3 = Permission(name="action:delete")
         db_session.add_all([perm1, perm2, perm3])
         await db_session.commit()
 
-        handler = AddPermissionToUserCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = AddPermissionToUserCommand(
             user_jwt_data=user_jwt,
@@ -178,26 +147,14 @@ class TestAddPermissionToUserCommand:
     async def test_add_permission_insufficient_permissions(
         self,
         db_session: AsyncSession,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
+        handler: AddPermissionToUserCommandHandler,
         standard_user: User,
-        token_blacklist_repository: TokenBlacklistRepository,
-        rbac_manager: AuthRBACManager,
     ) -> None:
-
         perm = Permission(name="test:perm")
         db_session.add(perm)
         await db_session.commit()
 
-        handler = AddPermissionToUserCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(standard_user)
+        user_jwt = jwt_from_user(standard_user)
 
         command = AddPermissionToUserCommand(
             user_jwt_data=user_jwt,
@@ -213,26 +170,15 @@ class TestAddPermissionToUserCommand:
         self,
         db_session: AsyncSession,
         user_repository: UserRepository,
-        permission_repository: PermissionRepository,
+        handler: AddPermissionToUserCommandHandler,
         admin_user: User,
         standard_user: User,
-        token_blacklist_repository: TokenBlacklistRepository,
-        rbac_manager: AuthRBACManager,
     ) -> None:
-
         perm = Permission(name="duplicate:perm")
         db_session.add(perm)
         await db_session.commit()
 
-        handler = AddPermissionToUserCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
-
-        user_jwt = AuthUserJWTData.create_from_user(admin_user)
+        user_jwt = jwt_from_user(admin_user)
 
         command = AddPermissionToUserCommand(
             user_jwt_data=user_jwt,
@@ -251,4 +197,3 @@ class TestAddPermissionToUserCommand:
 
         perm_count = sum(1 for p in updated_user.permissions if p.name == "duplicate:perm")
         assert perm_count == 1
-

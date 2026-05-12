@@ -6,7 +6,7 @@ from app.profiles.exceptions import (
     AlreadeExistProfileException,
     TooLongBioException,
     TooLongDisplayNameException,
-    TooLongSkillNameException
+    TooLongSkillNameException,
 )
 from app.profiles.repositories.profiles import ProfileRepository
 from tests.profiles.integration.factories import ProfileCommandFactory
@@ -15,16 +15,23 @@ from tests.profiles.integration.factories import ProfileCommandFactory
 @pytest.mark.integration
 @pytest.mark.profiles
 class TestCreateCommand:
+    @pytest.fixture
+    def handler(
+        self,
+        db_session: AsyncSession,
+        profile_repository: ProfileRepository,
+    ) -> CreateProfileCommandHanler:
+        return CreateProfileCommandHanler(
+            session=db_session,
+            profile_repository=profile_repository,
+        )
+
     @pytest.mark.asyncio
     async def test_create_success(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository
+        profile_repository: ProfileRepository,
+        handler: CreateProfileCommandHanler,
     ) -> None:
-        handler = CreateProfileCommandHanler(
-            session=db_session,
-            profile_repository=profile_repository
-        )
         cmd_data = ProfileCommandFactory.create_command(
             1, "test"
         )
@@ -43,69 +50,49 @@ class TestCreateCommand:
     @pytest.mark.asyncio
     async def test_create_duplicated(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository
+        handler: CreateProfileCommandHanler,
     ) -> None:
-        handler = CreateProfileCommandHanler(
-            session=db_session,
-            profile_repository=profile_repository
-        )
         cmd_data = ProfileCommandFactory.create_command(
             1, "test"
         )
         command = CreateProfileCommand(**cmd_data)
         await handler.handle(command)
 
-        with pytest.raises(AlreadeExistProfileException) as exc_info:
+        with pytest.raises(AlreadeExistProfileException):
             await handler.handle(command)
 
     @pytest.mark.asyncio
     async def test_create_long_skill_name(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository
+        handler: CreateProfileCommandHanler,
     ) -> None:
-        handler = CreateProfileCommandHanler(
-            session=db_session,
-            profile_repository=profile_repository
-        )
         cmd_data = ProfileCommandFactory.create_command(
-            1, "test", skills={"1"*1024}
+            1, "test", skills={"1" * 1024}
         )
         command = CreateProfileCommand(**cmd_data)
-        with pytest.raises(TooLongSkillNameException) as exc_info:
+        with pytest.raises(TooLongSkillNameException):
             await handler.handle(command)
 
     @pytest.mark.asyncio
     async def test_create_long_display_name(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository
+        handler: CreateProfileCommandHanler,
     ) -> None:
-        handler = CreateProfileCommandHanler(
-            session=db_session,
-            profile_repository=profile_repository
-        )
         cmd_data = ProfileCommandFactory.create_command(
-            1, "test", display_name="ab"*1024
+            1, "test", display_name="ab" * 1024
         )
         command = CreateProfileCommand(**cmd_data)
-        with pytest.raises(TooLongDisplayNameException) as exc_info:
+        with pytest.raises(TooLongDisplayNameException):
             await handler.handle(command)
 
     @pytest.mark.asyncio
     async def test_create_long_bio(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository
+        handler: CreateProfileCommandHanler,
     ) -> None:
-        handler = CreateProfileCommandHanler(
-            session=db_session,
-            profile_repository=profile_repository
-        )
         cmd_data = ProfileCommandFactory.create_command(
-            1, "test", bio="ab"*1024
+            1, "test", bio="ab" * 1024
         )
         command = CreateProfileCommand(**cmd_data)
-        with pytest.raises(TooLongBioException) as exc_info:
+        with pytest.raises(TooLongBioException):
             await handler.handle(command)

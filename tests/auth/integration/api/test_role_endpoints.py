@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models.user import User
 from tests.auth.integration.factories import RoleFactory
+from tests.support.http import api_path
 
 
 @pytest.mark.integration
@@ -20,7 +21,7 @@ class TestRoleEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.post(
-            "/api/v1/roles/",
+            api_path("roles/"),
             headers=headers,
             json={
                 "name": "test_role",
@@ -42,7 +43,7 @@ class TestRoleEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.get(
-            "/api/v1/roles/",
+            api_path("roles/"),
             headers=headers
         )
 
@@ -67,7 +68,7 @@ class TestRoleEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.post(
-            f"/api/v1/users/{standard_user.id}/roles",
+            api_path(f"users/{standard_user.id}/roles"),
             headers=headers,
             json={"role_name": "assignable"}
         )
