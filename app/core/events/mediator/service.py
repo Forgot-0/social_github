@@ -27,8 +27,8 @@ class MediatorEventBus(BaseEventBus):
                     handler = await requests_container.get(type_handler)
                     await handler(event)
 
-            await self.message_broker.send_event(
-                key=event.get_partition_key(),
-                topic=app_config.ANALYTICS_KAFKA_TOPIC,
-                event=event
-            )
+            # await self.message_broker.send_event(
+            #     key=event.get_partition_key(),
+            #     topic=app_config.ANALYTICS_KAFKA_TOPIC,
+            #     event=event
+            # )

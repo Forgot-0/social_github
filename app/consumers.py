@@ -36,7 +36,7 @@ async def lifespan(context: ContextRepo) :
 def setup_router(broker: KafkaBroker) -> None:
     broker.include_router(chat_delivery.router)
     broker.include_router(user.router)
-    broker.include_router(analytics.router)
+    # broker.include_router(analytics.router)
 
 
 def init_app() -> AsgiFastStream:
