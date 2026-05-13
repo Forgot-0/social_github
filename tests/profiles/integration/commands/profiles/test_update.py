@@ -70,7 +70,7 @@ class TestUpdateProfileHandler:
         assert updated is not None
         assert updated.display_name == expected["display_name"]
         assert updated.bio == expected["bio"]
-        assert updated.skills == list(set(expected["skills"]))
+        assert set(updated.skills) == set(expected["skills"])
 
     @pytest.mark.asyncio
     async def test_not_found_raises(

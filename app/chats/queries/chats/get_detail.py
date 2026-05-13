@@ -44,5 +44,5 @@ class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetaiDT
             permissions=chat.permissions or {},
             created_by=chat.created_by,
             member_count=chat.member_count,
-            members=[MemberChatDTO.model_validate(member.to_dict()) for member in chat.members],
+            members=[MemberChatDTO.model_validate(member) for member in chat.members],
         )

@@ -54,7 +54,7 @@ class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListCha
                     if read is not None
                     else chat.seq_counter
                 ),
-                me=MemberChatDTO.model_validate(member.to_dict()),
+                me=MemberChatDTO.model_validate(member),
                 last_read=read_dto,
             ))
 

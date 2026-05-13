@@ -39,7 +39,7 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessagesDTO]):
         page = messages[:limit]
 
         return MessagesDTO(
-            messages=[MessageDTO.model_validate(msg.to_dict()) for msg in page],
+            messages=[MessageDTO.model_validate(msg) for msg in page],
             has_next=len(messages) > limit,
             next_cursor=page[-1].seq if len(messages) > limit and page else None,
         )

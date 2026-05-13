@@ -49,5 +49,5 @@ class EditMessageCommandHandler(BaseCommandHandler[EditMessageCommand, MessageDT
             "Message edited",
             extra={"message_id": command.message_id, "by": user_id},
         )
-        return MessageDTO.model_validate(message.to_dict())
+        return MessageDTO.model_validate(message)
 

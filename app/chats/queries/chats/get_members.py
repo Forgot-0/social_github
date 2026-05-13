@@ -52,7 +52,7 @@ class GetChatMembersQueryHandler(BaseQueryHandler[GetChatMembersQuery, ListMembe
             ]
 
         return ListMembers(
-            members=[MemberChatDTO.model_validate(member.to_dict()) for member in page],
+            members=[MemberChatDTO.model_validate(member) for member in page],
             has_next=len(members) > limit,
             next_user_id=page[-1].user_id if len(members) > limit and page else None,
             presence=presence,

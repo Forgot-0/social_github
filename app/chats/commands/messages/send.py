@@ -105,4 +105,4 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
                 "fanout_strategy": chat.fanout_strategy.value,
             },
         )
-        return MessageDTO.model_validate(msg.to_dict())
+        return MessageDTO.model_validate(msg)

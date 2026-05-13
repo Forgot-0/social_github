@@ -132,4 +132,4 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
                 "by": user_id,
             },
         )
-        return MessageDTO.model_validate(forwarded_msg.to_dict())
+        return MessageDTO.model_validate(forwarded_msg)

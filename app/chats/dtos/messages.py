@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.chats.models.message import MessageType
 
@@ -25,6 +25,8 @@ class MessageDTO(BaseModel):
     attachments: list[AttachmentDTO] = Field(default_factory=list)
     reply_to: Optional["MessageDTO"] = Field(default=None)
     forwarded_from: Optional["MessageDTO"] = Field(default=None)
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReadDetail(BaseModel):

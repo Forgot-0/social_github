@@ -37,7 +37,7 @@ class GetMessageContextQueryHandler(BaseQueryHandler[GetMessageContextQuery, Mes
         )
         messages = sorted(messages, key=lambda msg: msg.seq)
         return MessagesDTO(
-            messages=[MessageDTO.model_validate(msg.to_dict()) for msg in messages],
+            messages=[MessageDTO.model_validate(msg) for msg in messages],
             has_next=False,
             next_cursor=None,
         )

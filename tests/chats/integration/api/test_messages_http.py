@@ -1,0 +1,247 @@
+"""Integration tests for ``/chats/{{id}}/messages`` (send, list, edit, delete, read, forward, idempotency, slow mode)."""
+
+import pytest
+from httpx import AsyncClient
+
+from app.core.services.auth.dto import UserJWTData
+from tests.chats.integration.factories import group_chat_payload, send_text_payload
+from tests.support.http import api_path
+
+
+async def _create_group_chat(
+    client: AsyncClient,
+    headers: dict[str, str],
+    *,
+    name: str = "Messages Test Chat",
+    member_ids: list[int] | None = None,
+    slow_mode_seconds: int = 0,
+) -> str:
+    payload = group_chat_payload(name=name, member_ids=member_ids, slow_mode_seconds=slow_mode_seconds)
+    response = await client.post(api_path("chats"), json=payload, headers=headers)
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+@pytest.mark.integration
+@pytest.mark.chats
+@pytest.mark.asyncio
+class TestMessagesHttpEndpoints:
+    async def test_send_list_get_edit_delete_flow(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers)
+
+        send_resp = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("hello world"),
+            headers=headers,
+        )
+        assert send_resp.status_code == 201
+        body = send_resp.json()
+        message_id = body["id"]
+        assert body["content"] == "hello world"
+        assert body["seq"] >= 1
+
+        list_resp = await client.get(api_path(f"chats/{chat_id}/messages"), headers=headers)
+        assert list_resp.status_code == 200
+        listed = list_resp.json()
+        assert listed["has_next"] in (True, False)
+        ids = {m["id"] for m in listed["messages"]}
+        assert message_id in ids
+
+        one = await client.get(
+            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            headers=headers,
+        )
+        assert one.status_code == 200
+        assert one.json()["id"] == message_id
+
+        edited = await client.patch(
+            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            json={"content": "hello edited"},
+            headers=headers,
+        )
+        assert edited.status_code == 200
+        assert edited.json()["content"] == "hello edited"
+        assert edited.json()["is_edited"] is True
+
+        delete_resp = await client.delete(
+            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            headers=headers,
+        )
+        assert delete_resp.status_code == 204
+
+    async def test_reply_to_message(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers)
+
+        first = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("parent"),
+            headers=headers,
+        )
+        assert first.status_code == 201
+        parent_id = first.json()["id"]
+
+        reply = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json={
+                "content": "child reply",
+                "reply_to_id": parent_id,
+                "message_type": "text",
+                "upload_tokens": [],
+            },
+            headers=headers,
+        )
+        assert reply.status_code == 201
+        assert reply.json()["reply_to_id"] == parent_id
+
+    async def test_message_context_and_mark_read(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers)
+
+        send_resp = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("ctx anchor"),
+            headers=headers,
+        )
+        assert send_resp.status_code == 201
+        seq = send_resp.json()["seq"]
+
+        ctx = await client.get(
+            api_path(f"chats/{chat_id}/messages/context"),
+            params={"target_seq": seq, "limit": 10},
+            headers=headers,
+        )
+        assert ctx.status_code == 200
+        assert any(m["seq"] == seq for m in ctx.json()["messages"])
+
+        read_resp = await client.post(
+            api_path(f"chats/{chat_id}/messages/read"),
+            json={"message_seq": seq},
+            headers=headers,
+        )
+        assert read_resp.status_code == 204
+
+    async def test_forward_message_between_chats(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        source_id = await _create_group_chat(client, headers, name="Source")
+        target_id = await _create_group_chat(client, headers, name="Target")
+
+        src_msg = await client.post(
+            api_path(f"chats/{source_id}/messages"),
+            json=send_text_payload("forward me"),
+            headers=headers,
+        )
+        assert src_msg.status_code == 201
+        source_message_id = src_msg.json()["id"]
+
+        fwd = await client.post(
+            api_path(f"chats/{target_id}/messages/forward"),
+            json={
+                "source_chat_id": source_id,
+                "source_message_id": source_message_id,
+                "comment": None,
+            },
+            headers=headers,
+        )
+        assert fwd.status_code == 201
+        assert fwd.json()["type"] == "forward"
+
+    async def test_send_idempotency_returns_same_message(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers)
+        idem_key = "idem-integration-1"
+
+        first = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("idempotent body"),
+            headers={**headers, "Idempotency-Key": idem_key},
+        )
+        assert first.status_code == 201
+        first_id = first.json()["id"]
+
+        second = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("different body ignored"),
+            headers={**headers, "Idempotency-Key": idem_key},
+        )
+        assert second.status_code == 201
+        assert second.json()["id"] == first_id
+
+    async def test_slow_mode_blocks_second_message_for_member(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        make_user_jwt,
+        create_auth_headers,
+    ) -> None:
+        owner_headers = create_auth_headers(user_jwt)
+        member_jwt = make_user_jwt(id="50050", username="slowmember")
+        member_headers = create_auth_headers(member_jwt)
+
+        chat_id = await _create_group_chat(
+            client,
+            owner_headers,
+            name="Slow chat",
+            member_ids=[1, 50_050],
+            slow_mode_seconds=300,
+        )
+
+        first = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("first"),
+            headers=member_headers,
+        )
+        assert first.status_code == 201
+
+        second = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("second too fast"),
+            headers=member_headers,
+        )
+        assert second.status_code == 429
+        assert second.json()["error"]["code"] == "SLOW_MODE_LIMIT"
+
+    async def test_not_member_cannot_send(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        make_user_jwt,
+        create_auth_headers,
+    ) -> None:
+        owner_headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, owner_headers)
+
+        outsider = make_user_jwt(id="50051", username="outsider")
+        response = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("nope"),
+            headers=create_auth_headers(outsider),
+        )
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "CHAT_ACCESS_DENIED"

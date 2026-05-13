@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Role(BaseModel):
@@ -7,6 +7,8 @@ class Role(BaseModel):
     level: int
     permissions: dict[str, bool] = Field(default_factory=dict)
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class MemberChatDTO(BaseModel):
     user_id: int
@@ -14,6 +16,8 @@ class MemberChatDTO(BaseModel):
     is_muted: bool
     is_banned: bool
     permissions_overrides: dict[str, bool] = Field(default_factory=dict)
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MemberPresenceDTO(BaseModel):
@@ -31,9 +35,13 @@ class MemeberDetailDTO(BaseModel):
     is_online: bool
     role: Role
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ListMembers(BaseModel):
     members: list[MemberChatDTO]
     has_next: bool
     next_user_id: int | None = None
     presence: list[MemberPresenceDTO] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)

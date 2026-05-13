@@ -32,4 +32,4 @@ class GetMessageDetailQueryHandler(BaseQueryHandler[GetMessageDetailQuery, Messa
         if message is None or message.chat_id != query.chat_id:
             raise NotFoundMessageException(message_id=str(query.message_id))
 
-        return MessageDTO.model_validate(message.to_dict())
+        return MessageDTO.model_validate(message)
