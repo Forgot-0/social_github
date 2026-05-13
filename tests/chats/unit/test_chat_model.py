@@ -1,12 +1,10 @@
-
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 
 from app.chats.config import chat_config
 from app.chats.exceptions import AccessDeniedChatException, MemberLimitExceededException, SlowModeOutOfRangeException
 from app.chats.models.chat import (
-    AddedChatMemberEvent,
     BannedChatMemberEvent,
     Chat,
     ChatFanoutStrategy,
@@ -56,11 +54,11 @@ class TestChatModel:
         assert all(member.role_id == 4 for member in chat.members)
 
         events = chat.pull_events()
-        assert len(events) == 2
-        assert isinstance(events[0], CreatedChatEvent)
-        assert events[0].created_by == 1
-        assert events[0].member_ids == [2]
-        assert events[0].chat_type == ChatType.DIRECT.value
+        assert len(events) == 3
+        assert isinstance(events[2], CreatedChatEvent)
+        assert events[2].created_by == 1
+        assert events[2].member_ids == [2]
+        assert events[2].chat_type == ChatType.DIRECT.value
 
     def test_create_group_chat_assigns_owner_and_members_roles(self) -> None:
         chat = make_group_chat(created_by=10, members_ids=[10, 20, 30])
