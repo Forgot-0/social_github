@@ -1,4 +1,4 @@
-"""Integration tests for ``/chats/{{id}}/messages`` (send, list, edit, delete, read, forward, idempotency, slow mode)."""
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -245,3 +245,126 @@ class TestMessagesHttpEndpoints:
         )
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "CHAT_ACCESS_DENIED"
+
+    async def test_list_messages_cursor_pagination(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers, name="Pagination chat")
+        for i in range(5):
+            send = await client.post(
+                api_path(f"chats/{chat_id}/messages"),
+                json=send_text_payload(f"msg-{i}"),
+                headers=headers,
+            )
+            assert send.status_code == 201
+
+        first = await client.get(
+            api_path(f"chats/{chat_id}/messages"),
+            params={"limit": 2},
+            headers=headers,
+        )
+        assert first.status_code == 200
+        page1 = first.json()
+        assert page1["has_next"] is True
+        assert page1["next_cursor"] is not None
+
+        second = await client.get(
+            api_path(f"chats/{chat_id}/messages"),
+            params={"limit": 2, "cursor_message_seq": page1["next_cursor"]},
+            headers=headers,
+        )
+        assert second.status_code == 200
+        seqs_page1 = {m["seq"] for m in page1["messages"]}
+        seqs_page2 = {m["seq"] for m in second.json()["messages"]}
+        assert seqs_page1.isdisjoint(seqs_page2)
+
+    async def test_get_message_detail_not_found(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers)
+        missing = uuid4()
+        response = await client.get(
+            api_path(f"chats/{chat_id}/messages/{missing}"),
+            headers=headers,
+        )
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "NOT_FOUND_MESSAGE"
+
+    async def test_edit_message_forbidden_for_non_author(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        make_user_jwt,
+        create_auth_headers,
+    ) -> None:
+        author_id = 50_060
+        owner_headers = create_auth_headers(user_jwt)
+        create = await client.post(
+            api_path("chats"),
+            json=group_chat_payload(name="Edit perms", member_ids=[1, author_id]),
+            headers=owner_headers,
+        )
+        assert create.status_code == 201
+        chat_id = create.json()["id"]
+
+        author = make_user_jwt(id=str(author_id), username="msgauthor")
+        author_headers = create_auth_headers(author)
+        sent = await client.post(
+            api_path(f"chats/{chat_id}/messages"),
+            json=send_text_payload("by member"),
+            headers=author_headers,
+        )
+        assert sent.status_code == 201
+        message_id = sent.json()["id"]
+
+        patch = await client.patch(
+            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            json={"content": "owner tries steal"},
+            headers=owner_headers,
+        )
+        assert patch.status_code == 403
+        assert patch.json()["error"]["code"] == "CHAT_ACCESS_DENIED"
+
+    async def test_forward_deleted_source_message_fails(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        source_id = await _create_group_chat(client, headers, name="Fwd source del")
+        target_id = await _create_group_chat(client, headers, name="Fwd target del")
+
+        src_msg = await client.post(
+            api_path(f"chats/{source_id}/messages"),
+            json=send_text_payload("to be deleted"),
+            headers=headers,
+        )
+        assert src_msg.status_code == 201
+        source_message_id = src_msg.json()["id"]
+
+        delete_resp = await client.delete(
+            api_path(f"chats/{source_id}/messages/{source_message_id}"),
+            headers=headers,
+        )
+        assert delete_resp.status_code == 204
+
+        fwd = await client.post(
+            api_path(f"chats/{target_id}/messages/forward"),
+            json={
+                "source_chat_id": source_id,
+                "source_message_id": source_message_id,
+                "comment": None,
+            },
+            headers=headers,
+        )
+        assert fwd.status_code == 404
+        assert fwd.json()["error"]["code"] == "NOT_FOUND_MESSAGE"

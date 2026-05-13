@@ -1,5 +1,3 @@
-"""Attachments upload flow and calls (LiveKit token) integration tests."""
-
 from uuid import uuid4
 
 import pytest
@@ -133,6 +131,30 @@ class TestCallsHttpEndpoints:
         assert data["token"] == "integration-test-livekit-jwt"
         assert data["slug"] == chat_id
         assert "livekit_url" in data
+
+    async def test_join_call_forbidden_for_non_member(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        make_user_jwt,
+        create_auth_headers,
+    ) -> None:
+        owner_headers = create_auth_headers(user_jwt)
+        create = await client.post(
+            api_path("chats"),
+            json=group_chat_payload(name="Calls closed"),
+            headers=owner_headers,
+        )
+        assert create.status_code == 201
+        chat_id = create.json()["id"]
+
+        stranger = make_user_jwt(id="50300", username="nocalluser")
+        response = await client.post(
+            api_path(f"chats/{chat_id}/calls/join"),
+            headers=create_auth_headers(stranger),
+        )
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "NOT_CHAT_MEMBER"
 
     async def test_mute_participant_no_op_with_stub_livekit(
         self,

@@ -1,9 +1,9 @@
-"""Integration tests for ``/chats/{{id}}/members`` (list, invite, roles, ban, kick)."""
-
 import pytest
 from httpx import AsyncClient
 
+from app.chats.keys import ChatKeys
 from app.core.services.auth.dto import UserJWTData
+from app.core.utils import now_utc
 from tests.chats.integration.factories import group_chat_payload
 from tests.support.http import api_path
 
@@ -175,3 +175,36 @@ class TestMembersHttpEndpoints:
         assert listed.status_code == 200
         by_user = {m["user_id"]: m for m in listed.json()["members"]}
         assert by_user[target_id]["role_id"] == 3
+
+    async def test_list_members_include_presence_marks_online_from_redis(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+        redis_client,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        peer_id = 50_150
+        await redis_client.zadd(
+            ChatKeys.presence_last_seen_zset(),
+            {str(peer_id): now_utc().timestamp()},
+        )
+
+        create = await client.post(
+            api_path("chats"),
+            json=group_chat_payload(name="Presence flags", member_ids=[1, peer_id]),
+            headers=headers,
+        )
+        assert create.status_code == 201
+        chat_id = create.json()["id"]
+
+        response = await client.get(
+            api_path(f"chats/{chat_id}/members"),
+            params={"include_presence": "true"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["presence"]
+        by_uid = {p["user_id"]: p["is_online"] for p in payload["presence"]}
+        assert by_uid.get(peer_id) is True

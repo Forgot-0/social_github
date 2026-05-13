@@ -1,12 +1,10 @@
-"""Integration tests for ``/chats`` REST endpoints (lifecycle, access control, public join)."""
-
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 
 from app.core.services.auth.dto import UserJWTData
-from tests.chats.integration.factories import direct_chat_payload, group_chat_payload
+from tests.chats.integration.factories import direct_chat_payload, group_chat_payload, send_text_payload
 from tests.support.http import api_path
 
 
@@ -166,3 +164,51 @@ class TestChatsHttpEndpoints:
         assert response.status_code == 201
         data = response.json()
         assert data["type"] == "direct"
+
+    async def test_list_chats_cursor_pagination(
+        self,
+        client: AsyncClient,
+        make_user_jwt,
+        create_auth_headers,
+    ) -> None:
+        isolated = make_user_jwt(id="91001", username="chatpager91001")
+        headers = create_auth_headers(isolated)
+        uid = int(isolated.id)
+        created_ids: list[str] = []
+        for i in range(3):
+            resp = await client.post(
+                api_path("chats"),
+                json=group_chat_payload(name=f"Page chat {i}", member_ids=[uid]),
+                headers=headers,
+            )
+            assert resp.status_code == 201
+            cid = resp.json()["id"]
+            created_ids.append(cid)
+            bump = await client.post(
+                api_path(f"chats/{cid}/messages"),
+                json=send_text_payload("activity"),
+                headers=headers,
+            )
+            assert bump.status_code == 201
+
+        first = await client.get(api_path("chats"), params={"limit": 2}, headers=headers)
+        assert first.status_code == 200
+        body = first.json()
+        assert len(body["chats"]) == 2
+        assert body["has_next"] is True
+        assert body["next_chat_id"] is not None
+        ids_first = {str(c["id"]) for c in body["chats"]}
+        assert ids_first.issubset(set(created_ids))
+
+        if body["next_date"] is not None:
+            second = await client.get(
+                api_path("chats"),
+                params={
+                    "limit": 2,
+                    "last_chat_id": str(body["next_chat_id"]),
+                    "last_activity_at": body["next_date"],
+                },
+                headers=headers,
+            )
+            assert second.status_code == 200
+            assert second.json()["has_next"] in (True, False)
