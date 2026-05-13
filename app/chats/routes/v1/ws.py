@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def _select_subprotocol(websocket: WebSocket) -> str | None:
+    print("HEADERS ", websocket.headers)
     offered = {
         part.strip()
         for part in websocket.headers.get("sec-websocket-protocol", "").split(",")
