@@ -184,7 +184,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         slow_mode_seconds: int = 0,
         permissions: dict[str, bool] | None = None,
     ) -> Self:
-        members_ids = list(dict.fromkeys(int(member_id) for member_id in members_ids if int(member_id) != created_by))
+        members_ids.remove(created_by)
 
         if chat_type == ChatType.DIRECT and len(members_ids) != 1:
             raise MemberLimitExceededException(limit=2)

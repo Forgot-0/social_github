@@ -41,32 +41,26 @@ class ChatMember(BaseModel, DateMixin):
     )
 
     def effective_permissions(self) -> dict[str, bool]:
-        perms = self.role.permissions.copy() if self.role is not None else {}
+        perms = self.role.permissions.copy()
         if self.permissions_overrides:
             perms.update(self.permissions_overrides)
         return perms
 
     def has_permission(self, permission_key: str) -> bool:
-        if self.role is None:
-            return False
         if self.permissions_overrides and permission_key in self.permissions_overrides:
             return bool(self.permissions_overrides[permission_key])
         return self.role.has_permission(permission_key)
 
     @property
-    def role_name(self) -> str | None:
-        return self.role.name if self.role is not None else None
+    def role_name(self) -> str:
+        return self.role.name
 
     @property
     def is_staff(self) -> bool:
-        if self.role is None:
-            return False
         return self.role.level >= chat_config.CHAT_STAFF_MIN_ROLE_LEVEL
 
     @property
     def is_editor_or_above(self) -> bool:
-        if self.role is None:
-            return False
         return self.role.level >= chat_config.CHAT_EDITOR_MIN_ROLE_LEVEL
 
     @property
