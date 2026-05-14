@@ -1,0 +1,122 @@
+
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.chats.commands.chats.create import CreateChatCommand, CreateChatCommandHandler
+from app.chats.models.chat import ChatType
+from app.chats.models.permission import ChatRolesEnum
+from app.chats.repositories.chat import ChatRepository
+from app.chats.services.livekit_service import LiveKitService
+from app.core.events.service import BaseEventBus
+from app.core.services.auth.dto import UserJWTData
+from tests.conftest import MockEventBus
+
+
+
+@pytest.mark.integration
+@pytest.mark.chats
+@pytest.mark.asyncio
+class TestCreateChatCommand:
+
+    @pytest.fixture
+    def handler(
+        self,
+        db_session: AsyncSession,
+        livekit: LiveKitService,
+        mock_event_bus: BaseEventBus,
+        chat_repository: ChatRepository,
+    ) -> CreateChatCommandHandler:
+        return CreateChatCommandHandler(
+            session=db_session,
+            chat_repository=chat_repository,
+            livekit_sevice=livekit,
+            event_bus=mock_event_bus,
+        )
+
+    async def test_create_direct_chat_persists_two_members(
+        self,
+        handler: CreateChatCommandHandler,
+        chat_repository: ChatRepository,
+        user_jwt: UserJWTData,
+    ) -> None:
+        cmd = CreateChatCommand(
+            name=None,
+            description=None,
+            chat_type=ChatType.DIRECT,
+            member_ids=[2],
+            is_public=False,
+            user_jwt_data=user_jwt,
+        )
+        dto = await handler.handle(cmd)
+        chat = await chat_repository.get_by_id(dto.id, with_members=True)
+        assert chat is not None
+        assert chat.member_count == 2
+        assert chat.members[0].role_id == ChatRolesEnum.DIRECT_MEMBER.value.id
+        assert chat.members[1].role_id == ChatRolesEnum.DIRECT_MEMBER.value.id
+        assert chat.name == None
+        assert chat.description == None
+
+    async def test_create_group_chat_with_name_and_description(
+        self,
+        handler: CreateChatCommandHandler,
+        chat_repository: ChatRepository,
+        user_jwt: UserJWTData
+    ) -> None:
+        cmd = CreateChatCommand(
+            name="My Group",
+            description="Best group",
+            chat_type=ChatType.GROUP,
+            member_ids=[10, 20, 30],
+            is_public=True,
+            user_jwt_data=user_jwt,
+        )
+        dto = await handler.handle(cmd)
+
+        chat = await chat_repository.get_by_id(dto.id, with_members=True)
+        assert chat is not None
+        assert chat.member_count == 4
+        assert chat.name == "My Group"
+        assert chat.description == "Best group"
+        assert chat.is_public
+
+    async def test_create_public_channel(
+        self,
+        handler: CreateChatCommandHandler,
+        chat_repository: ChatRepository,
+        user_jwt: UserJWTData
+    ) -> None:
+        cmd = CreateChatCommand(
+            name="News Channel",
+            description=None,
+            chat_type=ChatType.CHANNEL,
+            member_ids=[5, 6, 7],
+            is_public=True,
+            user_jwt_data=user_jwt,
+        )
+        dto = await handler.handle(cmd)
+
+        chat = await chat_repository.get_by_id(dto.id, with_members=True)
+        assert chat is not None
+        assert chat.type == ChatType.CHANNEL
+        assert chat.member_count == 4
+        assert chat.name == "News Channel"
+        assert chat.description == None
+        assert chat.is_public
+
+    async def test_create_group_with_slow_mode(
+        self,
+        handler: CreateChatCommandHandler,
+        user_jwt: UserJWTData
+    ) -> None:
+        cmd = CreateChatCommand(
+            name="Slow Group",
+            description=None,
+            chat_type=ChatType.GROUP,
+            member_ids=[1, 2],
+            is_public=False,
+            user_jwt_data=user_jwt,
+            slow_mode_seconds=60,
+        )
+        dto = await handler.handle(cmd)
+
+        assert dto.slow_mode_seconds == 60
