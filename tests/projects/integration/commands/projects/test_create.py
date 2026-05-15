@@ -10,6 +10,7 @@ from tests.projects.integration.factories import ProjectCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestCreateProjectCommand:
 
     @pytest.fixture
@@ -23,7 +24,6 @@ class TestCreateProjectCommand:
             project_repository=project_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_create_success(
         self,
         project_repository: ProjectRepository,
@@ -45,7 +45,6 @@ class TestCreateProjectCommand:
         assert created is not None
         assert created.owner_id == 1
 
-    @pytest.mark.asyncio
     async def test_limit_projects_per_user(
         self,
         handler
@@ -71,7 +70,6 @@ class TestCreateProjectCommand:
             await handler.handle(command)
 
 
-    @pytest.mark.asyncio
     async def test_already_slug_exists(self, handler) -> None:
         cmd_data = ProjectCommandFactory.create_command(
             owner_id=1,

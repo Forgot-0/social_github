@@ -21,6 +21,7 @@ from tests.support.jwt import jwt_from_user
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestAddPermissionToUserCommand:
     @pytest.fixture
     def handler(
@@ -39,7 +40,6 @@ class TestAddPermissionToUserCommand:
             token_blacklist=token_blacklist_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_add_permission_to_user_success(
         self,
         db_session: AsyncSession,
@@ -69,7 +69,6 @@ class TestAddPermissionToUserCommand:
         perm_names = {p.name for p in updated_user.permissions}
         assert "custom:action" in perm_names
 
-    @pytest.mark.asyncio
     async def test_add_nonexistent_permission(
         self,
         handler: AddPermissionToUserCommandHandler,
@@ -87,7 +86,6 @@ class TestAddPermissionToUserCommand:
         with pytest.raises(NotFoundPermissionsException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_add_permission_to_nonexistent_user(
         self,
         db_session: AsyncSession,
@@ -109,7 +107,6 @@ class TestAddPermissionToUserCommand:
         with pytest.raises(NotFoundUserException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_add_multiple_permissions_to_user(
         self,
         db_session: AsyncSession,
@@ -143,7 +140,6 @@ class TestAddPermissionToUserCommand:
         assert "action:edit" in perm_names
         assert "action:delete" in perm_names
 
-    @pytest.mark.asyncio
     async def test_add_permission_insufficient_permissions(
         self,
         db_session: AsyncSession,
@@ -165,7 +161,6 @@ class TestAddPermissionToUserCommand:
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_add_same_permission_twice(
         self,
         db_session: AsyncSession,

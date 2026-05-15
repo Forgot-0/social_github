@@ -12,6 +12,7 @@ from app.projects.repositories.projects import ProjectRepository
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestCreateApplicationCommand:
 
     @pytest.fixture
@@ -29,7 +30,6 @@ class TestCreateApplicationCommand:
             application_repository=application_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_create_success(
         self,
         persisted_position: Position,
@@ -59,7 +59,6 @@ class TestCreateApplicationCommand:
         assert app.status == ApplicationStatus.pending
         assert app.message == "I am a great fit"
 
-    @pytest.mark.asyncio
     async def test_create_position_not_found_raises(
         self,
         make_user_jwt,

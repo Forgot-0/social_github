@@ -19,6 +19,7 @@ from tests.projects.integration.factories import PositionCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestCreatePositionCommand:
 
     @pytest.fixture
@@ -40,7 +41,6 @@ class TestCreatePositionCommand:
             event_bus=mock_event_bus,
         )
 
-    @pytest.mark.asyncio
     async def test_create_success(
         self,
         persisted_project: Project,
@@ -70,7 +70,6 @@ class TestCreatePositionCommand:
         assert len(positions) == 1
         assert positions[0].title == "Senior Backend Dev"
 
-    @pytest.mark.asyncio
     async def test_create_fires_event(
         self,
         persisted_project: Project,
@@ -90,7 +89,6 @@ class TestCreatePositionCommand:
         assert event.__class__.__name__ == "CreatedPositionEvent"
         assert event.project_id == persisted_project.id
 
-    @pytest.mark.asyncio
     async def test_create_project_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -104,7 +102,6 @@ class TestCreatePositionCommand:
         with pytest.raises(NotFoundProjectException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_limit_exceeded_raises(
         self,
         persisted_project: Project,
@@ -133,7 +130,6 @@ class TestCreatePositionCommand:
                 )
             )
 
-    @pytest.mark.asyncio
     async def test_create_without_permission_raises(
         self,
         persisted_project: Project,

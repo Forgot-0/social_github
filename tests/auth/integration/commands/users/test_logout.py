@@ -16,6 +16,7 @@ from tests.auth.integration.factories import AuthCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestLogoutCommand:
     @pytest.fixture
     def login_handler(
@@ -51,7 +52,6 @@ class TestLogoutCommand:
             token_blacklist=token_blacklist_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_logout_success(
         self,
         db_session: AsyncSession,
@@ -79,7 +79,6 @@ class TestLogoutCommand:
 
         assert len(active_sessions) == 0
 
-    @pytest.mark.asyncio
     async def test_logout_invalid_token(
         self,
         logout_handler: LogoutCommandHandler,
@@ -89,7 +88,6 @@ class TestLogoutCommand:
         with pytest.raises(InvalidTokenException):
             await logout_handler.handle(logout_command)
 
-    @pytest.mark.asyncio
     async def test_logout_none_token(
         self,
         logout_handler: LogoutCommandHandler,

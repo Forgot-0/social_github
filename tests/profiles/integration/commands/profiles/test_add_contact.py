@@ -12,6 +12,7 @@ from app.profiles.repositories.profiles import ProfileRepository
 
 @pytest.mark.integration
 @pytest.mark.profiles
+@pytest.mark.asyncio
 class TestAddContactToProfileCommand:
 
     @pytest.fixture
@@ -27,7 +28,6 @@ class TestAddContactToProfileCommand:
             rbac_manager=rbac_manager,
         )
 
-    @pytest.mark.asyncio
     async def test_owner_can_add_contact_success(
         self,
         persisted_profile: Profile,
@@ -51,7 +51,6 @@ class TestAddContactToProfileCommand:
             for contact in updated.contacts
         )
 
-    @pytest.mark.asyncio
     async def test_add_multiple_contacts(
         self,
         persisted_profile: Profile,
@@ -86,7 +85,6 @@ class TestAddContactToProfileCommand:
             for contact in updated.contacts
         )
 
-    @pytest.mark.asyncio
     async def test_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -102,7 +100,6 @@ class TestAddContactToProfileCommand:
         with pytest.raises(NotFoundProfileException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_forbidden_if_not_owner_and_no_permission(
         self,
         persisted_profile: Profile,
@@ -119,7 +116,6 @@ class TestAddContactToProfileCommand:
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_allowed_if_not_owner_but_has_permission(
         self,
         persisted_profile: Profile,
@@ -144,7 +140,6 @@ class TestAddContactToProfileCommand:
             for contact in updated.contacts
         )
 
-    @pytest.mark.asyncio
     async def test_update_existing_contact(
         self,
         persisted_profile: Profile,

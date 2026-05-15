@@ -15,6 +15,7 @@ from app.profiles.repositories.profiles import ProfileRepository
 
 @pytest.mark.integration
 @pytest.mark.profiles
+@pytest.mark.asyncio
 class TestRemoveContactFromProfileCommand:
 
     @pytest.fixture
@@ -30,8 +31,6 @@ class TestRemoveContactFromProfileCommand:
             rbac_manager=rbac_manager,
         )
 
-
-    @pytest.mark.asyncio
     async def test_owner_can_remove_contact_success(
         self,
         persisted_profile_contact,
@@ -56,7 +55,6 @@ class TestRemoveContactFromProfileCommand:
             for contact in updated.contacts
         )
 
-    @pytest.mark.asyncio
     async def test_remove_one_contact_keeps_others(
         self,
         persisted_profile_contact,
@@ -93,7 +91,6 @@ class TestRemoveContactFromProfileCommand:
             for contact in updated.contacts
         )
 
-    @pytest.mark.asyncio
     async def test_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -108,7 +105,6 @@ class TestRemoveContactFromProfileCommand:
         with pytest.raises(NotFoundProfileException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_forbidden_if_not_owner_and_no_permission(
         self,
         persisted_profile_contact,
@@ -128,7 +124,6 @@ class TestRemoveContactFromProfileCommand:
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_allowed_if_not_owner_but_has_permission(
         self,
         persisted_profile_contact,
@@ -155,7 +150,6 @@ class TestRemoveContactFromProfileCommand:
             for contact in updated.contacts
         )
 
-    @pytest.mark.asyncio
     async def test_remove_non_existing_contact(
         self,
         persisted_profile: Profile,

@@ -15,6 +15,7 @@ from tests.profiles.integration.factories import ProfileCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.profiles
+@pytest.mark.asyncio
 class TestUpdateProfileHandler:
     @pytest.fixture
     def handler(
@@ -29,7 +30,6 @@ class TestUpdateProfileHandler:
             rbac_manager=rbac_manager,
         )
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "payload, expected",
         [
@@ -72,7 +72,6 @@ class TestUpdateProfileHandler:
         assert updated.bio == expected["bio"]
         assert set(updated.skills) == set(expected["skills"])
 
-    @pytest.mark.asyncio
     async def test_not_found_raises(
         self,
         handler: UpdateProfileCommandHandler,
@@ -91,7 +90,6 @@ class TestUpdateProfileHandler:
         with pytest.raises(NotFoundProfileException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_forbidden_if_not_owner_and_no_permission(
         self,
         persisted_profile: Profile,
@@ -107,7 +105,6 @@ class TestUpdateProfileHandler:
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_allowed_if_not_owner_but_has_permission(
         self,
         persisted_profile: Profile,

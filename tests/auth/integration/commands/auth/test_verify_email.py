@@ -17,6 +17,7 @@ from tests.conftest import MockEventBus, MockMailService
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestSendVerifyEmailCommand:
     @pytest.fixture
     def handler(
@@ -31,7 +32,6 @@ class TestSendVerifyEmailCommand:
             token_repository=token_blacklist_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_send_verify_email_success(
         self,
         unverified_user: User,
@@ -44,7 +44,6 @@ class TestSendVerifyEmailCommand:
         assert len(mock_mail_service.sent_emails) == 1
         assert mock_mail_service.sent_emails[0]["data"].recipient == unverified_user.email
 
-    @pytest.mark.asyncio
     async def test_send_verify_email_nonexistent_user(
         self,
         handler: SendVerifyCommandHandler,
@@ -57,6 +56,7 @@ class TestSendVerifyEmailCommand:
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestVerifyEmailCommand:
     @pytest.fixture
     def handler(
@@ -73,7 +73,6 @@ class TestVerifyEmailCommand:
             token_repository=token_blacklist_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_verify_email_success(
         self,
         db_session: AsyncSession,
@@ -99,7 +98,6 @@ class TestVerifyEmailCommand:
         assert verified_user is not None
         assert verified_user.is_verified is True
 
-    @pytest.mark.asyncio
     async def test_verify_email_invalid_token(
         self,
         handler: VerifyCommandHandler,
@@ -109,7 +107,6 @@ class TestVerifyEmailCommand:
         with pytest.raises(InvalidTokenException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_verify_email_already_verified(
         self,
         db_session: AsyncSession,

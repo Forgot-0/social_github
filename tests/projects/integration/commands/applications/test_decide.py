@@ -14,6 +14,7 @@ from app.projects.services.permission_service import ProjectPermissionService
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestDecideApplicationCommand:
 
     @pytest.fixture
@@ -33,7 +34,6 @@ class TestDecideApplicationCommand:
             project_permission_service=project_permission_service,
         )
 
-    @pytest.mark.asyncio
     async def test_approve_changes_application_status(
         self,
         persisted_application: Application,
@@ -56,7 +56,6 @@ class TestDecideApplicationCommand:
         assert updated.decided_at is not None
         assert updated.position.is_open == False
 
-    @pytest.mark.asyncio
     async def test_approve_creates_membership(
         self,
         persisted_application: Application,
@@ -79,7 +78,6 @@ class TestDecideApplicationCommand:
         assert membership is not None
         assert membership.status == MembershipStatus.active
 
-    @pytest.mark.asyncio
     async def test_reject_changes_application_status(
         self,
         persisted_application: Application,
@@ -100,7 +98,6 @@ class TestDecideApplicationCommand:
         assert updated.status == ApplicationStatus.rejected
         assert updated.decided_by == int(user_jwt.id)
 
-    @pytest.mark.asyncio
     async def test_reject_does_not_create_membership(
         self,
         persisted_application: Application,
@@ -122,7 +119,6 @@ class TestDecideApplicationCommand:
         )
         assert membership is None
 
-    @pytest.mark.asyncio
     async def test_decide_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -139,7 +135,6 @@ class TestDecideApplicationCommand:
         with pytest.raises(NotFoundProjectException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_approve_without_permission_raises(
         self,
         persisted_application: Application,
@@ -156,7 +151,6 @@ class TestDecideApplicationCommand:
         with pytest.raises(Exception):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_decide_already_decided_application_raises(
         self,
         persisted_application: Application,

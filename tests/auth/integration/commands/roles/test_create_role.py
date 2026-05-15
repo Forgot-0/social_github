@@ -18,6 +18,7 @@ from tests.support.jwt import jwt_from_user
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestCreateRoleCommand:
     @pytest.fixture
     def handler(
@@ -34,7 +35,6 @@ class TestCreateRoleCommand:
             rbac_manager=rbac_manager,
         )
 
-    @pytest.mark.asyncio
     async def test_create_role_success(
         self,
         db_session: AsyncSession,
@@ -60,7 +60,6 @@ class TestCreateRoleCommand:
         assert created_role.description == "Moderator role"
         assert created_role.security_level == 5
 
-    @pytest.mark.asyncio
     async def test_create_role_with_permissions(
         self,
         db_session: AsyncSession,
@@ -90,7 +89,6 @@ class TestCreateRoleCommand:
         assert created_role is not None
         assert len(created_role.permissions) == 2
 
-    @pytest.mark.asyncio
     async def test_create_role_duplicate_name(
         self,
         db_session: AsyncSession,
@@ -120,7 +118,6 @@ class TestCreateRoleCommand:
         with pytest.raises(DuplicateRoleException):
             await handler.handle(command2)
 
-    @pytest.mark.asyncio
     async def test_create_role_insufficient_permissions(
         self,
         handler: CreateRoleCommandHandler,
@@ -139,7 +136,6 @@ class TestCreateRoleCommand:
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_role_invalid_name(
         self,
         handler: CreateRoleCommandHandler,
@@ -158,7 +154,6 @@ class TestCreateRoleCommand:
         with pytest.raises(InvalidRoleNameException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_role_nonexistent_permission(
         self,
         handler: CreateRoleCommandHandler,
@@ -177,7 +172,6 @@ class TestCreateRoleCommand:
         with pytest.raises(NotFoundPermissionsException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_role_security_level_too_high(
         self,
         handler: CreateRoleCommandHandler,
@@ -196,7 +190,6 @@ class TestCreateRoleCommand:
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_role_empty_name(
         self,
         handler: CreateRoleCommandHandler,
@@ -215,7 +208,6 @@ class TestCreateRoleCommand:
         with pytest.raises(InvalidRoleNameException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_role_with_invalid_security_level(
         self,
         handler: CreateRoleCommandHandler,
@@ -234,7 +226,6 @@ class TestCreateRoleCommand:
         with pytest.raises(AccessDeniedException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_role_preserves_description(
         self,
         db_session: AsyncSession,
@@ -260,7 +251,6 @@ class TestCreateRoleCommand:
         assert created_role is not None
         assert created_role.description == description
 
-    @pytest.mark.asyncio
     async def test_create_multiple_roles_with_different_levels(
         self,
         db_session: AsyncSession,

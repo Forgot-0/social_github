@@ -18,6 +18,7 @@ from tests.conftest import MockEventBus, MockMailService
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestSendResetPasswordCommand:
     @pytest.fixture
     def handler(
@@ -32,7 +33,6 @@ class TestSendResetPasswordCommand:
             token_repository=token_blacklist_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_send_reset_password_code_success(
         self,
         standard_user: User,
@@ -45,7 +45,6 @@ class TestSendResetPasswordCommand:
         assert len(mock_mail_service.sent_emails) == 1
         assert mock_mail_service.sent_emails[0]["data"].recipient == standard_user.email
 
-    @pytest.mark.asyncio
     async def test_send_reset_password_nonexistent_user(
         self,
         handler: SendResetPasswordCommandHandler,
@@ -58,6 +57,7 @@ class TestSendResetPasswordCommand:
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestResetPasswordCommand:
     @pytest.fixture
     def handler(
@@ -76,7 +76,6 @@ class TestResetPasswordCommand:
             hash_service=hash_service,
         )
 
-    @pytest.mark.asyncio
     async def test_reset_password_success(
         self,
         db_session: AsyncSession,
@@ -110,7 +109,6 @@ class TestResetPasswordCommand:
         assert updated_user.password_hash is not None
         assert hash_service.verify_password(new_password, updated_user.password_hash)
 
-    @pytest.mark.asyncio
     async def test_reset_password_invalid_token(
         self,
         handler: ResetPasswordCommandHandler,
@@ -124,7 +122,6 @@ class TestResetPasswordCommand:
         with pytest.raises(InvalidTokenException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_reset_password_mismatch(
         self,
         standard_user: User,
@@ -149,7 +146,6 @@ class TestResetPasswordCommand:
         with pytest.raises(PasswordMismatchException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_reset_password_token_invalidated_after_use(
         self,
         db_session: AsyncSession,

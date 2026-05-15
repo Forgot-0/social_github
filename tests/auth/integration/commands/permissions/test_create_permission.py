@@ -13,6 +13,7 @@ from tests.support.jwt import jwt_from_user
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestCreatePermissionCommand:
     @pytest.fixture
     def handler(
@@ -27,7 +28,6 @@ class TestCreatePermissionCommand:
             rbac_manager=rbac_manager,
         )
 
-    @pytest.mark.asyncio
     async def test_create_permission_success(
         self,
         db_session: AsyncSession,
@@ -48,7 +48,6 @@ class TestCreatePermissionCommand:
         created_perm = await permission_repository.get_permission_by_name("post:publish")
         assert created_perm is not None
 
-    @pytest.mark.asyncio
     async def test_create_permission_duplicate(
         self,
         db_session: AsyncSession,
@@ -69,7 +68,6 @@ class TestCreatePermissionCommand:
         with pytest.raises(DuplicatePermissionException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_permission_insufficient_permissions(
         self,
         handler: CreatePermissionCommandHandler,

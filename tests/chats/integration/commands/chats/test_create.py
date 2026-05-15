@@ -3,13 +3,12 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.create import CreateChatCommand, CreateChatCommandHandler
-from app.chats.models.chat import ChatType
+from app.chats.models.chat import ChatFanoutStrategy, ChatType
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.livekit_service import LiveKitService
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from tests.conftest import MockEventBus
 
 
 
@@ -55,6 +54,7 @@ class TestCreateChatCommand:
         assert chat.members[1].role_id == ChatRolesEnum.DIRECT_MEMBER.value.id
         assert chat.name == None
         assert chat.description == None
+        assert chat.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE
 
     async def test_create_group_chat_with_name_and_description(
         self,
@@ -106,6 +106,7 @@ class TestCreateChatCommand:
     async def test_create_group_with_slow_mode(
         self,
         handler: CreateChatCommandHandler,
+        chat_repository: ChatRepository,
         user_jwt: UserJWTData
     ) -> None:
         cmd = CreateChatCommand(
@@ -119,4 +120,6 @@ class TestCreateChatCommand:
         )
         dto = await handler.handle(cmd)
 
-        assert dto.slow_mode_seconds == 60
+        chat = await chat_repository.get_by_id(dto.id, with_members=True)
+        assert chat is not None
+        assert chat.slow_mode_seconds == 60

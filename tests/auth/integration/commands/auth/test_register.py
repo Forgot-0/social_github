@@ -13,6 +13,7 @@ from tests.conftest import MockEventBus
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestRegisterCommand:
     @pytest.fixture
     def handler(
@@ -31,7 +32,6 @@ class TestRegisterCommand:
             hash_service=hash_service,
         )
 
-    @pytest.mark.asyncio
     async def test_register_new_user_success(
         self,
         user_repository: UserRepository,
@@ -60,7 +60,6 @@ class TestRegisterCommand:
         assert len(mock_event_bus.published_events) == 1
         assert mock_event_bus.published_events[0].__class__.__name__ == "CreatedUserEvent"
 
-    @pytest.mark.asyncio
     async def test_register_duplicate_username(
         self,
         handler: RegisterCommandHandler,
@@ -79,7 +78,6 @@ class TestRegisterCommand:
         assert exc_info.value.field == "username"
         assert exc_info.value.value == standard_user.username
 
-    @pytest.mark.asyncio
     async def test_register_duplicate_email(
         self,
         handler: RegisterCommandHandler,
@@ -98,7 +96,6 @@ class TestRegisterCommand:
         assert exc_info.value.field == "email"
         assert exc_info.value.value == standard_user.email
 
-    @pytest.mark.asyncio
     async def test_register_password_mismatch(
         self,
         handler: RegisterCommandHandler,
@@ -113,7 +110,6 @@ class TestRegisterCommand:
         with pytest.raises(PasswordMismatchException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_register_user_has_default_role(
         self,
         db_session: AsyncSession,
@@ -131,7 +127,6 @@ class TestRegisterCommand:
         assert len(created_user.roles) == 1
         assert list(created_user.roles)[0].name == "user"
 
-    @pytest.mark.asyncio
     async def test_register_password_is_hashed(
         self,
         db_session: AsyncSession,

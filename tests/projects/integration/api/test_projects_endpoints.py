@@ -10,9 +10,9 @@ from tests.support.http import api_path
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestProjectEndpoints:
 
-    @pytest.mark.asyncio
     async def test_create_project_success(
         self,
         client: AsyncClient,
@@ -36,7 +36,6 @@ class TestProjectEndpoints:
 
         assert response.status_code == 201
 
-    @pytest.mark.asyncio
     async def test_create_project_unauthorized(
         self,
         client: AsyncClient,
@@ -48,7 +47,6 @@ class TestProjectEndpoints:
 
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_get_project_success(
         self,
         client: AsyncClient,
@@ -68,7 +66,6 @@ class TestProjectEndpoints:
         assert data["id"] == persisted_project.id
         assert data["owner_id"] == persisted_project.owner_id
 
-    @pytest.mark.asyncio
     async def test_get_project_not_found(
         self,
         client: AsyncClient,
@@ -83,7 +80,6 @@ class TestProjectEndpoints:
         data = response.json()
         assert data["error"]["code"] == "NOT_FOUND_PROJECT"
 
-    @pytest.mark.asyncio
     async def test_update_project_success(
         self,
         client: AsyncClient,
@@ -101,7 +97,6 @@ class TestProjectEndpoints:
 
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_update_project_not_owner_forbidden(
         self,
         client: AsyncClient,
@@ -120,7 +115,6 @@ class TestProjectEndpoints:
 
         assert response.status_code in (403, 422, 500)
 
-    @pytest.mark.asyncio
     async def test_invite_member_success(
         self,
         client: AsyncClient,
@@ -138,7 +132,6 @@ class TestProjectEndpoints:
 
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_accept_invite_not_member_returns_error(
         self,
         client: AsyncClient,
@@ -156,7 +149,6 @@ class TestProjectEndpoints:
 
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_create_position_for_project_success(
         self,
         client: AsyncClient,
@@ -181,9 +173,9 @@ class TestProjectEndpoints:
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestPositionEndpoints:
 
-    @pytest.mark.asyncio
     async def test_list_positions_success(
         self,
         client: AsyncClient,
@@ -204,7 +196,6 @@ class TestPositionEndpoints:
         assert "items" in data
         assert "total" in data
 
-    @pytest.mark.asyncio
     async def test_get_position_by_id_success(
         self,
         client: AsyncClient,
@@ -224,7 +215,6 @@ class TestPositionEndpoints:
         assert data["id"] == str(persisted_position.id)
         assert data["title"] == persisted_position.title
 
-    @pytest.mark.asyncio
     async def test_get_position_not_found(
         self,
         client: AsyncClient,
@@ -242,7 +232,6 @@ class TestPositionEndpoints:
 
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_update_position_success(
         self,
         client: AsyncClient,
@@ -260,7 +249,6 @@ class TestPositionEndpoints:
 
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_delete_position_success(
         self,
         client: AsyncClient,
@@ -277,7 +265,6 @@ class TestPositionEndpoints:
 
         assert response.status_code == 204
 
-    @pytest.mark.asyncio
     async def test_apply_to_position_success(
         self,
         client: AsyncClient,
@@ -299,9 +286,9 @@ class TestPositionEndpoints:
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestApplicationEndpoints:
 
-    @pytest.mark.asyncio
     async def test_list_applications_success(
         self,
         client: AsyncClient,
@@ -326,7 +313,6 @@ class TestApplicationEndpoints:
         ids = [a["id"] for a in data["items"]]
         assert str(persisted_application.id) in ids
 
-    @pytest.mark.asyncio
     async def test_approve_application_success(
         self,
         client: AsyncClient,
@@ -343,7 +329,6 @@ class TestApplicationEndpoints:
 
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_reject_application_success(
         self,
         client: AsyncClient,
@@ -360,7 +345,6 @@ class TestApplicationEndpoints:
 
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_list_applications_filter_by_candidate(
         self,
         client: AsyncClient,

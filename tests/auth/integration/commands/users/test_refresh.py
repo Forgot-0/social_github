@@ -19,6 +19,7 @@ from tests.auth.integration.factories import AuthCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestRefreshTokenCommand:
     @pytest.fixture
     def login_handler(
@@ -52,7 +53,6 @@ class TestRefreshTokenCommand:
             user_repository=user_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_refresh_token_success(
         self,
         db_session: AsyncSession,
@@ -80,7 +80,6 @@ class TestRefreshTokenCommand:
         new_token_data = await auth_jwt_manager.validate_token(new_tokens.access_token)
         assert new_token_data.sub == str(standard_user.id)
 
-    @pytest.mark.asyncio
     async def test_refresh_token_invalid_token(
         self,
         refresh_handler: RefreshTokenCommandHandler,
@@ -92,7 +91,6 @@ class TestRefreshTokenCommand:
         with pytest.raises(InvalidTokenException):
             await refresh_handler.handle(refresh_command)
 
-    @pytest.mark.asyncio
     async def test_refresh_token_inactive_session(
         self,
         db_session: AsyncSession,
@@ -124,7 +122,6 @@ class TestRefreshTokenCommand:
         with pytest.raises(NotFoundOrInactiveSessionException):
             await refresh_handler.handle(refresh_command)
 
-    @pytest.mark.asyncio
     async def test_refresh_token_updates_session_activity(
         self,
         db_session: AsyncSession,

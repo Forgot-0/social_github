@@ -16,6 +16,7 @@ from tests.projects.integration.factories import PositionCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestUpdatePositionCommand:
 
     @pytest.fixture
@@ -35,7 +36,6 @@ class TestUpdatePositionCommand:
             event_bus=mock_event_bus,
         )
 
-    @pytest.mark.asyncio
     async def test_update_title_success(
         self,
         persisted_position: Position,
@@ -55,7 +55,6 @@ class TestUpdatePositionCommand:
         assert updated is not None
         assert updated.title == "Updated Title"
 
-    @pytest.mark.asyncio
     async def test_update_required_skills(
         self,
         persisted_position: Position,
@@ -75,7 +74,6 @@ class TestUpdatePositionCommand:
         assert updated is not None
         assert set(updated.required_skills) == {"rust", "wasm"}
 
-    @pytest.mark.asyncio
     async def test_update_location_type(
         self,
         persisted_position: Position,
@@ -95,7 +93,6 @@ class TestUpdatePositionCommand:
         assert updated is not None
         assert updated.location_type == PositionLocationType.onsite
 
-    @pytest.mark.asyncio
     async def test_update_none_fields_unchanged(
         self,
         persisted_position: Position,
@@ -117,7 +114,6 @@ class TestUpdatePositionCommand:
         assert updated is not None
         assert updated.title == original_title
 
-    @pytest.mark.asyncio
     async def test_update_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -134,7 +130,6 @@ class TestUpdatePositionCommand:
         with pytest.raises(NotFoundProjectException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_update_without_permission_raises(
         self,
         persisted_position: Position,

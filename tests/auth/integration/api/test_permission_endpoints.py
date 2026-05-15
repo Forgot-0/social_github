@@ -9,9 +9,9 @@ from tests.support.http import api_path
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestPermissionEndpoints:
 
-    @pytest.mark.asyncio
     async def test_create_permission_endpoint(
         self,
         client: AsyncClient,
@@ -28,7 +28,6 @@ class TestPermissionEndpoints:
 
         assert response.status_code == 201
 
-    @pytest.mark.asyncio
     async def test_get_permissions_endpoint(
         self,
         client: AsyncClient,
@@ -46,7 +45,6 @@ class TestPermissionEndpoints:
         data = response.json()
         assert "items" in data
 
-    @pytest.mark.asyncio
     async def test_delete_permission_endpoint(
         self,
         client: AsyncClient,

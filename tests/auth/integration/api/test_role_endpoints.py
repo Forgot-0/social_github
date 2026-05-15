@@ -9,9 +9,9 @@ from tests.support.http import api_path
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestRoleEndpoints:
 
-    @pytest.mark.asyncio
     async def test_create_role_endpoint(
         self,
         client: AsyncClient,
@@ -33,7 +33,6 @@ class TestRoleEndpoints:
 
         assert response.status_code == 201
 
-    @pytest.mark.asyncio
     async def test_get_roles_endpoint(
         self,
         client: AsyncClient,
@@ -52,7 +51,6 @@ class TestRoleEndpoints:
         assert "items" in data
         assert len(data["items"]) >= 3
 
-    @pytest.mark.asyncio
     async def test_assign_role_endpoint(
         self,
         client: AsyncClient,

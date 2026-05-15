@@ -7,9 +7,9 @@ from tests.support.http import api_path
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestUserEndpoints:
 
-    @pytest.mark.asyncio
     async def test_get_users_list_endpoint(
         self,
         client: AsyncClient,
@@ -30,7 +30,6 @@ class TestUserEndpoints:
         assert "page" in data
         assert len(data["items"]) >= 2
 
-    @pytest.mark.asyncio
     async def test_get_users_list_unauthorized(
         self,
         client: AsyncClient,

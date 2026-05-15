@@ -16,6 +16,7 @@ from app.projects.services.permission_service import ProjectPermissionService
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestAcceptInviteCommand:
 
     @pytest.fixture
@@ -48,7 +49,6 @@ class TestAcceptInviteCommand:
             event_bus=mock_event_bus,
         )
 
-    @pytest.mark.asyncio
     async def test_accept_invite_changes_status_to_active(
         self,
         db_session: AsyncSession,
@@ -83,7 +83,6 @@ class TestAcceptInviteCommand:
         assert membership.status == MembershipStatus.active
         assert membership.joined_at is not None
 
-    @pytest.mark.asyncio
     async def test_accept_without_invite_raises(
         self,
         persisted_project: Project,

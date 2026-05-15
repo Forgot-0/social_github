@@ -7,9 +7,9 @@ from tests.support.http import api_path
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestAuthEndpoints:
 
-    @pytest.mark.asyncio
     async def test_register_endpoint(
         self,
         client: AsyncClient,
@@ -30,7 +30,6 @@ class TestAuthEndpoints:
         assert data["email"] == "newuser@example.com"
         assert "id" in data
 
-    @pytest.mark.asyncio
     async def test_register_duplicate_email(
         self,
         client: AsyncClient,
@@ -50,7 +49,6 @@ class TestAuthEndpoints:
         data = response.json()
         assert data["error"]["code"] == "DUPLICATE_USER"
 
-    @pytest.mark.asyncio
     async def test_login_endpoint(
         self,
         client: AsyncClient,
@@ -71,7 +69,6 @@ class TestAuthEndpoints:
 
         assert "refresh_token" in response.cookies
 
-    @pytest.mark.asyncio
     async def test_login_wrong_password(
         self,
         client: AsyncClient,
@@ -89,7 +86,6 @@ class TestAuthEndpoints:
         data = response.json()
         assert data["error"]["code"] == "WRONG_LOGIN_DATA"
 
-    @pytest.mark.asyncio
     async def test_me_endpoint(
         self,
         client: AsyncClient,
@@ -109,7 +105,6 @@ class TestAuthEndpoints:
         assert data["username"] == standard_user.username
         assert data["email"] == standard_user.email
 
-    @pytest.mark.asyncio
     async def test_me_endpoint_unauthorized(
         self,
         client: AsyncClient,
@@ -118,7 +113,6 @@ class TestAuthEndpoints:
 
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
     async def test_refresh_token_endpoint(
         self,
         client: AsyncClient,
@@ -152,7 +146,6 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert data["access_token"] != login_response.json()["access_token"]
 
-    @pytest.mark.asyncio
     async def test_logout_endpoint(
         self,
         client: AsyncClient,

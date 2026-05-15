@@ -16,6 +16,7 @@ from tests.auth.integration.factories import AuthCommandFactory, UserFactory
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestLoginCommand:
     @pytest.fixture
     def handler(
@@ -34,7 +35,6 @@ class TestLoginCommand:
             hash_service=hash_service,
         )
 
-    @pytest.mark.asyncio
     async def test_login_with_username_success(
         self,
         handler: LoginCommandHandler,
@@ -51,7 +51,6 @@ class TestLoginCommand:
         assert token_group.access_token is not None
         assert token_group.refresh_token is not None
 
-    @pytest.mark.asyncio
     async def test_login_with_email_success(
         self,
         handler: LoginCommandHandler,
@@ -68,7 +67,6 @@ class TestLoginCommand:
         assert token_group.access_token is not None
         assert token_group.refresh_token is not None
 
-    @pytest.mark.asyncio
     async def test_login_wrong_password(
         self,
         handler: LoginCommandHandler,
@@ -85,7 +83,6 @@ class TestLoginCommand:
 
         assert exc_info.value.username == standard_user.username
 
-    @pytest.mark.asyncio
     async def test_login_nonexistent_user(
         self,
         handler: LoginCommandHandler,
@@ -99,7 +96,6 @@ class TestLoginCommand:
         with pytest.raises(WrongLoginDataException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_login_creates_session(
         self,
         db_session: AsyncSession,
@@ -122,7 +118,6 @@ class TestLoginCommand:
         assert len(sessions) > 0
         assert any(s.user_agent == generate_device_info("Chrome/100.0").user_agent for s in sessions)
 
-    @pytest.mark.asyncio
     async def test_login_multiple_times_same_device(
         self,
         db_session: AsyncSession,
@@ -151,7 +146,6 @@ class TestLoginCommand:
         device_sessions = [s for s in sessions if "Chrome" in s.user_agent]
         assert len(device_sessions) == 1
 
-    @pytest.mark.asyncio
     async def test_login_user_without_password(
         self,
         db_session: AsyncSession,
@@ -178,7 +172,6 @@ class TestLoginCommand:
         with pytest.raises(WrongLoginDataException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_login_tokens_contain_user_data(
         self,
         handler: LoginCommandHandler,

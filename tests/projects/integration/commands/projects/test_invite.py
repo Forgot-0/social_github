@@ -15,6 +15,7 @@ from app.projects.services.permission_service import ProjectPermissionService
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestInviteMemberCommand:
 
     @pytest.fixture
@@ -34,7 +35,6 @@ class TestInviteMemberCommand:
             event_bus=mock_event_bus,
         )
 
-    @pytest.mark.asyncio
     async def test_invite_success(
         self,
         persisted_project: Project,
@@ -56,7 +56,6 @@ class TestInviteMemberCommand:
         assert membership.status == MembershipStatus.invited
         assert membership.invited_by == int(user_jwt.id)
 
-    @pytest.mark.asyncio
     async def test_invite_project_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -72,7 +71,6 @@ class TestInviteMemberCommand:
         with pytest.raises(NotFoundProjectException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_invite_nonexistent_role_raises(
         self,
         persisted_project: Project,
@@ -89,7 +87,6 @@ class TestInviteMemberCommand:
         with pytest.raises(Exception):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_invite_already_member_raises(
         self,
         persisted_project: Project,
@@ -107,7 +104,6 @@ class TestInviteMemberCommand:
         with pytest.raises(Exception):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_invite_with_permissions_overrides(
         self,
         persisted_project: Project,

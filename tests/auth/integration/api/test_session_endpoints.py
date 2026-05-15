@@ -9,9 +9,9 @@ from tests.support.http import api_path
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestSessionEndpoints:
 
-    @pytest.mark.asyncio
     async def test_get_sessions_endpoint(
         self,
         client: AsyncClient,
@@ -29,7 +29,6 @@ class TestSessionEndpoints:
         data = response.json()
         assert "items" in data
 
-    @pytest.mark.asyncio
     async def test_deactivate_session_endpoint(
         self,
         client: AsyncClient,

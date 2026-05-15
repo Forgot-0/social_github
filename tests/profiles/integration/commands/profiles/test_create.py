@@ -14,6 +14,7 @@ from tests.profiles.integration.factories import ProfileCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.profiles
+@pytest.mark.asyncio
 class TestCreateCommand:
     @pytest.fixture
     def handler(
@@ -26,7 +27,6 @@ class TestCreateCommand:
             profile_repository=profile_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_create_success(
         self,
         profile_repository: ProfileRepository,
@@ -47,7 +47,6 @@ class TestCreateCommand:
         assert isinstance(created_profile.skills, list)
         assert created_profile.skills == list()
 
-    @pytest.mark.asyncio
     async def test_create_duplicated(
         self,
         handler: CreateProfileCommandHanler,
@@ -61,7 +60,6 @@ class TestCreateCommand:
         with pytest.raises(AlreadeExistProfileException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_long_skill_name(
         self,
         handler: CreateProfileCommandHanler,
@@ -73,7 +71,6 @@ class TestCreateCommand:
         with pytest.raises(TooLongSkillNameException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_long_display_name(
         self,
         handler: CreateProfileCommandHanler,
@@ -85,7 +82,6 @@ class TestCreateCommand:
         with pytest.raises(TooLongDisplayNameException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_create_long_bio(
         self,
         handler: CreateProfileCommandHanler,

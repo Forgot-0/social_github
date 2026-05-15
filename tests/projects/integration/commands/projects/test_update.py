@@ -13,6 +13,7 @@ from tests.projects.integration.factories import ProjectCommandFactory
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestUpdateProjectCommand:
 
     @pytest.fixture
@@ -30,7 +31,6 @@ class TestUpdateProjectCommand:
             event_bus=mock_event_bus,
         )
 
-    @pytest.mark.asyncio
     async def test_update_name_success(
         self,
         persisted_project: Project,
@@ -50,7 +50,6 @@ class TestUpdateProjectCommand:
         assert updated is not None
         assert updated.name == "Renamed Project"
 
-    @pytest.mark.asyncio
     async def test_update_description_success(
         self,
         persisted_project: Project,
@@ -70,7 +69,6 @@ class TestUpdateProjectCommand:
         assert updated is not None
         assert updated.small_description == "New description"
 
-    @pytest.mark.asyncio
     async def test_update_visibility_to_private(
         self,
         persisted_project: Project,
@@ -90,7 +88,6 @@ class TestUpdateProjectCommand:
         assert updated is not None
         assert updated.visibility == ProjectVisibility.private
 
-    @pytest.mark.asyncio
     async def test_update_tags_success(
         self,
         persisted_project: Project,
@@ -110,7 +107,6 @@ class TestUpdateProjectCommand:
         assert updated is not None
         assert set(updated.tags) == {"rust", "wasm"}
 
-    @pytest.mark.asyncio
     async def test_none_fields_not_changed(
         self,
         persisted_project: Project,
@@ -132,7 +128,6 @@ class TestUpdateProjectCommand:
         assert updated is not None
         assert updated.name == original_name
 
-    @pytest.mark.asyncio
     async def test_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -147,7 +142,6 @@ class TestUpdateProjectCommand:
         with pytest.raises(NotFoundProjectException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_non_owner_without_permission_cannot_update(
         self,
         persisted_project: Project,
@@ -165,7 +159,6 @@ class TestUpdateProjectCommand:
         with pytest.raises(Exception):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_super_admin_can_update_any_project(
         self,
         persisted_project: Project,

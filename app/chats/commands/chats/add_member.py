@@ -12,7 +12,6 @@ from app.chats.exceptions import (
 )
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
@@ -33,7 +32,6 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
     chat_access_service: ChatAccessService
-    connection_manager: ChatConnectionManager
     event_bus: BaseEventBus
 
     async def handle(self, command: AddMemberCommand) -> None:

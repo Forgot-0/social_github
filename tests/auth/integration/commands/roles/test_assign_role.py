@@ -17,6 +17,7 @@ from tests.support.jwt import jwt_from_user
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestAssignRoleCommand:
     @pytest.fixture
     def assign_role_handler(
@@ -56,7 +57,6 @@ class TestAssignRoleCommand:
             token_blacklist=token_blacklist_repository,
         )
 
-    @pytest.mark.asyncio
     async def test_assign_role_success(
         self,
         db_session: AsyncSession,
@@ -85,7 +85,6 @@ class TestAssignRoleCommand:
         role_names = {r.name for r in updated_user.roles}
         assert "test_assignable_role" in role_names
 
-    @pytest.mark.asyncio
     async def test_assign_role_nonexistent_user(
         self,
         db_session: AsyncSession,
@@ -107,7 +106,6 @@ class TestAssignRoleCommand:
         with pytest.raises(NotFoundUserException):
             await assign_role_handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_assign_nonexistent_role(
         self,
         assign_role_handler: AssignRoleCommandHandler,
@@ -125,7 +123,6 @@ class TestAssignRoleCommand:
         with pytest.raises(NotFoundRoleException):
             await assign_role_handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_assign_role_insufficient_permissions(
         self,
         db_session: AsyncSession,
@@ -155,7 +152,6 @@ class TestAssignRoleCommand:
         with pytest.raises(AccessDeniedException):
             await assign_role_handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_remove_role_success(
         self,
         db_session: AsyncSession,
@@ -192,7 +188,6 @@ class TestAssignRoleCommand:
         role_names = {r.name for r in updated_user.roles}
         assert "removable_role" not in role_names
 
-    @pytest.mark.asyncio
     async def test_assign_multiple_roles(
         self,
         db_session: AsyncSession,
@@ -230,7 +225,6 @@ class TestAssignRoleCommand:
         assert "role_one" in role_names
         assert "role_two" in role_names
 
-    @pytest.mark.asyncio
     async def test_remove_role_user_without_role(
         self,
         db_session: AsyncSession,
@@ -253,7 +247,6 @@ class TestAssignRoleCommand:
         with pytest.raises(Exception):
             await remove_role_handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_assign_role_same_role_twice(
         self,
         db_session: AsyncSession,
@@ -286,7 +279,6 @@ class TestAssignRoleCommand:
         role_count = sum(1 for r in updated_user.roles if r.name == "duplicate_assign")
         assert role_count == 1
 
-    @pytest.mark.asyncio
     async def test_remove_role_insufficient_permissions(
         self,
         db_session: AsyncSession,

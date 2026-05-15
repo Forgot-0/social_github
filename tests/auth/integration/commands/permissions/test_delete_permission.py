@@ -13,6 +13,7 @@ from tests.support.jwt import jwt_from_user
 
 @pytest.mark.integration
 @pytest.mark.auth
+@pytest.mark.asyncio
 class TestDeletePermissionCommand:
     @pytest.fixture
     def handler(
@@ -29,7 +30,6 @@ class TestDeletePermissionCommand:
             permission_blacklist=permission_blacklist,
         )
 
-    @pytest.mark.asyncio
     async def test_delete_permission_success(
         self,
         db_session: AsyncSession,
@@ -54,7 +54,6 @@ class TestDeletePermissionCommand:
         deleted_perm = await permission_repository.get_permission_by_name("deletable:perm")
         assert deleted_perm is None
 
-    @pytest.mark.asyncio
     async def test_delete_protected_permission(
         self,
         handler: DeletePermissionCommandHandler,
@@ -70,7 +69,6 @@ class TestDeletePermissionCommand:
         with pytest.raises(ProtectedPermissionException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_delete_permission_insufficient_permissions(
         self,
         db_session: AsyncSession,

@@ -15,6 +15,7 @@ from app.projects.services.permission_service import ProjectPermissionService
 
 @pytest.mark.integration
 @pytest.mark.projects
+@pytest.mark.asyncio
 class TestDeletePositionCommand:
 
     @pytest.fixture
@@ -32,7 +33,6 @@ class TestDeletePositionCommand:
             project_permission_service=project_permission_service,
         )
 
-    @pytest.mark.asyncio
     async def test_delete_success(
         self,
         persisted_position: Position,
@@ -50,7 +50,6 @@ class TestDeletePositionCommand:
         deleted = await position_repository.get_by_id(str(persisted_position.id))
         assert deleted is None
 
-    @pytest.mark.asyncio
     async def test_delete_not_found_raises(
         self,
         user_jwt: UserJWTData,
@@ -66,7 +65,6 @@ class TestDeletePositionCommand:
         with pytest.raises(NotFoundProjectException):
             await handler.handle(command)
 
-    @pytest.mark.asyncio
     async def test_delete_without_permission_raises(
         self,
         persisted_position: Position,
