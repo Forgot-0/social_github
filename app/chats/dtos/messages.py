@@ -19,6 +19,8 @@ class MessageDTO(BaseModel):
     reply_to_id: UUID | None
     forwarded_from_chat_id: UUID | None
     forwarded_from_message_id: UUID | None
+    forwarded_from_author_id: int | None
+
     is_edited: bool
     created_at: datetime
 

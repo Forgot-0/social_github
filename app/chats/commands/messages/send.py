@@ -43,7 +43,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
     access_service: ChatAccessService
     message_repository: MessageRepository
     attachment_repository: AttachmentRepository
-    slow_mode_sevice: SlowModeService
+    slow_mode_service: SlowModeService
     event_bus: BaseEventBus
 
     async def handle(self, command: SendMessageCommand) -> MessageDTO:
@@ -65,7 +65,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
                 chat_id=str(command.chat_id), requester_id=user_id
             )
 
-        await self.slow_mode_sevice.is_slow(chat=chat, user_id=user_id, member=member)
+        await self.slow_mode_service.is_slow(chat=chat, user_id=user_id, member=member)
 
         claimed = []
         if command.upload_tokens:

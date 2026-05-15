@@ -4,14 +4,19 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.add_member import AddMemberCommand, AddMemberCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, AlreadyMemberException, NotChatMemberException, NotFoundChatException
+from app.chats.exceptions import (
+    AccessDeniedChatException,
+    AlreadyMemberException,
+    NotChatMemberException,
+    NotFoundChatException
+)
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.ws import ChatConnectionManager
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
+
 
 @pytest.mark.integration
 @pytest.mark.chats
