@@ -45,7 +45,7 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
 
         if command.last_seq is not None:
             limit = chat_config.WS_REPLAY_BATCH_SIZE
-            last_seq = min(0, command.last_seq)
+            last_seq = max(0, command.last_seq)
             messages = await self.message_repository.get_chat_messages_after_seq(
                 chat_id=chat_id,
                 last_seq=last_seq,

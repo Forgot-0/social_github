@@ -18,42 +18,44 @@ from tests.chats.integration.mock import StubLiveKitService
 def livekit() -> LiveKitService:
     return StubLiveKitService(url="ws://test", api_key="k", api_secret="s")
 
+
 @pytest.fixture
-def chat_repository(redis_client, db_session) -> ChatRepository:
+def chat_repository(redis_client, db_session: AsyncSession) -> ChatRepository:
     return ChatRepository(redis=redis_client, session=db_session)
+
 
 @pytest.fixture
 def chat_access_service(rbac_manager) -> ChatAccessService:
     return ChatAccessService(rbac_manager=rbac_manager)
 
+
 @pytest.fixture
 def message_repository(db_session: AsyncSession) -> MessageRepository:
     return MessageRepository(session=db_session)
+
 
 @pytest.fixture
 def attachment_repository(db_session: AsyncSession, redis_client) -> AttachmentRepository:
     return AttachmentRepository(session=db_session, redis=redis_client)
 
+
 @pytest.fixture
 def read_repository(db_session: AsyncSession) -> ReadReceiptRepository:
     return ReadReceiptRepository(session=db_session)
+
 
 @pytest.fixture
 def slow_mode_service(redis_client, chat_access_service: ChatAccessService) -> SlowModeService:
     return SlowModeService(redis=redis_client, access_service=chat_access_service)
 
-
 @pytest.fixture
-async def group_chat(
-    db_session: AsyncSession,
-    user_jwt: UserJWTData,
-) -> Chat:
+async def group_chat(db_session: AsyncSession, user_jwt: UserJWTData) -> Chat:
     chat = Chat.create(
         created_by=int(user_jwt.id),
         members_ids=[2, 3],
         chat_type=ChatType.GROUP,
-        name="New Chat",
-        is_public=False
+        name="Test Group",
+        is_public=False,
     )
     db_session.add(chat)
     await db_session.commit()
@@ -61,46 +63,81 @@ async def group_chat(
     return chat
 
 
+@pytest.fixture
+async def public_group_chat(db_session: AsyncSession, user_jwt: UserJWTData) -> Chat:
+    chat = Chat.create(
+        created_by=int(user_jwt.id),
+        members_ids=[2, 3],
+        chat_type=ChatType.GROUP,
+        name="Public Group",
+        is_public=True,
+    )
+    db_session.add(chat)
+    await db_session.commit()
+    await db_session.refresh(chat)
+    return chat
+
 
 @pytest.fixture
-async def create_group_chat(
-    db_session: AsyncSession,
-    user_jwt: UserJWTData,
-) :
-    async def create(members: list[int], slow_mode: int=0, admin_only: bool=False) -> Chat:
+async def direct_chat(db_session: AsyncSession, user_jwt: UserJWTData) -> Chat:
+    chat = Chat.create(
+        created_by=int(user_jwt.id),
+        members_ids=[2],
+        chat_type=ChatType.DIRECT,
+    )
+    db_session.add(chat)
+    await db_session.commit()
+    await db_session.refresh(chat)
+    return chat
+
+
+@pytest.fixture
+def create_group_chat(db_session: AsyncSession, user_jwt: UserJWTData):
+    async def _factory(
+        members: list[int],
+        slow_mode: int = 0,
+        admin_only: bool = False,
+        is_public: bool = False,
+        name: str = "Test Group",
+    ) -> Chat:
         chat = Chat.create(
             created_by=int(user_jwt.id),
             members_ids=members,
             chat_type=ChatType.GROUP,
-            name="New Chat",
-            is_public=False,
+            name=name,
+            is_public=is_public,
             slow_mode_seconds=slow_mode,
-            admin_only=admin_only
+            admin_only=admin_only,
         )
         db_session.add(chat)
         await db_session.commit()
         await db_session.refresh(chat)
         return chat
-    return create
+
+    return _factory
 
 
 @pytest.fixture
-async def create_message(
-    db_session: AsyncSession,
-):
-    async def create(chat: Chat, user_jwt: UserJWTData, content: str | None, forward_msg: Message | None=None):
+def create_message(db_session: AsyncSession):
+    async def _factory(
+        chat: Chat,
+        sender_jwt: UserJWTData,
+        content: str | None,
+        forward_from: Message | None = None,
+    ) -> Message:
         msg = Message.create(
-            sender_id=int(user_jwt.id),
+            sender_id=int(sender_jwt.id),
             chat_id=chat.id,
             content=content,
-            seq=chat.seq_counter+1,
-            forwarded_from_author_id=forward_msg.author_id if forward_msg else None,
-            forwarded_from_chat_id=forward_msg.chat_id if forward_msg else None,
-            forwarded_from_message_id=forward_msg.id if forward_msg else None
+            seq=chat.seq_counter + 1,
+            forwarded_from_author_id=forward_from.author_id if forward_from else None,
+            forwarded_from_chat_id=forward_from.chat_id if forward_from else None,
+            forwarded_from_message_id=forward_from.id if forward_from else None,
         )
         chat.seq_counter += 1
         db_session.add(msg)
         await db_session.commit()
         await db_session.refresh(msg)
         return msg
-    return create
+
+    return _factory

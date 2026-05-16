@@ -283,7 +283,7 @@ class ChatConnectionManager:
                         await self.unregister(conn)
                         continue
 
-                        await self.set_route_users(conn)
+                    await self.set_route_users(conn)
 
                     subscriptions = subs_snapshot.get(conn.connection_id, set())
                     if subscriptions:

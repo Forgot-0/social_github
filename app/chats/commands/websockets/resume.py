@@ -37,7 +37,7 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
             }
             command.conn.try_send(event)
             limit = chat_config.WS_REPLAY_BATCH_SIZE
-            last_seq = min(0, last_seq)
+            last_seq = max(0, last_seq)
             messages = await self.message_repository.get_chat_messages_after_seq(
                 chat_id=UUID(chat_id),
                 last_seq=last_seq,
