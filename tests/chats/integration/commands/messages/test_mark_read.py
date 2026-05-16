@@ -46,8 +46,6 @@ class TestMarkAsReadCommand:
             MarkAsReadCommand(chat_id=group_chat.id, message_seq=5, user_jwt_data=user_jwt)
         )
 
-        from app.chats.models.read_receipts import ReadReceipt
-        from sqlalchemy import select
         result = await db_session.execute(
             select(ReadReceipt).where(
                 ReadReceipt.chat_id == group_chat.id,
