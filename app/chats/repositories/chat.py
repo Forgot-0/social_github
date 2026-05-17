@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Select, and_, or_, select
+from sqlalchemy import Select, and_, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from app.chats.models.chat import Chat
@@ -35,6 +35,20 @@ class ChatRepository(IRepository[Chat], CacheRepository):
 
         result = await self.session.execute(stmt)
         return result.scalar()
+
+    async def allocate_message_seq(self, chat_id: UUID, message_date: datetime) -> int | None:
+        stmt = (
+            update(Chat)
+            .where(Chat.id == chat_id, Chat.deleted_at.is_(None))
+            .values(
+                seq_counter=Chat.seq_counter + 1,
+                last_activity_at=message_date,
+            )
+            .returning(Chat.seq_counter)
+            .execution_options(synchronize_session=False)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def create(self, chat: Chat) -> None:
         self.session.add(chat)

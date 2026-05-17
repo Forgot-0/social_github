@@ -34,7 +34,7 @@ from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
 from app.init_data import create_first_data
 from app.main import init_app
-from tests.chats.integration.providers import ChatsIntegrationProvider
+from tests.chats.providers import ChatsIntegrationProvider
 from tests.mocks import FakeQueueService, FakeStorageService
 
 

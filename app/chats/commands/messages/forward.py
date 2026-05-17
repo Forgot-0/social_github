@@ -23,6 +23,7 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.storage.service import StorageService
+from app.core.utils import now_utc
 
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
         ):
             raise AccessDeniedChatException(chat_id=str(command.source_chat_id), requester_id=user_id)
 
-        target_chat = await self.chat_repository.get_by_id(command.target_chat_id, with_for_update=True)
+        target_chat = await self.chat_repository.get_by_id(command.target_chat_id)
         if target_chat is None:
             raise NotFoundChatException(chat_id=str(command.target_chat_id))
 
@@ -97,11 +98,18 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             atch = attachment.create_for_forward(chat_id=target_chat.id)
             forward_attachments.append(atch)
 
-        target_chat.seq_counter += 1
+        message_date = now_utc()
+        next_seq = await self.chat_repository.allocate_message_seq(
+            chat_id=command.target_chat_id,
+            message_date=message_date,
+        )
+        if next_seq is None:
+            raise NotFoundChatException(chat_id=str(command.target_chat_id))
+
         forwarded_msg = Message.create(
             sender_id=user_id,
             chat_id=command.target_chat_id,
-            seq=target_chat.seq_counter,
+            seq=next_seq,
             content=command.comment or source_msg.content,
             message_type=MessageType.FORWARD,
             forwarded_from_chat_id=(
@@ -121,7 +129,6 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             ),
             attachments=forward_attachments
         )
-        target_chat.update_last_activity(forwarded_msg.created_at)
         await self.message_repository.create(forwarded_msg)
         await self.session.commit()
         await self.event_bus.publish(forwarded_msg.pull_events())

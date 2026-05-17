@@ -69,6 +69,10 @@ class WebsocketKeys:
         return f"ws:sub:chat:{chat_id}"
 
     @staticmethod
+    def active_subscription_gateways_key(chat_id: str) -> str:
+        return f"ws:sub:chat:{chat_id}:gateways"
+
+    @staticmethod
     def connection_subscription_key(connection_id: str, chat_id: str) -> str:
         return f"ws:sub:conn:{connection_id}:{chat_id}"
 

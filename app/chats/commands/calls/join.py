@@ -14,6 +14,7 @@ from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
+from app.core.utils import now_utc
 
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
         if member is None:
             raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
 
-        chat = await self.chat_repository.get_by_id(command.chat_id, with_for_update=True)
+        chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
@@ -51,15 +52,21 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
             user_id=str(user_id),
             username=username,
         )
-        chat.seq_counter += 1
+        message_date = now_utc()
+        next_seq = await self.chat_repository.allocate_message_seq(
+            chat_id=chat.id,
+            message_date=message_date,
+        )
+        if next_seq is None:
+            raise NotFoundChatException(chat_id=str(command.chat_id))
+
         msg = Message.create(
             sender_id=None,
             chat_id=chat.id,
-            seq=chat.seq_counter,
+            seq=next_seq,
             content=f"📞 {username} joined the call",
             message_type=MessageType.SYSTEM
         )
-        chat.update_last_activity(msg.created_at)
         await self.message_repository.create(msg)
         await self.session.commit()
         await self.event_bus.publish(msg.pull_events())

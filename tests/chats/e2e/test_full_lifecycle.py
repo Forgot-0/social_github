@@ -130,6 +130,7 @@ class TestFullChatLifecycleE2E:
             (c for c in list_resp.json()["chats"] if c["id"] == chat_id),
             None,
         )
+        print(chat_in_list)
         assert chat_in_list is not None
         assert chat_in_list["unread_count"] == 2
 

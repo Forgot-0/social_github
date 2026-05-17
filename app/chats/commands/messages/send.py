@@ -22,6 +22,7 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.storage.service import StorageService
+from app.core.utils import now_utc
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
     event_bus: BaseEventBus
 
     async def handle(self, command: SendMessageCommand) -> MessageDTO:
-        chat = await self.chat_repository.get_by_id(command.chat_id, with_for_update=True)
+        chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
             raise NotFoundChatException(chat_id=str(command.chat_id))
 
@@ -82,17 +83,23 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
             if reply_msg is None:
                 raise NotFoundMessageException(message_id=str(command.reply_to_id))
 
-        chat.seq_counter += 1
+        message_date = now_utc()
+        next_seq = await self.chat_repository.allocate_message_seq(
+            chat_id=command.chat_id,
+            message_date=message_date,
+        )
+        if next_seq is None:
+            raise NotFoundChatException(chat_id=str(command.chat_id))
+
         msg = Message.create(
             sender_id=user_id,
             chat_id=command.chat_id,
-            seq=chat.seq_counter,
+            seq=next_seq,
             content=command.content,
             reply_to_id=command.reply_to_id,
             message_type=command.message_type,
             attachments=claimed,
         )
-        chat.update_last_activity(message_date=msg.created_at)
 
         await self.message_repository.create(msg)
         await self.session.commit()
