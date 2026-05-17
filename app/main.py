@@ -253,3 +253,25 @@ def init_app() -> FastAPI:
     app.add_exception_handler(RequestValidationError, handle_validation_exception) # type: ignore
     app.openapi = lambda: custom_openapi(app)
     return app
+
+
+def test_app() -> FastAPI:
+    app = FastAPI(
+        openapi_url=(
+            f"{app_config.API_V1_STR}/openapi.json"
+            if app_config.ENVIRONMENT in ["local", "testing"]
+            else None
+        ),
+        lifespan=lifespan,
+        redirect_slashes=False
+    )
+
+    configure_logging()
+    setup_middleware(app)
+    setup_router(app)
+
+    app.add_exception_handler(Exception, handle_unknown_exception)
+    app.add_exception_handler(ApplicationException, handle_application_exception) # type: ignore
+    app.add_exception_handler(RequestValidationError, handle_validation_exception) # type: ignore
+    app.openapi = lambda: custom_openapi(app)
+    return app

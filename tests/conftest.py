@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 import pytest
 import pytest_asyncio
 from dishka import AsyncContainer, Provider, Scope, provide
+from dishka.integrations.fastapi import setup_dishka
 from redis.asyncio import Redis
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
@@ -33,7 +34,7 @@ from app.core.services.queues.service import QueueService
 from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
 from app.init_data import create_first_data
-from app.main import init_app
+from app.main import test_app
 from tests.chats.providers import ChatsIntegrationProvider
 from tests.mocks import FakeQueueService, FakeStorageService
 
@@ -243,7 +244,7 @@ async def di_container(
     db_session: AsyncSession,
     redis_client: Redis,
     mock_event_bus: BaseEventBus
-) -> AsyncGenerator[AsyncContainer, None]:
+):
 
     class TestProvider(Provider):
         @provide(scope=Scope.REQUEST)
@@ -268,7 +269,7 @@ async def di_container(
 
     container = create_container(TestProvider(), ChatsIntegrationProvider())
 
-    yield container
+    return container
 
     await container.close()
 
@@ -277,8 +278,8 @@ async def di_container(
 async def app(di_container: AsyncContainer) -> FastAPI:
     if "PROMETHEUS_MULTIPROC_DIR" in os.environ:
         del os.environ["PROMETHEUS_MULTIPROC_DIR"]
-    app = init_app()
-    app.state.dishka_container = di_container
+    app = test_app()
+    setup_dishka(di_container, app)
     return app
 
 
