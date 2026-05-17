@@ -8,16 +8,6 @@ from app.chats.dtos.messages import MessageDTO
 from app.core.services.storage.service import StorageService
 
 
-def _iter_message_attachments(message: MessageDTO) -> Iterable[AttachmentDTO]:
-    yield from message.attachments
-
-    if message.reply_to is not None:
-        yield from _iter_message_attachments(message.reply_to)
-
-    if message.forwarded_from is not None:
-        yield from _iter_message_attachments(message.forwarded_from)
-
-
 @overload
 async def attach_download_urls(
     messages: MessageDTO,
@@ -42,7 +32,7 @@ async def attach_download_urls(
 
     attachments_by_key: dict[str, list[AttachmentDTO]] = {}
     for message in message_list:
-        for attachment in _iter_message_attachments(message):
+        for attachment in message.attachments:
             attachments_by_key.setdefault(attachment.s3_key, []).append(attachment)
 
     if not attachments_by_key:
