@@ -5,8 +5,10 @@ from app.chats.dtos.messages import MessageDTO
 from app.chats.exceptions import NotChatMemberException, NotFoundMessageException
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
+from app.chats.services.message_attachments import attach_download_urls
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.storage.service import StorageService
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -20,6 +22,7 @@ class GetMessageDetailQuery(BaseQuery):
 class GetMessageDetailQueryHandler(BaseQueryHandler[GetMessageDetailQuery, MessageDTO]):
     chat_repository: ChatRepository
     message_repository: MessageRepository
+    storage_service: StorageService
 
     async def handle(self, query: GetMessageDetailQuery) -> MessageDTO:
         user_id = int(query.user_jwt_data.id)
@@ -32,4 +35,5 @@ class GetMessageDetailQueryHandler(BaseQueryHandler[GetMessageDetailQuery, Messa
         if message is None or message.chat_id != query.chat_id:
             raise NotFoundMessageException(message_id=str(query.message_id))
 
-        return MessageDTO.model_validate(message)
+        dto = MessageDTO.model_validate(message)
+        return await attach_download_urls(dto, self.storage_service)

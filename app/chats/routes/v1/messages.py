@@ -10,8 +10,8 @@ from app.chats.commands.messages.mark_read import MarkAsReadCommand
 from app.chats.commands.messages.modify import EditMessageCommand
 from app.chats.commands.messages.send import SendMessageCommand
 from app.chats.config import chat_config
-from app.chats.exceptions import IdempotencyConflictException
 from app.chats.dtos.messages import MessageDTO, MessagesDTO
+from app.chats.exceptions import IdempotencyConflictException
 from app.chats.queries.messages.get_context import GetMessageContextQuery
 from app.chats.queries.messages.get_detail import GetMessageDetailQuery
 from app.chats.queries.messages.get_list import GetMessagesQuery

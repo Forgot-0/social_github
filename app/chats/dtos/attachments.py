@@ -13,6 +13,8 @@ class AttachmentDTO(BaseModel):
     uploader_id: int
     attachment_type: AttachmentType
     attachment_status: AttachmentStatus
+    url: str | None = None
+    url_expires_in: int | None = None
     s3_key: str
     mime_type: str
     original_filename: str

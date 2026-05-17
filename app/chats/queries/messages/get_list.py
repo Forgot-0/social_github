@@ -5,8 +5,10 @@ from app.chats.dtos.messages import MessageDTO, MessagesDTO
 from app.chats.exceptions import NotChatMemberException
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
+from app.chats.services.message_attachments import attach_download_urls
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.storage.service import StorageService
 
 
 @dataclass(frozen=True)
@@ -21,6 +23,7 @@ class GetMessagesQuery(BaseQuery):
 class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessagesDTO]):
     chat_repository: ChatRepository
     message_repository: MessageRepository
+    storage_service: StorageService
 
     async def handle(self, query: GetMessagesQuery) -> MessagesDTO:
         user_id = int(query.user_jwt_data.id)
@@ -37,9 +40,11 @@ class GetMessagesQueryHandler(BaseQueryHandler[GetMessagesQuery, MessagesDTO]):
             direction="backward",
         )
         page = messages[:limit]
+        message_dtos = [MessageDTO.model_validate(msg) for msg in page]
+        message_dtos = await attach_download_urls(message_dtos, self.storage_service)
 
         return MessagesDTO(
-            messages=[MessageDTO.model_validate(msg) for msg in page],
+            messages=message_dtos,
             has_next=len(messages) > limit,
             next_cursor=page[-1].seq if len(messages) > limit and page else None,
         )

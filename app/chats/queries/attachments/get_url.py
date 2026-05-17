@@ -54,6 +54,7 @@ class GetAttachmentDownloadUrlQueryHandler(
         url = await self.storage_service.generate_presigned_url(
             bucket_name=chat_config.ATTACHMENT_BUCKET,
             file_key=s3_key,
+            expires=chat_config.DOWNLOAD_URL_TTL,
         )
 
         return AttachmentDownloadUrlDTO(

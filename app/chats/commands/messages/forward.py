@@ -17,10 +17,12 @@ from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.access import ChatAccessService
+from app.chats.services.message_attachments import attach_download_urls
 from app.chats.services.slow_mode import SlowModeService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.storage.service import StorageService
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +45,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
     attachment_repository: AttachmentRepository
     chat_access_service: ChatAccessService
     slow_mode_service: SlowModeService
+    storage_service: StorageService
     event_bus: BaseEventBus
 
     async def handle(self, command: ForwardMessageCommand) -> MessageDTO:
@@ -132,4 +135,5 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
                 "by": user_id,
             },
         )
-        return MessageDTO.model_validate(forwarded_msg)
+        dto = MessageDTO.model_validate(forwarded_msg)
+        return await attach_download_urls(dto, self.storage_service)

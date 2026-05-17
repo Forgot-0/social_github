@@ -8,8 +8,10 @@ from app.chats.exceptions import NotChatMemberException
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import WSClientOp
+from app.chats.services.message_attachments import attach_download_urls
 from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
 
 
@@ -27,6 +29,7 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
     manager: ChatConnectionManager
     chat_repository: ChatRepository
     message_repository: MessageRepository
+    storage_service: StorageService
 
     async def handle(self, command: SubscribeCommand) -> None:
         chat_id = UUID(command.chat_id)
@@ -62,8 +65,11 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
                     "payload": {
                         "after_seq": last_seq,
                         "messages": [
-                            MessageDTO.model_validate(message.to_dict()).model_dump(mode="json")
-                            for message in batch
+                            message.model_dump(mode="json")
+                            for message in await attach_download_urls(
+                                [MessageDTO.model_validate(item.to_dict()) for item in batch],
+                                self.storage_service,
+                            )
                         ],
                         "has_more": len(messages) > limit,
                         "next_last_seq": next_last_seq,
