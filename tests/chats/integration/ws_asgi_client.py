@@ -113,7 +113,6 @@ class AsyncASGIWebSocketSession:
             t = msg["type"]
             if t == "websocket.accept":
                 self._accepted_subprotocol = msg.get("subprotocol")
-                print(msg)
                 return True
             if t == "websocket.close":
                 self._deny_close = msg

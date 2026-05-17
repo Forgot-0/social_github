@@ -4,6 +4,7 @@ from uuid import UUID
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO
 from app.chats.dtos.websocket import WSConnection
+from app.chats.exceptions import NotChatMemberException
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import WSClientOp
@@ -29,8 +30,24 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
     storage_service: StorageService
 
     async def handle(self, command: ResumeCommand) -> None:
+        if len(command.cursor) > 20:
+            raise
 
         for chat_id, cursor_seq in command.cursor.items():
+            member = await self.chat_repository.get_member_chat(
+                chat_id=UUID(chat_id),
+                member_id=command.conn.user_id,
+                with_role=False
+            )
+            if member is None or member.is_banned:
+                event = {
+                    "type": "ws.error",
+                    "code": "NOT_CHAT_MEMBER",
+                    "ts": now_utc().isoformat()
+                }
+                command.conn.try_send(event)
+                return 
+
             await self.manager.subscribe_chat(command.conn, chat_id)
             event = {
                 "type": "ws.subscribed",

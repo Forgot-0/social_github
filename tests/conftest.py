@@ -172,6 +172,9 @@ def mock_event_bus() -> BaseEventBus:
 def mock_queue_service() -> QueueService:
     return FakeQueueService()
 
+@pytest.fixture
+def mock_storage_service() -> StorageService:
+    return FakeStorageService()
 
 @pytest.fixture
 def jwt_manager() -> JWTManager:

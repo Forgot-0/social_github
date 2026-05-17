@@ -1,14 +1,11 @@
 from enum import Enum as PyEnum
-from typing import TYPE_CHECKING, Self
+from typing import Self
 from uuid import UUID as PyUUID, uuid7
 
 from sqlalchemy import UUID, BigInteger, Enum, ForeignKey, Index, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base_model import BaseModel, DateMixin
-
-if TYPE_CHECKING:
-    from app.chats.models.message import Message
 
 
 class AttachmentType(str, PyEnum):
@@ -50,8 +47,6 @@ class MessageAttachment(BaseModel, DateMixin):
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     source_attachment_id: Mapped[PyUUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-
-    message: Mapped["Message"] = relationship(back_populates="attachments", lazy="noload")
 
     __table_args__ = (
         Index("ix_msg_attachments_message_id", "message_id"),

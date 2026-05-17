@@ -186,3 +186,19 @@ locust -f locustfile.py --host=http://localhost:8000 \
   --users=100 --spawn-rate=5 --run-time=1h --headless \
   --csv=results/soak
 ```
+
+
+
+
+
+
+Чего не хватает в тестах
+Отсутствующие unit-тесты
+МодульЧто нужно покрытьChatMembereffective_permissions, can_bypass_slow_mode, is_staff, is_channel_staffMessageAttachmentcreate_for_forward, mark_proccesed, set_resolution, set_durationChatDeliveryRouterparse_active_subscription_route — граничные случаи (пустая строка, неполный route)WSConnectiontry_send при QueueFull, поведение при closed=TrueSlowModeServiceis_slow с bypass, is_slow без redis TTL
+Отсутствующие integration-тесты
+СценарийПочему важноMarkAsReadCommand — монотонность upsertБаг с onupdate не работает при upsert (описан выше)RequestAttachmentUpload с превышением лимитовMAX_MEDIA_PER_MESSAGE, MAX_FILES_PER_MESSAGE, размер файлаBanMemberCommand — флаг ban=False (unban)Только ban покрыт, unban — нетWebSocket — подписка на чужой чатNotChatMemberException через WSWebSocket — resume с реальными seqПроверка что нужные сообщения доходятForwardMessageCommand — с вложениямиКопирование attachments при forwardChangeMemberRole — понижение до viewerПроверка что права реально уменьшаются
+Отсутствующие типы тестов
+
+E2E тест полного цикла: создание чата → отправка сообщения → WebSocket получает событие → mark_read → счётчик непрочитанных == 0
+Нагрузочный baseline: хотя бы один parametrize-тест для ChatDeliveryRouter с батчами из 1000+ user_id
+Snapshot-тесты для WS-событий: проверка формата build_ws_event для каждого типа события

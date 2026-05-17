@@ -46,7 +46,7 @@ async def attach_download_urls(
             attachments_by_key.setdefault(attachment.s3_key, []).append(attachment)
 
     if not attachments_by_key:
-        return message_list[0] if len(message_list) == 1 else message_list
+        return message_list[0] if isinstance(messages, MessageDTO) else message_list
 
     keys = tuple(attachments_by_key)
     urls = await asyncio.gather(
@@ -65,4 +65,4 @@ async def attach_download_urls(
             attachment.url = url
             attachment.url_expires_in = chat_config.DOWNLOAD_URL_TTL
 
-    return message_list[0] if len(message_list) == 1 else message_list
+    return message_list[0] if isinstance(messages, MessageDTO) else message_list

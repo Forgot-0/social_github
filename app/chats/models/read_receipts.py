@@ -13,10 +13,10 @@ class ReadReceipt(BaseModel, DateMixin):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     chat_id: Mapped[PyUUID] = mapped_column(
         UUID, ForeignKey("chats.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        nullable=False
     )
-    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-    last_read_message_seq: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    last_read_message_seq: Mapped[int] = mapped_column(BigInteger, nullable=False)
     last_read_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )

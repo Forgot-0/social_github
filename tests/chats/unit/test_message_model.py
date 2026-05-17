@@ -17,7 +17,7 @@ from app.chats.models.message import (
 from uuid import uuid4
 
 
-def make_message(
+def create_message(
     content: str | None = "hello",
     msg_type: MessageType = MessageType.TEXT,
     reply_to_id=None,
@@ -32,7 +32,7 @@ def make_message(
     )
 
 
-def make_attachment(
+def create_attachment(
     att_type: AttachmentType = AttachmentType.IMAGE,
     status: AttachmentStatus = AttachmentStatus.SUCCESS,
 ) -> MessageAttachment:
@@ -54,7 +54,7 @@ def make_attachment(
 class TestMessageModel:
 
     def test_create_text_message_registers_sent_event(self) -> None:
-        msg = make_message("hello world")
+        msg = create_message("hello world")
 
         events = msg.pull_events()
         assert len(events) == 1
@@ -64,28 +64,28 @@ class TestMessageModel:
         assert events[0].message_type == MessageType.TEXT.value
 
     def test_html_content_is_escaped_on_create(self) -> None:
-        msg = make_message('<script>alert("xss")</script>')
+        msg = create_message('<script>alert("xss")</script>')
         assert msg.content is not None
         assert "<script>" not in msg.content
         assert "&lt;script&gt;" in msg.content
 
     def test_content_too_long_raises(self) -> None:
         with pytest.raises(MessageTooLongException) as exc:
-            make_message("x" * (chat_config.MAX_MESSAGE_LENGTH + 1))
+            create_message("x" * (chat_config.MAX_MESSAGE_LENGTH + 1))
         assert exc.value.max_length == chat_config.MAX_MESSAGE_LENGTH
 
     def test_null_byte_in_content_raises(self) -> None:
         with pytest.raises(InvalidMessageException):
-            make_message("hello\x00world")
+            create_message("hello\x00world")
 
     def test_reply_without_reply_to_id_raises(self) -> None:
         with pytest.raises(InvalidMessageException) as exc:
-            make_message(msg_type=MessageType.REPLY, reply_to_id=None)
+            create_message(msg_type=MessageType.REPLY, reply_to_id=None)
         assert "reply_to_id" in exc.value.reason
 
     def test_reply_with_reply_to_id_succeeds(self) -> None:
         parent_id = uuid4()
-        msg = make_message(msg_type=MessageType.REPLY, reply_to_id=parent_id)
+        msg = create_message(msg_type=MessageType.REPLY, reply_to_id=parent_id)
         assert msg.reply_to_id == parent_id
 
     def test_system_message_skips_content_validation(self) -> None:
@@ -99,7 +99,7 @@ class TestMessageModel:
         assert msg.content == "<b>user</b> joined"
 
     def test_update_content_sets_edited_flag_and_registers_event(self) -> None:
-        msg = make_message("original")
+        msg = create_message("original")
         msg.pull_events()
 
         msg.update_content("edited", modified_by=1)
@@ -112,7 +112,7 @@ class TestMessageModel:
         assert events[0].modified_by == 1
 
     def test_delete_sets_flag_and_registers_event(self) -> None:
-        msg = make_message("bye")
+        msg = create_message("bye")
         msg.pull_events()
 
         msg.delete(deleted_by=1)
@@ -125,7 +125,7 @@ class TestMessageModel:
 
     def test_too_many_media_attachments_raises(self) -> None:
         attachments = [
-            make_attachment(AttachmentType.IMAGE)
+            create_attachment(AttachmentType.IMAGE)
             for _ in range(chat_config.MAX_MEDIA_PER_MESSAGE + 1)
         ]
         with pytest.raises(AttachmentLimitExceededException):
@@ -139,7 +139,7 @@ class TestMessageModel:
 
     def test_too_many_file_attachments_raises(self) -> None:
         attachments = [
-            make_attachment(AttachmentType.FILE)
+            create_attachment(AttachmentType.FILE)
             for _ in range(chat_config.MAX_FILES_PER_MESSAGE + 1)
         ]
         with pytest.raises(AttachmentLimitExceededException):
@@ -153,7 +153,7 @@ class TestMessageModel:
 
     def test_pending_attachment_raises_not_found(self) -> None:
         from app.chats.exceptions import AttachmentNotFoundException
-        pending = make_attachment(status=AttachmentStatus.PENDING)
+        pending = create_attachment(status=AttachmentStatus.PENDING)
         with pytest.raises(AttachmentNotFoundException):
             Message.create(
                 sender_id=1,

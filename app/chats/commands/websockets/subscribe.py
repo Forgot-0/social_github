@@ -35,7 +35,13 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
         chat_id = UUID(command.chat_id)
         member = await self.chat_repository.get_member_chat(chat_id=chat_id, member_id=command.user_id, with_role=False)
         if member is None or member.is_banned:
-            raise NotChatMemberException(chat_id=command.chat_id, user_id=command.user_id)
+            event = {
+                "type": "ws.error",
+                "code": "NOT_CHAT_MEMBER",
+                "ts": now_utc().isoformat()
+            }
+            command.conn.try_send(event)
+            return 
 
         await self.manager.subscribe_chat(command.conn, command.chat_id)
         event = {

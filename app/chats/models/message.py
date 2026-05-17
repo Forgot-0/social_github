@@ -128,7 +128,7 @@ class Message(BaseModel, DateMixin):
         foreign_keys=[forwarded_from_message_id], remote_side="Message.id", lazy="noload"
     )
     attachments: Mapped[list["MessageAttachment"]] = relationship(
-        back_populates="message", lazy="noload", cascade="all, delete-orphan"
+        lazy="noload", cascade="all, delete-orphan"
     )
 
     __table_args__ = (

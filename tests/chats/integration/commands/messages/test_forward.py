@@ -30,6 +30,7 @@ class TestForwardMessageCommand:
         attachment_repository: AttachmentRepository,
         slow_mode_service: SlowModeService,
         mock_event_bus: BaseEventBus,
+        mock_storage_service,
     ) -> ForwardMessageCommandHandler:
         return ForwardMessageCommandHandler(
             session=db_session,
@@ -38,7 +39,8 @@ class TestForwardMessageCommand:
             message_repository=message_repository,
             attachment_repository=attachment_repository,
             slow_mode_service=slow_mode_service,
-            event_bus=mock_event_bus
+            storage_service=mock_storage_service,
+            event_bus=mock_event_bus,
         )
 
     async def test_forward_message_to_another_chat(

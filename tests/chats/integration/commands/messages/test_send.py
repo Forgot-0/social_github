@@ -29,6 +29,7 @@ class TestSendMessageCommand:
         message_repository: MessageRepository,
         attachment_repository: AttachmentRepository,
         slow_mode_service: SlowModeService,
+        mock_storage_service,
         mock_event_bus: BaseEventBus,
     ) -> SendMessageCommandHandler:
         return SendMessageCommandHandler(
@@ -38,6 +39,7 @@ class TestSendMessageCommand:
             message_repository=message_repository,
             attachment_repository=attachment_repository,
             slow_mode_service=slow_mode_service,
+            storage_service=mock_storage_service,
             event_bus=mock_event_bus
         )
 

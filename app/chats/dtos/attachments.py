@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.chats.models.attachment import AttachmentStatus, AttachmentType
 
@@ -25,6 +25,8 @@ class AttachmentDTO(BaseModel):
     duration_seconds: int | None
 
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AttachmentDownloadUrlDTO(BaseModel):
