@@ -27,12 +27,6 @@ def is_chat_domain_event(event: dict[str, Any]) -> bool:
 
 
 def build_ws_event(event: dict[str, Any]) -> dict[str, Any]:
-    """Convert a durable Kafka domain event into a compact websocket event.
-
-    The Kafka event is intentionally kept as the source of truth. The websocket
-    payload includes the remaining event fields so clients can update optimistic
-    state immediately and still use `last_seq` replay for loss recovery.
-    """
     event_name = str(event.get("event_name") or "chat.event")
     chat_id = event.get("chat_id")
     payload = {

@@ -13,7 +13,6 @@ from app.chats.config import chat_config
 from app.core.utils import now_utc
 
 
-
 @dataclass(slots=True)
 class WSConnection:
     websocket: WebSocket
@@ -52,7 +51,10 @@ class WSConnection:
 
     async def _writer_loop(self) -> None:
         try:
-            while not self.closed and self.websocket.application_state == WebSocketState.CONNECTED:
+            while (
+                not self.closed
+                and self.websocket.application_state == WebSocketState.CONNECTED
+            ):
                 try:
                     payload = await asyncio.wait_for(
                         self.send_queue.get(), timeout=5.0
@@ -68,7 +70,10 @@ class WSConnection:
 
     async def _heartbeat_loop(self) -> None:
         try:
-            while not self.closed and self.websocket.application_state == WebSocketState.CONNECTED:
+            while (
+                not self.closed
+                and self.websocket.application_state == WebSocketState.CONNECTED
+            ):
                 await asyncio.sleep(chat_config.WS_HEARTBEAT_INTERVAL)
                 if self.closed:
                     return
@@ -76,12 +81,13 @@ class WSConnection:
                 if idle > chat_config.WS_HEARTBEAT_TIMEOUT:
                     await self.close(code=1001, reason="heartbeat timeout")
                     return
-                if not self.try_send({
-                    "type": "ws.ping",
-                    "connection_id": self.connection_id,
-                    "ts": now_utc().isoformat(),
-                }):
-                    await self.close(code=1013, reason="slow consumer")
+                if not self.try_send(
+                    {
+                        "type": "ws.ping",
+                        "connection_id": self.connection_id,
+                        "ts": now_utc().isoformat(),
+                    }
+                ):
                     return
         except asyncio.CancelledError:
             raise

@@ -72,7 +72,7 @@ async def db_engine(postgres_container: PostgresContainer) -> AsyncGenerator[Asy
     engine = create_async_engine(
         database_url,
         poolclass=NullPool,
-        echo=False,
+        # echo=False,
     )
 
     async with engine.begin() as conn:
@@ -244,7 +244,7 @@ async def di_container(
     db_session: AsyncSession,
     redis_client: Redis,
     mock_event_bus: BaseEventBus
-):
+) -> AsyncContainer:
 
     class TestProvider(Provider):
         @provide(scope=Scope.REQUEST)
@@ -268,10 +268,7 @@ async def di_container(
             return FakeStorageService()
 
     container = create_container(TestProvider(), ChatsIntegrationProvider())
-
     return container
-
-    await container.close()
 
 
 @pytest_asyncio.fixture

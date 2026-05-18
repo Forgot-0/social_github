@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 _CHAT_CHANNEL_RE = re.compile(r"^chat:v\d+:chat:(?P<chat_id>[^:]+):channel$")
 _USER_CHANNEL_RE = re.compile(r"^chat:v\d+:user:(?P<user_id>\d+):channel$")
-
+_LOCAL_SEND_BATCH_SIZE = 1_024
 
 @dataclass(slots=True)
 class ChatConnectionManager:
@@ -67,7 +67,9 @@ class ChatConnectionManager:
         for conn in conns:
             await self.unregister(conn, close_code=1001, close_reason="server shutdown")
 
-        gateway_connections = await self.redis.smembers(WebsocketKeys.gateway_route_key(self.gateway_id))  # type: ignore[misc]
+        gateway_connections = await self.redis.smembers(
+            WebsocketKeys.gateway_route_key(self.gateway_id)
+        )  # type: ignore[misc]
         if gateway_connections:
             pipe = self.redis.pipeline(transaction=False)
             for cid in gateway_connections:
@@ -133,9 +135,12 @@ class ChatConnectionManager:
                 if not user_conns:
                     self.connections_by_user.pop(conn.user_id, None)
 
-            subscribed_chats = conn.subscriptions
+            subscribed_chats = set(conn.subscriptions)
+            gateway_chats_to_remove: list[str] = []
             for chat_id in subscribed_chats:
                 self._unsubscribe_chat_in_memory(conn, chat_id)
+                if not self._chat_has_local_subscribers(chat_id):
+                    gateway_chats_to_remove.append(chat_id)
 
         route_value = f"{self.gateway_id}:{conn.connection_id}"
         sub_route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
@@ -172,6 +177,8 @@ class ChatConnectionManager:
         pipe = self.redis.pipeline(transaction=False)
         pipe.sadd(WebsocketKeys.active_subscription_key(chat_id), route)
         pipe.expire(WebsocketKeys.active_subscription_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
+        pipe.sadd(WebsocketKeys.active_subscription_gateways_key(chat_id), self.gateway_id)
+        pipe.expire(WebsocketKeys.active_subscription_gateways_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
         pipe.setex(
             WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
             chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
@@ -182,11 +189,14 @@ class ChatConnectionManager:
     async def unsubscribe_chat(self, conn: WSConnection, chat_id: str) -> None:
         async with self._lock:
             self._unsubscribe_chat_in_memory(conn, chat_id)
+            remove_gateway_route = not self._chat_has_local_subscribers(chat_id)
 
         route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
         pipe = self.redis.pipeline(transaction=False)
         pipe.srem(WebsocketKeys.active_subscription_key(chat_id), route)
         pipe.delete(WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id))
+        if remove_gateway_route:
+            pipe.srem(WebsocketKeys.active_subscription_gateways_key(chat_id), self.gateway_id)
         await pipe.execute()
 
     async def send_to_users_local(
@@ -206,16 +216,24 @@ class ChatConnectionManager:
                 and (not require_subscription or not chat_id or chat_id in conn.subscriptions)
             ]
 
-        for conn in conns:
-            await self._send_or_unregister(conn, event)
+        await self._send_to_connections(conns, event)
 
     async def send_to_chat_local(self, chat_id: str, event: dict[str, Any]) -> None:
         async with self._lock:
             conn_ids = tuple(self.subscriptions_by_chat.get(str(chat_id), ()))
             conns = [self.connections_by_id[cid] for cid in conn_ids if cid in self.connections_by_id]
 
-        for conn in conns:
-            await self._send_or_unregister(conn, event)
+        await self._send_to_connections(conns, event)
+
+    async def _send_to_connections(self, conns: list[WSConnection], event: dict[str, Any]) -> None:
+        if not conns:
+            return
+        for start in range(0, len(conns), _LOCAL_SEND_BATCH_SIZE):
+            batch = conns[start:start + _LOCAL_SEND_BATCH_SIZE]
+            await asyncio.gather(
+                *(self._send_or_unregister(conn, event) for conn in batch),
+                return_exceptions=False,
+            )
 
     async def publish(self, channel: str, payload: dict[str, Any]) -> None:
         event = {**payload, "ts": payload.get("ts") or now_utc().isoformat()}
@@ -295,6 +313,11 @@ class ChatConnectionManager:
                                 WebsocketKeys.active_subscription_key(chat_id),
                                 chat_config.WS_ACTIVE_SUBSCRIPTION_TTL
                             )
+                            pipe.sadd(WebsocketKeys.active_subscription_gateways_key(chat_id), self.gateway_id)
+                            pipe.expire(
+                                WebsocketKeys.active_subscription_gateways_key(chat_id),
+                                chat_config.WS_ACTIVE_SUBSCRIPTION_TTL
+                            )
                             pipe.setex(
                                 WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
                                 chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
@@ -334,18 +357,22 @@ class ChatConnectionManager:
                 if not messages:
                     continue
 
+                tasks = [
+                    self._process_gateway_stream_entry(message_id, fields)
+                    for _stream_name, stream_messages in messages
+                    for message_id, fields in stream_messages
+                ]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
                 ack_ids: list[Any] = []
-                for _stream_name, stream_messages in messages:
-                    for message_id, fields in stream_messages:
-                        try:
-                            await self._handle_gateway_stream_message(fields)
-                        except Exception:
-                            logger.exception(
-                                "Failed to process websocket gateway stream message",
-                                extra={"stream_id": message_id},
-                            )
-                        finally:
-                            ack_ids.append(message_id)
+                for result in results:
+                    if isinstance(result, Exception):
+                        logger.error(
+                            "Failed to process websocket gateway stream message",
+                            exc_info=result,
+                        )
+                        continue
+                    if result is not None:
+                        ack_ids.append(result)
 
                 if ack_ids:
                     await self.redis.xack(self.stream_key, self.stream_group, *ack_ids)
@@ -362,12 +389,31 @@ class ChatConnectionManager:
                 )
                 await asyncio.sleep(backoff)
 
+    async def _process_gateway_stream_entry(self, message_id: Any, fields: dict[Any, Any]) -> Any | None:
+        try:
+            await self._handle_gateway_stream_message(fields)
+        except Exception:
+            logger.exception(
+                "Failed to process websocket gateway stream message",
+                extra={"stream_id": message_id},
+            )
+            return None
+        return message_id
+
     async def _handle_gateway_stream_message(self, fields: dict[Any, Any]) -> None:
         event = orjson.loads(fields["event"])
-        user_ids = {int(uid) for uid in orjson.loads(fields["user_ids"])}
-        
         chat_id = event.get("chat_id") or fields.get("chat_id")
+        if isinstance(chat_id, bytes):
+            chat_id = chat_id.decode()
+
+        broadcast_to_chat = event.pop("broadcast_to_chat", False)
         require_subscription = event.pop("require_subscription", False)
+        if broadcast_to_chat:
+            await self.send_to_chat_local(str(chat_id), event)
+            return
+
+        user_ids = {int(uid) for uid in orjson.loads(fields["user_ids"])}
+
         await self.send_to_users_local(
             user_ids,
             event,
@@ -409,3 +455,6 @@ class ChatConnectionManager:
         chat_conns.discard(conn.connection_id)
         if len(chat_conns) == 0:
             self.subscriptions_by_chat.pop(chat_id, None)
+
+    def _chat_has_local_subscribers(self, chat_id: str) -> bool:
+        return bool(self.subscriptions_by_chat.get(str(chat_id)))
