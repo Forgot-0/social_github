@@ -15,7 +15,7 @@ class ReadReceipt(BaseModel, DateMixin):
         UUID, ForeignKey("chats.id", ondelete="CASCADE"),
         nullable=False
     )
-    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     last_read_message_seq: Mapped[int] = mapped_column(BigInteger, nullable=False)
     last_read_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()

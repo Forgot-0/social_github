@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from redis.asyncio import Redis
 
@@ -7,6 +7,17 @@ from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
 from app.chats.services.access import ChatAccessService
 
+
+SCRIPT_SLOW_MODE = """
+local key = KEYS[1]
+local ttl = tonumber(ARGV[1])
+local result = redis.call('SET', key, '1', 'EX', ttl, 'NX')
+if result then
+    return {1, ttl}
+else
+    return {0, redis.call('TTL', key)}
+end
+"""
 
 @dataclass
 class SlowModeService:
@@ -18,15 +29,9 @@ class SlowModeService:
             return
 
         key = f"chat:slowmode:{chat.id}:{user_id}"
-        allowed = await self.redis.set(
-            key,
-            "1",
-            ex=chat.slow_mode_seconds,
-            nx=True,
-        )
+        script = self.redis.register_script(SCRIPT_SLOW_MODE)
+        allowed, ttl = await script(keys=[key], args=[chat.slow_mode_seconds])
+
         if allowed:
             return
-
-        ttl = await self.redis.ttl(key)
-        retry_after = max(1, int(ttl) if ttl and ttl > 0 else chat.slow_mode_seconds)
-        raise SlowModeLimitException(chat_id=str(chat.id), retry_after=retry_after)
+        raise SlowModeLimitException(chat_id=str(chat.id), retry_after=max(1, int(ttl)))

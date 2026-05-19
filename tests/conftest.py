@@ -1,26 +1,32 @@
 import asyncio
-from collections.abc import AsyncGenerator, Generator
+import os
+from collections.abc import AsyncGenerator, Callable, Generator, Iterable
 from dataclasses import dataclass, field
 from datetime import timedelta
-import os
-from typing import Any, Callable, Iterable
+from typing import Any
 from uuid import uuid4
 
-from fastapi import FastAPI
-from fastapi_limiter import FastAPILimiter
-from httpx import ASGITransport, AsyncClient
 import pytest
 import pytest_asyncio
 from dishka import AsyncContainer, Provider, Scope, provide
 from dishka.integrations.fastapi import setup_dishka
+from fastapi import FastAPI
+from fastapi_limiter import FastAPILimiter
+from httpx import ASGITransport, AsyncClient
 from redis.asyncio import Redis
-from sqlalchemy import event
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.pool import NullPool
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import AsyncRedisContainer
 
 from app.core.configs.app import app_config
+from app.core.db.base_model import BaseModel
 from app.core.db.base_model import BaseModel
 from app.core.di.container import create_container
 from app.core.events.event import BaseEvent, EventRegisty
@@ -65,6 +71,7 @@ def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     with AsyncRedisContainer("redis:7.2-alpine") as redis:
         yield redis
 
+
 @pytest_asyncio.fixture(scope="session")
 async def db_engine(postgres_container: PostgresContainer) -> AsyncGenerator[AsyncEngine, None]:
     database_url = postgres_container.get_connection_url(driver="asyncpg")
@@ -72,7 +79,6 @@ async def db_engine(postgres_container: PostgresContainer) -> AsyncGenerator[Asy
     engine = create_async_engine(
         database_url,
         poolclass=NullPool,
-        # echo=False,
     )
 
     async with engine.begin() as conn:
@@ -97,40 +103,32 @@ async def load_initial_data(db_engine: AsyncEngine) -> AsyncGenerator[None, None
 
 
 @pytest_asyncio.fixture
-async def db_session(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
-
+async def db_connection(db_engine: AsyncEngine) -> AsyncGenerator[AsyncConnection, None]:
     connection = await db_engine.connect()
     transaction = await connection.begin()
 
-    session_maker = async_sessionmaker(
-        bind=connection,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autoflush=False,
-    )
+    try:
+        yield connection
+    finally:
+        await transaction.rollback()
+        await connection.close()
 
-    session = session_maker()
-    await connection.begin_nested()
 
-    @event.listens_for(session.sync_session, "after_transaction_end")
-    def restart_savepoint(session: Any, transaction: Any) -> None:
-        if transaction.nested and not transaction._parent.nested:
-            session.begin_nested()
+@pytest_asyncio.fixture
+async def db_session(di_container):
+    async with di_container() as request:
+        yield await request.get(AsyncSession)
 
-    yield session
-
-    await session.close()
-    await transaction.rollback()
-    await connection.close()
 
 @pytest_asyncio.fixture
 async def redis_client(redis_container: AsyncRedisContainer) -> AsyncGenerator[Redis, None]:
     client = await redis_container.get_async_client()
 
-    yield client
-
-    await client.flushall()
-    await client.aclose()
+    try:
+        yield client
+    finally:
+        await client.flushall()
+        await client.aclose()
 
 
 @dataclass
@@ -173,9 +171,11 @@ def mock_event_bus() -> BaseEventBus:
 def mock_queue_service() -> QueueService:
     return FakeQueueService()
 
+
 @pytest.fixture
 def mock_storage_service() -> StorageService:
     return FakeStorageService()
+
 
 @pytest.fixture
 def jwt_manager() -> JWTManager:
@@ -184,9 +184,11 @@ def jwt_manager() -> JWTManager:
         jwt_algorithm=app_config.JWT_ALGORITHM,
     )
 
+
 @pytest.fixture
 def rbac_manager() -> RBACManager:
     return RBACManager()
+
 
 @pytest.fixture
 def make_user_jwt() -> Callable[..., UserJWTData]:
@@ -210,9 +212,11 @@ def make_user_jwt() -> Callable[..., UserJWTData]:
 
     return _make_user_jwt
 
+
 @pytest.fixture
 def user_jwt(make_user_jwt) -> UserJWTData:
     return make_user_jwt()
+
 
 @pytest.fixture
 def super_admin_user_jwt(make_user_jwt) -> UserJWTData:
@@ -221,72 +225,89 @@ def super_admin_user_jwt(make_user_jwt) -> UserJWTData:
 
 @pytest.fixture
 def create_access_token(jwt_manager: JWTManager):
-
     def _create(user_jwt: UserJWTData) -> str:
         data = user_jwt.to_dict()
         data["type"] = JwtTokenType.ACCESS
         data["jti"] = str(uuid4())
-        data['exp'] = (now_utc() + timedelta(minutes=5)).timestamp()
-        data['iat'] = now_utc().timestamp()
+        data["exp"] = (now_utc() + timedelta(minutes=5)).timestamp()
+        data["iat"] = now_utc().timestamp()
         return jwt_manager.encode(data)
 
     return _create
+
 
 @pytest.fixture
 def create_auth_headers(create_access_token):
     def _headers(user_jwt: UserJWTData) -> dict[str, str]:
         token = create_access_token(user_jwt)
         return {"Authorization": f"Bearer {token}"}
+
     return _headers
+
 
 @pytest_asyncio.fixture
 async def di_container(
-    db_session: AsyncSession,
+    db_connection: AsyncConnection,
     redis_client: Redis,
-    mock_event_bus: BaseEventBus
-) -> AsyncContainer:
+    mock_event_bus: BaseEventBus,
+) -> AsyncGenerator[AsyncContainer, None]:
 
     class TestProvider(Provider):
         @provide(scope=Scope.REQUEST)
-        async def get_session(self) -> AsyncGenerator[AsyncSession]:
-            yield db_session
+        async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+            session_maker = async_sessionmaker(
+                bind=db_connection,
+                class_=AsyncSession,
+                expire_on_commit=False,
+                autoflush=False,
+            )
+            session = session_maker()
+
+            try:
+                yield session
+            finally:
+                await session.close()
 
         @provide(scope=Scope.APP)
-        async def get_redis(self) -> Redis:
+        def get_redis(self) -> Redis:
             return redis_client
 
         @provide(scope=Scope.APP)
-        async def get_mock_event_bus(self) -> BaseEventBus:
+        def get_mock_event_bus(self) -> BaseEventBus:
             return mock_event_bus
 
         @provide(scope=Scope.APP)
-        async def get_queue_service(self) -> QueueService:
+        def get_queue_service(self) -> QueueService:
             return FakeQueueService()
 
         @provide(scope=Scope.APP)
-        async def storage_service(self) -> StorageService:
+        def get_storage_service(self) -> StorageService:
             return FakeStorageService()
 
     container = create_container(TestProvider(), ChatsIntegrationProvider())
-    return container
+    try:
+        yield container
+    finally:
+        await container.close()
 
 
 @pytest_asyncio.fixture
 async def app(di_container: AsyncContainer) -> FastAPI:
     if "PROMETHEUS_MULTIPROC_DIR" in os.environ:
         del os.environ["PROMETHEUS_MULTIPROC_DIR"]
-    app = test_app()
-    setup_dishka(di_container, app)
-    return app
+
+    application = test_app()
+    setup_dishka(di_container, application)
+    return application
 
 
 @pytest_asyncio.fixture
 async def client(app: FastAPI, redis_client: Redis) -> AsyncGenerator[AsyncClient, None]:
     await FastAPILimiter.init(redis_client)
     transport = ASGITransport(app=app)
+
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-
 
 
 @pytest.fixture
@@ -311,4 +332,3 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "profiles: Тесты модуля профиля")
     config.addinivalue_line("markers", "projects: Тесты модуля projects")
     config.addinivalue_line("markers", "chats: Тесты модуля chats")
-
