@@ -1,7 +1,6 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.positions.update import UpdatePositionCommand, UpdatePositionCommandHandler
 from app.projects.exceptions import (
@@ -9,8 +8,6 @@ from app.projects.exceptions import (
 )
 from app.projects.models.position import Position, PositionLocationType
 from app.projects.repositories.positions import PositionRepository
-from app.projects.repositories.projects import ProjectRepository
-from app.projects.services.permission_service import ProjectPermissionService
 from tests.projects.integration.factories import PositionCommandFactory
 
 
@@ -20,21 +17,11 @@ from tests.projects.integration.factories import PositionCommandFactory
 class TestUpdatePositionCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        position_repository: PositionRepository,
-        project_repository: ProjectRepository,
-        project_permission_service: ProjectPermissionService,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> UpdatePositionCommandHandler:
-        return UpdatePositionCommandHandler(
-            session=db_session,
-            position_repository=position_repository,
-            project_repository=project_repository,
-            project_permission_service=project_permission_service,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(UpdatePositionCommandHandler)
 
     async def test_update_title_success(
         self,

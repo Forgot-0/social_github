@@ -1,7 +1,6 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.projects.invite import InviteMemberCommand, InviteMemberCommandHandler
 from app.projects.exceptions import NotFoundProjectException
@@ -9,8 +8,7 @@ from app.projects.models.member import MembershipStatus
 from app.projects.models.project import Project
 from app.projects.models.role_permissions import ProjectRolesEnum
 from app.projects.repositories.projects import ProjectRepository
-from app.projects.repositories.roles import ProjectRoleRepository
-from app.projects.services.permission_service import ProjectPermissionService
+
 
 
 @pytest.mark.integration
@@ -19,21 +17,11 @@ from app.projects.services.permission_service import ProjectPermissionService
 class TestInviteMemberCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        project_repository: ProjectRepository,
-        project_role_repository: ProjectRoleRepository,
-        project_permission_service: ProjectPermissionService,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> InviteMemberCommandHandler:
-        return InviteMemberCommandHandler(
-            session=db_session,
-            project_repository=project_repository,
-            project_role_repository=project_role_repository,
-            project_permission_service=project_permission_service,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(InviteMemberCommandHandler)
 
     async def test_invite_success(
         self,

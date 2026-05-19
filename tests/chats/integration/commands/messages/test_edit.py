@@ -1,14 +1,12 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.chats.commands.messages.modify import EditMessageCommand, EditMessageCommandHandler
 from app.chats.exceptions import AccessDeniedChatException, NotFoundMessageException
 from app.chats.models.chat import Chat
-from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -17,19 +15,11 @@ from app.core.services.auth.dto import UserJWTData
 @pytest.mark.asyncio
 class TestEditMessageCommand:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        chat_repository: ChatRepository,
-        message_repository: MessageRepository,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> EditMessageCommandHandler:
-        return EditMessageCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            message_repository=message_repository,
-            event_bus=mock_event_bus
-        )
+        return await request_container.get(EditMessageCommandHandler)
 
     async def test_author_edits_own_message(
         self,

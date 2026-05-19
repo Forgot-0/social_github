@@ -2,8 +2,8 @@ import hashlib
 import secrets
 from datetime import timedelta
 
+from dishka import AsyncContainer
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.users.send_verify import SendVerifyCommand, SendVerifyCommandHandler
 from app.auth.commands.users.verify import VerifyCommand, VerifyCommandHandler
@@ -12,7 +12,7 @@ from app.auth.models.user import User
 from app.auth.repositories.session import TokenBlacklistRepository
 from app.auth.repositories.user import UserRepository
 from app.core.services.auth.exceptions import InvalidTokenException
-from tests.conftest import MockEventBus, MockMailService
+from tests.mocks import MockMailService
 
 
 @pytest.mark.integration
@@ -20,17 +20,11 @@ from tests.conftest import MockEventBus, MockMailService
 @pytest.mark.asyncio
 class TestSendVerifyEmailCommand:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        user_repository: UserRepository,
-        mock_mail_service: MockMailService,
-        token_blacklist_repository: TokenBlacklistRepository,
+        request_container: AsyncContainer
     ) -> SendVerifyCommandHandler:
-        return SendVerifyCommandHandler(
-            user_repository=user_repository,
-            mail_service=mock_mail_service,
-            token_repository=token_blacklist_repository,
-        )
+        return await request_container.get(SendVerifyCommandHandler)
 
     async def test_send_verify_email_success(
         self,
@@ -59,23 +53,14 @@ class TestSendVerifyEmailCommand:
 @pytest.mark.asyncio
 class TestVerifyEmailCommand:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        user_repository: UserRepository,
-        mock_event_bus: MockEventBus,
-        token_blacklist_repository: TokenBlacklistRepository,
+        request_container: AsyncContainer,
     ) -> VerifyCommandHandler:
-        return VerifyCommandHandler(
-            session=db_session,
-            event_bus=mock_event_bus,
-            user_repository=user_repository,
-            token_repository=token_blacklist_repository,
-        )
+        return await request_container.get(VerifyCommandHandler)
 
     async def test_verify_email_success(
         self,
-        db_session: AsyncSession,
         user_repository: UserRepository,
         unverified_user: User,
         token_blacklist_repository: TokenBlacklistRepository,
@@ -92,7 +77,6 @@ class TestVerifyEmailCommand:
 
         command = VerifyCommand(token=hashed_token)
         await handler.handle(command)
-        await db_session.commit()
 
         verified_user = await user_repository.get_by_id(unverified_user.id)
         assert verified_user is not None
@@ -109,7 +93,6 @@ class TestVerifyEmailCommand:
 
     async def test_verify_email_already_verified(
         self,
-        db_session: AsyncSession,
         user_repository: UserRepository,
         standard_user: User,
         token_blacklist_repository: TokenBlacklistRepository,
@@ -126,7 +109,6 @@ class TestVerifyEmailCommand:
 
         command = VerifyCommand(token=hashed_token)
         await handler.handle(command)
-        await db_session.commit()
 
         verified_user = await user_repository.get_by_id(standard_user.id)
         assert verified_user is not None

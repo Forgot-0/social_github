@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.profiles.commands.profiles.create import CreateProfileCommand, CreateProfileCommandHanler
 from app.profiles.exceptions import (
@@ -17,15 +17,11 @@ from tests.profiles.integration.factories import ProfileCommandFactory
 @pytest.mark.asyncio
 class TestCreateCommand:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository,
+        request_container: AsyncContainer,
     ) -> CreateProfileCommandHanler:
-        return CreateProfileCommandHanler(
-            session=db_session,
-            profile_repository=profile_repository,
-        )
+        return await request_container.get(CreateProfileCommandHanler)
 
     async def test_create_success(
         self,

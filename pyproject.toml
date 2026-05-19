@@ -68,3 +68,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore:The @wait_container_is_ready decorator is deprecated:DeprecationWarning",
+    "ignore:Behavior without patch module is deprecated:DeprecationWarning",
+    "ignore:Accessing argon2\\.__version__ is deprecated:DeprecationWarning",
+    "ignore:The 'u' type code is deprecated:DeprecationWarning"
+]

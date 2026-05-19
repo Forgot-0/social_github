@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pytest
 
 from app.chats.config import chat_config
@@ -15,6 +13,7 @@ from app.chats.models.chat import (
     LeftChatMemberEvent,
     UpdatedChatEvent,
 )
+from app.core.utils import now_utc
 
 
 def make_direct_chat(created_by: int = 1, other_member: int = 2) -> Chat:
@@ -215,7 +214,7 @@ class TestChatModel:
 
     def test_update_last_activity_sets_timestamp(self) -> None:
         chat = make_direct_chat()
-        timestamp = datetime.utcnow()
+        timestamp = now_utc()
 
         chat.update_last_activity(message_date=timestamp)
 

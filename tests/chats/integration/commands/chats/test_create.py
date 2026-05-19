@@ -1,13 +1,11 @@
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.chats.commands.chats.create import CreateChatCommand, CreateChatCommandHandler
 from app.chats.models.chat import ChatFanoutStrategy, ChatType
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
-from app.chats.services.livekit_service import LiveKitService
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -18,19 +16,11 @@ from app.core.services.auth.dto import UserJWTData
 class TestCreateChatCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        livekit: LiveKitService,
-        mock_event_bus: BaseEventBus,
-        chat_repository: ChatRepository,
+        request_container: AsyncContainer,
     ) -> CreateChatCommandHandler:
-        return CreateChatCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            livekit_sevice=livekit,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(CreateChatCommandHandler)
 
     async def test_create_direct_chat_persists_two_members(
         self,

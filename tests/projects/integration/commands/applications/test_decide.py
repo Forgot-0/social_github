@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.applications.decision import DecideApplicationCommand, DecideApplicationCommandHandler
@@ -7,9 +7,7 @@ from app.projects.exceptions import NotFoundProjectException
 from app.projects.models.application import Application, ApplicationStatus
 from app.projects.models.member import MembershipStatus
 from app.projects.repositories.applications import ApplicationRepository
-from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
-from app.projects.services.permission_service import ProjectPermissionService
 
 
 @pytest.mark.integration
@@ -18,21 +16,11 @@ from app.projects.services.permission_service import ProjectPermissionService
 class TestDecideApplicationCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        application_repository: ApplicationRepository,
-        project_repository: ProjectRepository,
-        position_repository: PositionRepository,
-        project_permission_service: ProjectPermissionService,
+        request_container: AsyncContainer,
     ) -> DecideApplicationCommandHandler:
-        return DecideApplicationCommandHandler(
-            session=db_session,
-            application_repository=application_repository,
-            project_repository=project_repository,
-            position_repository=position_repository,
-            project_permission_service=project_permission_service,
-        )
+        return await request_container.get(DecideApplicationCommandHandler)
 
     async def test_approve_changes_application_status(
         self,

@@ -1,12 +1,10 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.chats.commands.chats.kick import KickMemberCommand, KickMemberCommandHandler
 from app.chats.exceptions import AccessDeniedChatException, NotChatMemberException
 from app.chats.models.chat import Chat
 from app.chats.repositories.chat import ChatRepository
-from app.chats.services.access import ChatAccessService
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -16,19 +14,11 @@ from app.core.services.auth.dto import UserJWTData
 class TestKickMemberCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        chat_repository: ChatRepository,
-        chat_access_service: ChatAccessService,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> KickMemberCommandHandler:
-        return KickMemberCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            chat_access_service=chat_access_service,
-            event_bus=mock_event_bus
-        )
+        return await request_container.get(KickMemberCommandHandler)
 
     async def test_owner_kicks_member(
         self,

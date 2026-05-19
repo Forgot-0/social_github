@@ -1,3 +1,4 @@
+from dishka import AsyncContainer
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,10 +12,7 @@ from app.auth.exceptions import (
 )
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
-from app.auth.repositories.permission import PermissionRepository
-from app.auth.repositories.session import TokenBlacklistRepository
 from app.auth.repositories.user import UserRepository
-from app.auth.services.rbac import AuthRBACManager
 from app.core.services.auth.exceptions import AccessDeniedException
 from tests.support.jwt import jwt_from_user
 
@@ -24,21 +22,11 @@ from tests.support.jwt import jwt_from_user
 @pytest.mark.asyncio
 class TestAddPermissionToUserCommand:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        user_repository: UserRepository,
-        permission_repository: PermissionRepository,
-        rbac_manager: AuthRBACManager,
-        token_blacklist_repository: TokenBlacklistRepository,
+        request_container: AsyncContainer
     ) -> AddPermissionToUserCommandHandler:
-        return AddPermissionToUserCommandHandler(
-            session=db_session,
-            user_repository=user_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            token_blacklist=token_blacklist_repository,
-        )
+        return await request_container.get(AddPermissionToUserCommandHandler)
 
     async def test_add_permission_to_user_success(
         self,
@@ -61,7 +49,6 @@ class TestAddPermissionToUserCommand:
         )
 
         await handler.handle(command)
-        await db_session.commit()
 
         updated_user = await user_repository.get_user_with_permission_by_id(standard_user.id)
         assert updated_user is not None
@@ -130,7 +117,6 @@ class TestAddPermissionToUserCommand:
         )
 
         await handler.handle(command)
-        await db_session.commit()
 
         updated_user = await user_repository.get_user_with_permission_by_id(standard_user.id)
         assert updated_user is not None
@@ -182,10 +168,8 @@ class TestAddPermissionToUserCommand:
         )
 
         await handler.handle(command)
-        await db_session.commit()
 
         await handler.handle(command)
-        await db_session.commit()
 
         updated_user = await user_repository.get_user_with_permission_by_id(standard_user.id)
         assert updated_user is not None

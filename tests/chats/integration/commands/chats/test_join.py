@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pytest
+from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.join import JoinChatCommand, JoinChatCommandHandler
@@ -9,10 +10,9 @@ from app.chats.exceptions import (
     AlreadyMemberException,
     NotFoundChatException,
 )
-from app.chats.models.chat import Chat, ChatType
+from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -22,17 +22,11 @@ from app.core.services.auth.dto import UserJWTData
 class TestJoinChatCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        mock_event_bus: BaseEventBus,
-        chat_repository: ChatRepository,
+        request_container: AsyncContainer,
     ) -> JoinChatCommandHandler:
-        return JoinChatCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(JoinChatCommandHandler)
 
     async def test_user_joins_public_group_and_gets_member_role(
         self,

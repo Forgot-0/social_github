@@ -1,9 +1,8 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
-from app.core.services.auth.rbac import RBACManager
 from app.profiles.commands.profiles.remove_contact import (
     RemoveContactToProfileCommand,
     RemoveContactToProfileCommandHandler
@@ -19,23 +18,17 @@ from app.profiles.repositories.profiles import ProfileRepository
 class TestRemoveContactFromProfileCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository,
-        rbac_manager: RBACManager,
+        request_container: AsyncContainer,
     ) -> RemoveContactToProfileCommandHandler:
-        return RemoveContactToProfileCommandHandler(
-            session=db_session,
-            profile_repository=profile_repository,
-            rbac_manager=rbac_manager,
-        )
+        return await request_container.get(RemoveContactToProfileCommandHandler)
 
     async def test_owner_can_remove_contact_success(
         self,
         persisted_profile_contact,
         user_jwt: UserJWTData,
-        handler,
+        handler: RemoveContactToProfileCommandHandler,
         profile_repository: ProfileRepository,
     ) -> None:
         profile = await persisted_profile_contact([("github", "https://github.com/testuser")])
@@ -59,7 +52,7 @@ class TestRemoveContactFromProfileCommand:
         self,
         persisted_profile_contact,
         user_jwt: UserJWTData,
-        handler,
+        handler: RemoveContactToProfileCommandHandler,
         profile_repository: ProfileRepository,
     ) -> None:
         profile = await persisted_profile_contact([
@@ -94,7 +87,7 @@ class TestRemoveContactFromProfileCommand:
     async def test_not_found_raises(
         self,
         user_jwt: UserJWTData,
-        handler,
+        handler: RemoveContactToProfileCommandHandler,
     ) -> None:
         command = RemoveContactToProfileCommand(
             profile_id=999999,
@@ -109,7 +102,7 @@ class TestRemoveContactFromProfileCommand:
         self,
         persisted_profile_contact,
         make_user_jwt,
-        handler,
+        handler: RemoveContactToProfileCommandHandler,
     ) -> None:
         profile = await persisted_profile_contact([
             ("github", "https://github.com/testuser")
@@ -128,7 +121,7 @@ class TestRemoveContactFromProfileCommand:
         self,
         persisted_profile_contact,
         super_admin_user_jwt: UserJWTData,
-        handler,
+        handler: RemoveContactToProfileCommandHandler,
         profile_repository: ProfileRepository,
     ) -> None:
         profile = await persisted_profile_contact([
@@ -154,7 +147,7 @@ class TestRemoveContactFromProfileCommand:
         self,
         persisted_profile: Profile,
         user_jwt: UserJWTData,
-        handler,
+        handler: RemoveContactToProfileCommandHandler,
         profile_repository: ProfileRepository,
     ) -> None:
         command = RemoveContactToProfileCommand(

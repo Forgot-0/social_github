@@ -1,7 +1,6 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.positions.create import CreatePositionCommand, CreatePositionCommandHandler
 from app.projects.config import project_config
@@ -11,9 +10,6 @@ from app.projects.exceptions import (
 )
 from app.projects.models.project import Project
 from app.projects.repositories.positions import PositionRepository
-from app.projects.repositories.projects import ProjectRepository
-from app.projects.repositories.roles import ProjectRoleRepository
-from app.projects.services.permission_service import ProjectPermissionService
 from tests.projects.integration.factories import PositionCommandFactory
 
 
@@ -23,23 +19,11 @@ from tests.projects.integration.factories import PositionCommandFactory
 class TestCreatePositionCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        project_repository: ProjectRepository,
-        position_repository: PositionRepository,
-        project_role_repository: ProjectRoleRepository,
-        project_permission_service: ProjectPermissionService,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> CreatePositionCommandHandler:
-        return CreatePositionCommandHandler(
-            session=db_session,
-            project_repository=project_repository,
-            position_repository=position_repository,
-            project_role_repository=project_role_repository,
-            project_permission_service=project_permission_service,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(CreatePositionCommandHandler)
 
     async def test_create_success(
         self,

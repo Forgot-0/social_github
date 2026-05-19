@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.chats.commands.chats.add_member import AddMemberCommand, AddMemberCommandHandler
 from app.chats.exceptions import (
@@ -13,8 +13,6 @@ from app.chats.exceptions import (
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
-from app.chats.services.access import ChatAccessService
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -24,23 +22,14 @@ from app.core.services.auth.dto import UserJWTData
 class TestAddMemberCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        chat_repository: ChatRepository,
-        chat_access_service: ChatAccessService,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> AddMemberCommandHandler:
-        return AddMemberCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            chat_access_service=chat_access_service,
-            event_bus=mock_event_bus
-        )
+        return await request_container.get(AddMemberCommandHandler)
 
     async def test_owner_adds_new_member(
         self,
-        db_session: AsyncSession,
         handler: AddMemberCommandHandler,
         chat_repository: ChatRepository,
         user_jwt: UserJWTData,
@@ -54,7 +43,6 @@ class TestAddMemberCommand:
                 role_id=5,
             )
         )
-        await db_session.commit()
 
         member = await chat_repository.get_member_chat(group_chat.id, 99)
         assert member is not None

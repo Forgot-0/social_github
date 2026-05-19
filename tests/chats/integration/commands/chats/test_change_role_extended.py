@@ -1,4 +1,5 @@
 import pytest
+from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.change_role import ChangeMemberRoleCommand, ChangeMemberRoleCommandHandler
@@ -6,7 +7,6 @@ from app.chats.exceptions import AccessDeniedChatException, NotChatMemberExcepti
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
-from app.chats.services.access import ChatAccessService
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -23,17 +23,11 @@ VIEWER_ID = ChatRolesEnum.VIEWER.value.id
 class TestChangeMemberRoleDowngrade:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        chat_repository: ChatRepository,
-        chat_access_service: ChatAccessService,
+        request_container: AsyncContainer,
     ) -> ChangeMemberRoleCommandHandler:
-        return ChangeMemberRoleCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            chat_access_service=chat_access_service,
-        )
+        return await request_container.get(ChangeMemberRoleCommandHandler)
 
     async def _get_role_id(self, chat_repository: ChatRepository, chat: Chat, user_id: int) -> int:
         member = await chat_repository.get_member_chat(chat.id, user_id)

@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.positions.delete import DeletePositionCommand, DeletePositionCommandHandler
@@ -8,8 +8,6 @@ from app.projects.exceptions import (
 )
 from app.projects.models.position import Position
 from app.projects.repositories.positions import PositionRepository
-from app.projects.repositories.projects import ProjectRepository
-from app.projects.services.permission_service import ProjectPermissionService
 
 
 
@@ -19,19 +17,11 @@ from app.projects.services.permission_service import ProjectPermissionService
 class TestDeletePositionCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        position_repository: PositionRepository,
-        project_repository: ProjectRepository,
-        project_permission_service: ProjectPermissionService,
+        request_container: AsyncContainer,
     ) -> DeletePositionCommandHandler:
-        return DeletePositionCommandHandler(
-            session=db_session,
-            position_repository=position_repository,
-            project_repository=project_repository,
-            project_permission_service=project_permission_service,
-        )
+        return await request_container.get(DeletePositionCommandHandler)
 
     async def test_delete_success(
         self,

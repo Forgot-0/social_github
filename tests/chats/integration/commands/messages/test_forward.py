@@ -1,17 +1,11 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.chats.commands.messages.forward import ForwardMessageCommand, ForwardMessageCommandHandler
 from app.chats.exceptions import NotChatMemberException, NotFoundMessageException
 from app.chats.models.message import MessageType
-from app.chats.repositories.attachment import AttachmentRepository
-from app.chats.repositories.chat import ChatRepository
-from app.chats.repositories.message import MessageRepository
-from app.chats.services.access import ChatAccessService
-from app.chats.services.slow_mode import SlowModeService
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -21,27 +15,11 @@ from app.core.services.auth.dto import UserJWTData
 class TestForwardMessageCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        chat_repository: ChatRepository,
-        chat_access_service: ChatAccessService,
-        message_repository: MessageRepository,
-        attachment_repository: AttachmentRepository,
-        slow_mode_service: SlowModeService,
-        mock_event_bus: BaseEventBus,
-        mock_storage_service,
+        request_container: AsyncContainer,
     ) -> ForwardMessageCommandHandler:
-        return ForwardMessageCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            chat_access_service=chat_access_service,
-            message_repository=message_repository,
-            attachment_repository=attachment_repository,
-            slow_mode_service=slow_mode_service,
-            storage_service=mock_storage_service,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(ForwardMessageCommandHandler)
 
     async def test_forward_message_to_another_chat(
         self,

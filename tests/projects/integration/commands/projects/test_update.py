@@ -1,13 +1,11 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.projects.update import UpdateProjectCommand, UpdateProjectCommandHandler
 from app.projects.exceptions import NotFoundProjectException
 from app.projects.models.project import Project, ProjectVisibility
 from app.projects.repositories.projects import ProjectRepository
-from app.projects.services.permission_service import ProjectPermissionService
 from tests.projects.integration.factories import ProjectCommandFactory
 
 
@@ -17,19 +15,11 @@ from tests.projects.integration.factories import ProjectCommandFactory
 class TestUpdateProjectCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        project_repository: ProjectRepository,
-        project_permission_service: ProjectPermissionService,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> UpdateProjectCommandHandler:
-        return UpdateProjectCommandHandler(
-            session=db_session,
-            project_repository=project_repository,
-            project_permission_service=project_permission_service,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(UpdateProjectCommandHandler)
 
     async def test_update_name_success(
         self,

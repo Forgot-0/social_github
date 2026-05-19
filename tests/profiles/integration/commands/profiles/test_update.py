@@ -1,11 +1,10 @@
 from datetime import date
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
-from app.core.services.auth.rbac import RBACManager
 from app.profiles.commands.profiles.update import UpdateProfileCommand, UpdateProfileCommandHandler
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.models.profile import Profile
@@ -18,17 +17,11 @@ from tests.profiles.integration.factories import ProfileCommandFactory
 @pytest.mark.asyncio
 class TestUpdateProfileHandler:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository,
-        rbac_manager: RBACManager,
+        request_container: AsyncContainer,
     ) -> UpdateProfileCommandHandler:
-        return UpdateProfileCommandHandler(
-            session=db_session,
-            profile_repository=profile_repository,
-            rbac_manager=rbac_manager,
-        )
+        return await request_container.get(UpdateProfileCommandHandler)
 
     @pytest.mark.parametrize(
         "payload, expected",

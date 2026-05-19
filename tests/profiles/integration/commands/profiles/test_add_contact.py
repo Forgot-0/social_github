@@ -1,9 +1,8 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedException
-from app.core.services.auth.rbac import RBACManager
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand, AddContactToProfileCommandHandler
 from app.profiles.exceptions import NotFoundProfileException
 from app.profiles.models.profile import Profile
@@ -16,17 +15,11 @@ from app.profiles.repositories.profiles import ProfileRepository
 class TestAddContactToProfileCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        profile_repository: ProfileRepository,
-        rbac_manager: RBACManager,
+        request_container: AsyncContainer,
     ) -> AddContactToProfileCommandHandler:
-        return AddContactToProfileCommandHandler(
-            session=db_session,
-            profile_repository=profile_repository,
-            rbac_manager=rbac_manager,
-        )
+        return await request_container.get(AddContactToProfileCommandHandler)
 
     async def test_owner_can_add_contact_success(
         self,

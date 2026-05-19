@@ -1,3 +1,4 @@
+from dishka import AsyncContainer
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -5,8 +6,7 @@ from app.auth.commands.permissions.delete import DeletePermissionCommand, Delete
 from app.auth.exceptions import ProtectedPermissionException
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
-from app.auth.repositories.permission import PermissionInvalidateRepository, PermissionRepository
-from app.auth.services.rbac import AuthRBACManager
+from app.auth.repositories.permission import PermissionRepository
 from app.core.services.auth.exceptions import AccessDeniedException
 from tests.support.jwt import jwt_from_user
 
@@ -15,20 +15,13 @@ from tests.support.jwt import jwt_from_user
 @pytest.mark.auth
 @pytest.mark.asyncio
 class TestDeletePermissionCommand:
+
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        permission_repository: PermissionRepository,
-        rbac_manager: AuthRBACManager,
-        permission_blacklist: PermissionInvalidateRepository,
+        request_container: AsyncContainer
     ) -> DeletePermissionCommandHandler:
-        return DeletePermissionCommandHandler(
-            session=db_session,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-            permission_blacklist=permission_blacklist,
-        )
+        return await request_container.get(DeletePermissionCommandHandler)
 
     async def test_delete_permission_success(
         self,
@@ -49,7 +42,6 @@ class TestDeletePermissionCommand:
         )
 
         await handler.handle(command)
-        await db_session.commit()
 
         deleted_perm = await permission_repository.get_permission_by_name("deletable:perm")
         assert deleted_perm is None

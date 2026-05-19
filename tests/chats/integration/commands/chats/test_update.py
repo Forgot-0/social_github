@@ -1,16 +1,13 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.chats.commands.chats.update import UpdateChatCommand, UpdateChatCommandHandler
 from app.chats.exceptions import AccessDeniedChatException, NotFoundChatException, SlowModeOutOfRangeException
 from app.chats.models.chat import Chat
 from app.chats.repositories.chat import ChatRepository
-from app.chats.services.access import ChatAccessService
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from tests.conftest import MockEventBus
 
 
 
@@ -19,19 +16,11 @@ from tests.conftest import MockEventBus
 @pytest.mark.asyncio
 class TestUpdateChatCommand:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        mock_event_bus: BaseEventBus,
-        chat_repository: ChatRepository,
-        chat_access_service: ChatAccessService,
+        request_container: AsyncContainer,
     ) -> UpdateChatCommandHandler:
-        return UpdateChatCommandHandler(
-            sessions=db_session,
-            chat_repository=chat_repository,
-            access_service=chat_access_service,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(UpdateChatCommandHandler)
 
     async def test_owner_can_rename_group(
         self,

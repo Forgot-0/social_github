@@ -1,4 +1,5 @@
 import pytest
+from dishka import AsyncContainer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,10 +7,6 @@ from app.chats.commands.messages.mark_read import MarkAsReadCommand, MarkAsReadC
 from app.chats.exceptions import NotChatMemberException
 from app.chats.models.chat import Chat
 from app.chats.models.read_receipts import ReadReceipt
-from app.chats.repositories.chat import ChatRepository
-from app.chats.repositories.reads import ReadReceiptRepository
-from app.chats.services.access import ChatAccessService
-from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 
 
@@ -19,21 +16,11 @@ from app.core.services.auth.dto import UserJWTData
 class TestMarkAsReadCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        chat_repository: ChatRepository,
-        chat_access_service: ChatAccessService,
-        read_repository: ReadReceiptRepository,
-        mock_event_bus: BaseEventBus,
+        request_container: AsyncContainer,
     ) -> MarkAsReadCommandHandler:
-        return MarkAsReadCommandHandler(
-            session=db_session,
-            chat_repository=chat_repository,
-            access_service=chat_access_service,
-            read_receipt_repository=read_repository,
-            event_bus=mock_event_bus,
-        )
+        return await request_container.get(MarkAsReadCommandHandler)
 
     async def test_member_marks_message_as_read(
         self,

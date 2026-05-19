@@ -1,13 +1,14 @@
+from uuid import uuid4
+
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
+from sqlalchemy import select
 
 from app.projects.commands.applications.create import CreateApplicationCommand, CreateApplicationCommandHandler
-from app.projects.exceptions import NotFoundPositionException, NotFoundProjectException
-from app.projects.models.application import  ApplicationStatus
+from app.projects.exceptions import NotFoundPositionException
+from app.projects.models.application import  Application, ApplicationStatus
 from app.projects.models.position import Position
 from app.projects.repositories.applications import ApplicationRepository
-from app.projects.repositories.positions import PositionRepository
-from app.projects.repositories.projects import ProjectRepository
 
 
 @pytest.mark.integration
@@ -16,19 +17,11 @@ from app.projects.repositories.projects import ProjectRepository
 class TestCreateApplicationCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        project_repository: ProjectRepository,
-        position_repository: PositionRepository,
-        application_repository: ApplicationRepository,
+        request_container: AsyncContainer,
     ) -> CreateApplicationCommandHandler:
-        return CreateApplicationCommandHandler(
-            session=db_session,
-            project_repository=project_repository,
-            position_repository=position_repository,
-            application_repository=application_repository,
-        )
+        return await request_container.get(CreateApplicationCommandHandler)
 
     async def test_create_success(
         self,
@@ -46,12 +39,10 @@ class TestCreateApplicationCommand:
 
         await handler.handle(command)
 
-        from sqlalchemy import select
-        from app.projects.models.application import Application as App
         result = await application_repository.session.execute(
-            select(App).where(
-                App.position_id == persisted_position.id,
-                App.candidate_id == 888,
+            select(Application).where(
+                Application.position_id == persisted_position.id,
+                Application.candidate_id == 888,
             )
         )
         app = result.scalar()
@@ -64,7 +55,6 @@ class TestCreateApplicationCommand:
         make_user_jwt,
         handler: CreateApplicationCommandHandler,
     ) -> None:
-        from uuid import uuid4
 
         candidate_jwt = make_user_jwt(id="888", username="candidate")
         command = CreateApplicationCommand(

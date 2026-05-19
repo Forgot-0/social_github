@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from dishka import AsyncContainer
 
 from app.projects.commands.projects.create import CreateProjectCommand, CreateProjectCommandHandler
 from app.projects.config import project_config
@@ -14,15 +14,11 @@ from tests.projects.integration.factories import ProjectCommandFactory
 class TestCreateProjectCommand:
 
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        project_repository: ProjectRepository,
+        request_container: AsyncContainer,
     ) -> CreateProjectCommandHandler:
-        return CreateProjectCommandHandler(
-            session=db_session,
-            project_repository=project_repository,
-        )
+        return await request_container.get(CreateProjectCommandHandler)
 
     async def test_create_success(
         self,

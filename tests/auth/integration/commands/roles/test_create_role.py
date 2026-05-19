@@ -1,3 +1,4 @@
+from dishka import AsyncContainer
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,9 +10,7 @@ from app.auth.exceptions import (
 )
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
-from app.auth.repositories.permission import PermissionRepository
 from app.auth.repositories.role import RoleRepository
-from app.auth.services.rbac import AuthRBACManager
 from app.core.services.auth.exceptions import AccessDeniedException
 from tests.support.jwt import jwt_from_user
 
@@ -21,23 +20,14 @@ from tests.support.jwt import jwt_from_user
 @pytest.mark.asyncio
 class TestCreateRoleCommand:
     @pytest.fixture
-    def handler(
+    async def handler(
         self,
-        db_session: AsyncSession,
-        role_repository: RoleRepository,
-        permission_repository: PermissionRepository,
-        rbac_manager: AuthRBACManager,
+        request_container: AsyncContainer
     ) -> CreateRoleCommandHandler:
-        return CreateRoleCommandHandler(
-            session=db_session,
-            role_repository=role_repository,
-            permission_repository=permission_repository,
-            rbac_manager=rbac_manager,
-        )
+        return await request_container.get(CreateRoleCommandHandler)
 
     async def test_create_role_success(
         self,
-        db_session: AsyncSession,
         role_repository: RoleRepository,
         handler: CreateRoleCommandHandler,
         admin_user: User,
@@ -53,7 +43,6 @@ class TestCreateRoleCommand:
         )
 
         await handler.handle(command)
-        await db_session.commit()
 
         created_role = await role_repository.get_by_name("moderator")
         assert created_role is not None
@@ -83,7 +72,6 @@ class TestCreateRoleCommand:
         )
 
         await handler.handle(command)
-        await db_session.commit()
 
         created_role = await role_repository.get_with_permission_by_name("content_creator")
         assert created_role is not None
@@ -91,7 +79,6 @@ class TestCreateRoleCommand:
 
     async def test_create_role_duplicate_name(
         self,
-        db_session: AsyncSession,
         handler: CreateRoleCommandHandler,
         admin_user: User,
     ) -> None:
@@ -105,7 +92,6 @@ class TestCreateRoleCommand:
             permissions=set(),
         )
         await handler.handle(command1)
-        await db_session.commit()
 
         command2 = CreateRoleCommand(
             user_jwt_data=user_jwt,
@@ -228,7 +214,6 @@ class TestCreateRoleCommand:
 
     async def test_create_role_preserves_description(
         self,
-        db_session: AsyncSession,
         role_repository: RoleRepository,
         handler: CreateRoleCommandHandler,
         admin_user: User,
@@ -245,7 +230,6 @@ class TestCreateRoleCommand:
         )
 
         await handler.handle(command)
-        await db_session.commit()
 
         created_role = await role_repository.get_by_name("editor_role")
         assert created_role is not None
@@ -253,7 +237,6 @@ class TestCreateRoleCommand:
 
     async def test_create_multiple_roles_with_different_levels(
         self,
-        db_session: AsyncSession,
         role_repository: RoleRepository,
         handler: CreateRoleCommandHandler,
         admin_user: User,
@@ -275,7 +258,6 @@ class TestCreateRoleCommand:
                 permissions=set(),
             )
             await handler.handle(command)
-            await db_session.commit()
 
         for role_name, _, security_level in roles_data:
             created_role = await role_repository.get_by_name(role_name)
