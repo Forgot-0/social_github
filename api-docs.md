@@ -205,6 +205,8 @@ interface MemberInfoDTO {
   user_id: number;
   role_id: number;
   is_muted: boolean;
+  is_banned: boolean;
+  permissions_overrides: Record<string, boolean>;
 }
 
 interface MemberPresenceDTO {
@@ -212,103 +214,77 @@ interface MemberPresenceDTO {
   is_online: boolean;
 }
 
-interface ChatListItemDTO {
-  id: number;
+interface ChatDTO {
+  id: string; // UUID
+  seq_counter: number;
+  last_activity_at: string | null;
   type: "direct" | "group" | "channel";
   name: string | null;
   description: string | null;
-  avatar_url: string | null;
+  avatar_s3_key: string | null;
   is_public: boolean;
+  admin_only: boolean;
+  slow_mode_seconds: number;
+  permissions: Record<string, boolean>;
   created_by: number;
-  last_activity_at: string | null;  // ISO 8601 datetime
-  unread_count: number;             // default: 0
-  member_count: number;             // default: 0
-}
-
-interface ChatDetailDTO {
-  id: number;
-  type: "direct" | "group" | "channel";
-  name: string | null;
-  description: string | null;
-  avatar_url: string | null;
-  is_public: boolean;
-  created_by: number;
-  members: MemberInfoDTO[];
+  member_count: number;
   unread_count: number;
 }
 
-interface ChatListCursorPageDTO {
-  items: ChatListItemDTO[];
-  next_cursor: string | null;   // base64-строка, передаётся as-is в следующий запрос
-  has_more: boolean;
+interface ChatDetailDTO extends Omit<ChatDTO, "unread_count"> {
+  members: MemberInfoDTO[];
 }
 
-interface ChatPresenceDTO {
-  chat_id: number;
-  members: MemberPresenceDTO[];
-  online_count: number;
-}
-
-interface CreateChatResponse {
-  chat_id: number;
+interface ListChatsDTO {
+  has_next: boolean;
+  chats: ChatDTO[];
+  next_date: string | null;
+  next_chat_id: string | null; // UUID
 }
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
 
 interface AttachmentDTO {
   id: string;                   // UUID
-  message_id: number;
-  chat_id: number;
+  message_id: string | null;    // UUID
+  chat_id: string;              // UUID
   uploader_id: number;
   attachment_type: "image" | "video" | "file";
+  attachment_status: string;
+  url: string | null;
+  url_expires_in: number | null;
+  s3_key: string;
   mime_type: string;
   original_filename: string;
-  file_size: number;            // байты
-  width: number | null;         // только для image/video
+  size: number;
+  width: number | null;
   height: number | null;
-  duration_seconds: number | null; // только для video
-  created_at: string;           // ISO 8601 datetime
+  duration_seconds: number | null;
+  created_at: string;
 }
 
 interface MessageDTO {
-  id: number;
-  chat_id: number;
-  author_id: number | null;     // null для system-сообщений
-  type: "text" | "reply" | "system" | "image" | "file";
+  id: string;
+  chat_id: string;
+  seq: number;
+  author_id: number | null;
+  type: string;
   content: string | null;
-  reply_to_id: number | null;
-  media_url: string | null;
-  is_deleted: boolean;
+  reply_to_id: string | null;
+  forwarded_from_chat_id: string | null;
+  forwarded_from_message_id: string | null;
+  forwarded_from_author_id: number | null;
   is_edited: boolean;
-  created_at: string;           // ISO 8601 datetime
-  updated_at: string;
-  reply_to: MessageDTO | null;  // вложенный объект при type="reply"
+  created_at: string;
+  reply_to: MessageDTO | null;
+  forwarded_from: MessageDTO | null;
   attachments: AttachmentDTO[];
-  forwarded_from_chat_id: number | null;
-  forwarded_from_message_id: number | null;
 }
 
-interface MessageCursorPage {
-  items: MessageDTO[];
-  next_cursor: number | null;   // ID последнего сообщения — передаётся как before_id
-  has_more: boolean;
-  read_cursors: Record<number, number>; // user_id -> last_read_message_id
-}
-
-interface MessageDeliveryStatusDTO {
-  message_id: number;
-  delivered_to: Record<number, boolean>; // user_id -> delivered
-}
-
-interface MemberReadCursorDTO {
-  user_id: number;
-  last_read_message_id: number;
-}
-
-interface MessageReadDetailsPageDTO {
-  items: MemberReadCursorDTO[];
+interface MessagesDTO {
+  messages: MessageDTO[];
   next_cursor: number | null;
-  has_more: boolean;
+  has_next: boolean;
 }
 
 interface UploadSlotDTO {
@@ -1489,210 +1465,112 @@ sort:                  string
 
 Базовый префикс: `/api/v1/chats`
 
-### POST `/chats/` 🔒
-
-**Request:**
-```json
-{
-  "chat_type": "group",
-  "member_ids": [5, 6, 7],
-  "name": "Team Chat",
-  "description": "Our team",
-  "is_public": false
-}
-```
-
-| Поле          | Тип              | Ограничение             | Обязательность |
-|---------------|------------------|-------------------------|----------------|
-| `chat_type`   | `"direct" \| "group" \| "channel"` | — | да |
-| `member_ids`  | `number[]`       | max 99 элементов        | нет            |
-| `name`        | `string \| null` | max 256 символов        | нет            |
-| `description` | `string \| null` | max 1024 символа        | нет            |
-| `is_public`   | `boolean`        | default: `false`        | нет            |
-
-**Правила:**
-- `direct` — ровно 1 `member_id` (текущий пользователь + 1 собеседник)
-- `group` / `channel` — текущий пользователь становится `owner`
-
-**Response 201 → `CreateChatResponse`:**
-```json
-{ "chat_id": 42 }
-```
-
-**Ошибки:** `DIRECT_CHAT_EXISTS` 409, `MEMBER_LIMIT_EXCEEDED` 400
-
----
-
-### GET `/chats/my` 🔒
+### GET `/chats` 🔒
 
 **Query params:**
-```
-limit:  number (default: 20, min: 1, max: 100)
-cursor: string | null — base64 cursor из предыдущего ответа
-```
+- `limit`: `number` (default `50`, min `1`, max `100`)
+- `last_chat_id`: `string | null` (UUID)
+- `last_activity_at`: `string | null` (ISO datetime)
 
-**Response 200 → `ChatListCursorPageDTO`:**
+**Response 200 → `ListChats`:**
 ```json
 {
-  "items": [
-    {
-      "id": 42,
-      "type": "group",
-      "name": "Team Chat",
-      "description": "Our team",
-      "avatar_url": null,
-      "is_public": false,
-      "created_by": 1,
-      "last_activity_at": "2026-03-31T10:00:00Z",
-      "unread_count": 3,
-      "member_count": 5
-    }
-  ],
-  "next_cursor": "MjAyNi0wMy0zMVQxMDowMDowMHw0Mg==",
-  "has_more": true
+  "has_next": true,
+  "next_date": "2026-03-31T10:00:00Z",
+  "next_chat_id": "550e8400-e29b-41d4-a716-446655440000",
+  "chats": []
 }
 ```
 
-> `next_cursor` передаётся as-is в следующий запрос. Декодируется как `"<ISO datetime>|<chat_id>"`.
+### POST `/chats` 🔒
 
----
+**Request (`CreateChatRequest`):**
+```json
+{
+  "name": "Team Chat",
+  "description": "Our team",
+  "chat_type": "group",
+  "member_ids": [5, 6],
+  "is_public": false,
+  "admin_only": false,
+  "slow_mode_seconds": 0,
+  "permissions": {}
+}
+```
+
+**Response 201 → `ChatDTO`**
 
 ### GET `/chats/{chat_id}` 🔒
 
-**Response 200 → `ChatDetailDTO`:**
+**Response 200 → `ChatDetaiDTO`**
+
+### PATCH `/chats/{chat_id}` 🔒
+
+**Request (`UpdateChatRequest`):**
 ```json
 {
-  "id": 42,
-  "type": "group",
-  "name": "Team Chat",
-  "description": "Our team",
-  "avatar_url": null,
-  "is_public": false,
-  "created_by": 1,
-  "members": [
-    { "user_id": 1, "role_id": 1, "is_muted": false },
-    { "user_id": 5, "role_id": 3, "is_muted": false }
-  ],
-  "unread_count": 0
+  "name": "New name",
+  "description": "New description",
+  "is_public": true,
+  "admin_only": true,
+  "slow_mode_seconds": 10,
+  "permissions": {"message:send": true}
 }
 ```
 
-**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403
+**Response 200 → `ChatDTO`**
 
----
-
-### PUT `/chats/{chat_id}` 🔒
-
-Требует роль `admin` или `owner` (`chat:update`).
-
-**Request:**
-```json
-{
-  "name": "New Name",
-  "description": "New Description",
-  "avatar_url": "https://cdn.example.com/avatars/chat_42.jpg"
-}
-```
-
-> Все поля опциональны. Передавать только изменяемые.
-
-**Response 200:** `{}`
-
-**Ошибки:** `NOT_FOUND_CHAT` 404, `CHAT_ACCESS_DENIED` 403
-
----
-
-### POST `/chats/{chat_id}/members` 🔒
-
-Требует `member:invite`.
-
-**Request:**
-```json
-{ "user_id": 7, "role_id": 3 }
-```
-
-**Response 200:** `{}`
-
-**Ошибки:** `NOT_FOUND_CHAT` 404, `CHAT_ACCESS_DENIED` 403, `ALREADY_CHAT_MEMBER` 409, `MEMBER_LIMIT_EXCEEDED` 400
-
----
-
-### DELETE `/chats/{chat_id}/members/{user_id}` 🔒
-
-Требует `member:kick`.
+### DELETE `/chats/{chat_id}` 🔒
 
 **Response 204** (no content)
 
-**Ошибки:** `NOT_FOUND_CHAT` 404, `CHAT_ACCESS_DENIED` 403, `NOT_CHAT_MEMBER` 403
+### POST `/chats/{chat_id}/join` 🔒
 
----
+**Response 204** (no content)
 
-### PUT `/chats/{chat_id}/members/{user_id}/role` 🔒
+### POST `/chats/{chat_id}/leave` 🔒
 
-Требует `role:change` (только `owner`).
+**Response 204** (no content)
 
-**Request:**
+### GET `/chats/{chat_id}/members` 🔒
+
+**Query params:**
+- `limit`: `number` (default `100`, min `1`, max `500`)
+- `cursor_user_id`: `number | null`
+- `include_presence`: `boolean` (default `false`)
+
+**Response 200 → `ListMembers`**
+
+### POST `/chats/{chat_id}/members` 🔒
+
+**Request (`AddMemberRequest`):**
+```json
+{ "user_id": 7, "role_id": 5 }
+```
+
+**Response 204** (no content)
+
+### PATCH `/chats/{chat_id}/members/{user_id}/role` 🔒
+
+**Request (`ChangeMemberRoleRequest`):**
 ```json
 { "role_id": 2 }
 ```
 
-**Response 200:** `{}`
+**Response 204** (no content)
 
----
+### PATCH `/chats/{chat_id}/members/{user_id}/ban` 🔒
 
-### POST `/chats/{chat_id}/members/{user_id}/ban` 🔒
-
-Требует `member:ban`.
-
-**Request:**
+**Request (`BanMemberRequest`):**
 ```json
 { "ban": true }
 ```
 
-> `ban: false` — разбанить. Default: `true`.
-
-**Response 200:** `{}`
-
----
-
-### POST `/chats/{chat_id}/leave` 🔒
-
-> ⚠️ Owner не может покинуть чат, пока есть другие участники.
-
 **Response 204** (no content)
 
----
+### DELETE `/chats/{chat_id}/members/{user_id}` 🔒
 
-### GET `/chats/{chat_id}/presence` 🔒
-
-**Response 200 → `ChatPresenceDTO`:**
-```json
-{
-  "chat_id": 42,
-  "members": [
-    { "user_id": 1, "is_online": true },
-    { "user_id": 5, "is_online": false }
-  ],
-  "online_count": 1
-}
-```
-
----
-
-### GET `/chats/{chat_id}/messages/{message_id}/delivery` 🔒
-
-**Response 200 → `MessageDeliveryStatusDTO`:**
-```json
-{
-  "message_id": 101,
-  "delivered_to": {
-    "1": true,
-    "5": false
-  }
-}
-```
-
----
+**Response 204** (no content)
 
 ### POST `/chats/{chat_id}/calls/join` 🔒
 
@@ -1700,57 +1578,122 @@ cursor: string | null — base64 cursor из предыдущего ответа
 ```json
 {
   "token": "eyJ...",
-  "slug": "chat:42",
+  "slug": "chat:550e8400-e29b-41d4-a716-446655440000",
   "livekit_url": "wss://livekit.example.com"
 }
 ```
 
-> Используйте `token` в LiveKit SDK, `livekit_url` — адрес сервера.
+### POST `/chats/{chat_id}/calls/participants/{user_id}/mute` 🔒
 
-**Ошибки:** `NOT_FOUND_CHAT` 404, `NOT_CHAT_MEMBER` 403
-
----
-
-### GET `/chats/{chat_id}/calls/participants` 🔒
-
-**Response 200 → `LiveKitParticipantsDTO[]`:**
-```json
-[
-  {
-    "identity": "1",
-    "name": "johndoe",
-    "state": 2,
-    "joined_at": 1711872000
-  }
-]
-```
-
----
-
-### PUT `/chats/{chat_id}/calls/participants/{user_id}/mute` 🔒
-
-Требует `call:mute_member`.
-
-**Request:**
+**Request (`MuteParticipantRequest`):**
 ```json
 { "muted": true }
 ```
 
-> Default: `true`. `false` — unmute.
+**Response 204** (no content)
 
-**Response 200:** `{}`
+### POST `/chats/realtime/presence` 🔒
+
+**Request (`PresenceBatchRequest`):**
+```json
+{ "user_ids": [1, 5, 7] }
+```
+
+**Response 200 → `MemberPresenceDTO[]`**
+
+### GET `/chats/realtime/ws/status` 🔒
+
+**Response 200:**
+```json
+{
+  "gateway_id": "gw-1",
+  "stream_key": "chat:events",
+  "connections": 10,
+  "users": 8,
+  "subscribed_chats": 15
+}
+```
 
 ---
 
-## 12. Сообщения
+## 12. Сообщения и вложения
 
 Базовый префикс: `/api/v1/chats/{chat_id}/messages`
 
-### Двухшаговая отправка с вложениями
+### GET `/chats/{chat_id}/messages` 🔒
 
-#### Шаг 1 — POST `/upload` 🔒
+**Query params:**
+- `limit`: `number` (default `30`, min `1`, max `100`)
+- `cursor_message_seq`: `number | null` (>= `0`)
 
-**Request:**
+**Response 200 → `MessagesDTO`**
+
+### GET `/chats/{chat_id}/messages/context` 🔒
+
+**Query params:**
+- `target_seq`: `number` (>= `0`)
+- `limit`: `number` (default `40`, min `1`, max `100`)
+
+**Response 200 → `MessagesDTO`**
+
+### POST `/chats/{chat_id}/messages` 🔒
+
+Поддерживает заголовок `Idempotency-Key`.
+
+**Request (`SendMessageRequest`):**
+```json
+{
+  "content": "Hello",
+  "reply_to_id": null,
+  "message_type": "text",
+  "upload_tokens": []
+}
+```
+
+**Response 201 → `MessageDTO`**
+
+### GET `/chats/{chat_id}/messages/{message_id}` 🔒
+
+**Response 200 → `MessageDTO`**
+
+### PATCH `/chats/{chat_id}/messages/{message_id}` 🔒
+
+**Request (`EditMessageRequest`):**
+```json
+{ "content": "Edited text" }
+```
+
+**Response 200 → `MessageDTO`**
+
+### DELETE `/chats/{chat_id}/messages/{message_id}` 🔒
+
+**Response 204** (no content)
+
+### POST `/chats/{chat_id}/messages/forward` 🔒
+
+**Request (`ForwardMessageRequest`):**
+```json
+{
+  "source_chat_id": "550e8400-e29b-41d4-a716-446655440000",
+  "source_message_id": "550e8400-e29b-41d4-a716-446655440001",
+  "comment": "FYI"
+}
+```
+
+**Response 201 → `MessageDTO`**
+
+### POST `/chats/{chat_id}/messages/read` 🔒
+
+**Request (`MarkReadRequest`):**
+```json
+{ "message_seq": 120 }
+```
+
+**Response 204** (no content)
+
+### POST `/chats/{chat_id}/attachments/upload-requests` 🔒
+
+**Request (`RequestAttachmentUploadRequest`):**
 ```json
 {
   "uploads": [
@@ -1763,219 +1706,22 @@ cursor: string | null — base64 cursor из предыдущего ответа
 }
 ```
 
-| Поле                     | Тип    | Ограничение         |
-|--------------------------|--------|---------------------|
-| `uploads`                | array  | 1–11 элементов      |
-| `uploads[].filename`     | string | 1–256 символов      |
-| `uploads[].mime_type`    | string | 3–128 символов      |
-| `uploads[].file_size`    | number | 1 byte – 100 МБ     |
+**Response 201 → `UploadSlotDTO[]`**
 
-**Ограничения типов:**
-- до 10 медиа (image + video) на сообщение
-- до 1 файла на сообщение
+### POST `/chats/{chat_id}/attachments/upload-requests:confirm` 🔒
 
-**Response 200 → `UploadSlotDTO[]`:**
-```json
-[
-  {
-    "upload_token": "tok_abc123",
-    "upload_url": "https://s3.example.com/...",
-    "attachment_type": "image",
-    "expires_in": 300
-  }
-]
-```
-
-> Загрузите файл PUT-запросом на `upload_url` напрямую в S3, затем используйте `upload_token` на шаге 2.
-
----
-
-#### Шаг 2 — POST `/` 🔒
-
-**Request:**
+**Request (`ConfirmAttachmentUploadRequest`):**
 ```json
 {
-  "content": "Look at this photo",
-  "reply_to_id": null,
-  "message_type": "text",
-  "upload_tokens": ["tok_abc123"]
+  "upload_tokens": ["550e8400-e29b-41d4-a716-446655440000"]
 }
 ```
 
-| Поле            | Тип       | Ограничение               | Обязательность |
-|-----------------|-----------|---------------------------|----------------|
-| `content`       | string \| null | max 4096 символов    | нет*           |
-| `reply_to_id`   | number \| null | ID сообщения          | нет            |
-| `message_type`  | string    | default: `"text"`         | нет            |
-| `upload_tokens` | string[]  | max 11 элементов          | нет*           |
+**Response 202** (no content)
 
-> *Хотя бы одно из `content` или `upload_tokens` должно быть непустым.
+### GET `/chats/{chat_id}/messages/{message_id}/attachments/{attachment_id}/download-url` 🔒
 
-**Response 201 → `SendMessageResult`:**
-```json
-{
-  "message_id": 120,
-  "chat_id": 42,
-  "created_at": "2026-03-31T10:10:00Z",
-  "attachment_count": 1
-}
-```
-
----
-
-### POST `/forward` 🔒
-
-**Request:**
-```json
-{
-  "source_chat_id": 10,
-  "source_message_id": 501,
-  "comment": "FYI"
-}
-```
-
-| Поле                | Тип           | Обязательность |
-|---------------------|---------------|----------------|
-| `source_chat_id`    | number        | да             |
-| `source_message_id` | number        | да             |
-| `comment`           | string \| null (max 4096) | нет |
-
-> Пользователь должен быть участником обоих чатов. Вложения копируются по ссылке.
-
-**Response 201 → `ForwardMessageResult`:**
-```json
-{
-  "message_id": 121,
-  "chat_id": 42,
-  "created_at": "2026-03-31T10:11:00Z",
-  "attachment_count": 2
-}
-```
-
----
-
-### GET `/` 🔒
-
-**Query params:**
-```
-limit:     number (default: 30, min: 1, max: 100)
-before_id: number | null — ID сообщения, до которого загружать (не включая)
-```
-
-**Response 200 → `MessageCursorPage`:**
-```json
-{
-  "items": [
-    {
-      "id": 120,
-      "chat_id": 42,
-      "author_id": 1,
-      "type": "text",
-      "content": "Hello!",
-      "reply_to_id": null,
-      "media_url": null,
-      "is_deleted": false,
-      "is_edited": false,
-      "created_at": "2026-03-31T10:10:00Z",
-      "updated_at": "2026-03-31T10:10:00Z",
-      "reply_to": null,
-      "attachments": [],
-      "forwarded_from_chat_id": null,
-      "forwarded_from_message_id": null
-    }
-  ],
-  "next_cursor": 119,
-  "has_more": true,
-  "read_cursors": { "5": 118, "7": 115 }
-}
-```
-
-> `next_cursor` — ID сообщения. Передавайте как `before_id` в следующий запрос.  
-> `read_cursors` — словарь `user_id → last_read_message_id`.  
-> Вложения в items содержат метаданные без presigned URL — используйте отдельный эндпоинт.
-
----
-
-### GET `/{message_id}/attachments/{attachment_id}/url` 🔒
-
-**Response 200 → `AttachmentDownloadUrlDTO`:**
-```json
-{
-  "attachment_id": "6d0de7a6-94b6-42ba-9005-62f40e7652f6",
-  "url": "https://s3.example.com/...",
-  "expires_in": 300
-}
-```
-
-> TTL — 300 секунд (5 минут). URL кешируется на сервере.
-
----
-
-### GET `/read-details` 🔒
-
-**Query params:**
-```
-limit:         number (default: 50, min: 1, max: 200)
-after_user_id: number | null — cursor (user_id из предыдущей страницы)
-```
-
-**Response 200 → `MessageReadDetailsPageDTO`:**
-```json
-{
-  "items": [
-    { "user_id": 1, "last_read_message_id": 120 },
-    { "user_id": 5, "last_read_message_id": 118 }
-  ],
-  "next_cursor": 5,
-  "has_more": false
-}
-```
-
-> `next_cursor` — `user_id`, передаётся как `after_user_id`.
-
----
-
-### PUT `/{message_id}` 🔒
-
-Только автор сообщения может редактировать.
-
-**Request:**
-```json
-{ "content": "Edited text" }
-```
-
-| Поле      | Тип    | Ограничение              |
-|-----------|--------|--------------------------|
-| `content` | string | min 1, max 4096 символов |
-
-**Response 200:** `{}`
-
-**Ошибки:** `NOT_FOUND_MESSAGE` 404, `CHAT_ACCESS_DENIED` 403
-
----
-
-### DELETE `/{message_id}` 🔒
-
-Soft-delete. Автор — любое своё сообщение. Admin/Owner — любое (`message:delete`).
-
-**Response 204** (no content)
-
-**Ошибки:** `NOT_FOUND_MESSAGE` 404, `CHAT_ACCESS_DENIED` 403
-
----
-
-### POST `/read` 🔒
-
-Отметить сообщения прочитанными (до указанного включительно).
-
-**Request:**
-```json
-{ "message_id": 120 }
-```
-
-**Response 204** (no content)
-
-> При вызове всем другим участникам рассылается WS-событие `messages_read`.
+**Response 200 → `AttachmentDownloadUrlDTO`**
 
 ---
 
@@ -1984,142 +1730,51 @@ Soft-delete. Автор — любое своё сообщение. Admin/Owner 
 ### Подключение
 
 ```
-WS /api/v1/chats/ws/?token=<access_token>
+WS /api/v1/chats/ws?token=<access_token>
 ```
 
-### Коды закрытия
+Поддерживается subprotocol `chat.v1`.
 
-| Код  | Причина                                           |
-|------|---------------------------------------------------|
-| 4001 | Невалидный токен                                  |
-| 1008 | Превышен лимит одновременных подключений на юзера |
+### Событие после подключения
 
-### Базовый формат события
-
-```typescript
-interface WSEvent {
-  type: WSEventType;
-  chat_id: number;
-  payload: Record<string, unknown>;
-  ts: string;  // ISO 8601 datetime (от клиента — можно пустую строку)
-}
-
-type WSEventType =
-  | "new_message"
-  | "message_deleted"
-  | "message_edited"
-  | "messages_read"
-  | "member_joined"
-  | "member_left"
-  | "member_kick"
-  | "typing_start"
-  | "typing_stop"
-  | "ping"
-  | "call_started"
-  | "call_joined"
-  | "call_left"
-  | "call_ended";
-```
-
-### События от сервера — payload схемы
-
-#### `new_message`
-```typescript
-interface WSNewMessagePayload {
-  id: number;
-  chat_id: number;
-  author_id: number | null;       // null для system-сообщений
-  content: string | null;
-  created_at: string;             // ISO 8601
-  is_edited: boolean;
-  reply_to_id: number | null;
-  attachment_count: number;
-  forwarded_from_chat_id: number | null;
-  forwarded_from_message_id: number | null;
-}
-```
-
-#### `message_deleted` / `message_edited`
-```typescript
-interface WSModifyMessagePayload {
-  id: number;
-  chat_id: number;
-  author_id: number;
-  content: string | null;
-}
-```
-
-#### `messages_read`
-```typescript
-interface WSMessagesReadPayload {
-  chat_id: number;
-  user_id: number;
-  last_read_message_id: number;
-}
-```
-
-#### `typing_start` / `typing_stop`
-```typescript
-interface WSTypingPayload {
-  chat_id: number;
-  user_id: number;
-}
-```
-
-#### `member_joined` / `member_left` / `member_kick`
-```typescript
-interface WSMemberPayload {
-  user_id: number;
-  kicked_by?: number;   // только для member_kick
-}
-```
-
-#### `call_started`
-```typescript
-interface WSCallStartedPayload {
-  slug: string;         // "chat:<chat_id>"
-  started_by: string;   // identity (строка user_id)
-  username: string;
-}
-```
-
-#### `call_joined` / `call_left`
-```typescript
-interface WSCallMemberPayload {
-  user_id: number | null;
-  username: string;
-}
-```
-
-#### `call_ended`
-```typescript
-interface WSCallEndedPayload {
-  duration_seconds: number;
-}
-```
-
-### События от клиента
-
-#### Индикатор набора
-```json
-{ "type": "typing_start", "chat_id": 42, "payload": {} }
-```
-```json
-{ "type": "typing_stop", "chat_id": 42, "payload": {} }
-```
-
-#### Подтверждение доставки
+Сервер отправляет `ws.ready`:
 ```json
 {
-  "type": "new_message",
-  "chat_id": 42,
-  "payload": { "message_id": 120 }
+  "type": "ws.ready",
+  "payload": {
+    "connection_id": "...",
+    "gateway_id": "...",
+    "heartbeat_interval": 30,
+    "heartbeat_timeout": 90,
+    "reconnect": { "mode": "last_seq_per_chat", "op": "resume" }
+  }
 }
 ```
 
-> Клиент обязан отправлять подтверждение доставки при получении каждого `new_message`.
+### Команды клиента
 
----
+Формат (`WSClientCommand`):
+```json
+{ "op": "subscribe", "chat_id": "<chat_uuid>", "last_seq": 10 }
+```
+
+Поддерживаемые `op`:
+- `ping`
+- `pong`
+- `subscribe` (нужен `chat_id`)
+- `unsubscribe` (нужен `chat_id`)
+- `resume` (`cursors`: объект `{ "<chat_id>": <last_seq> }`)
+
+### Ошибки WS
+
+При невалидной команде/кадре сервер отправляет событие:
+```json
+{ "type": "ws.error", "code": "BAD_COMMAND", "detail": "..." }
+```
+или
+```json
+{ "type": "ws.error", "code": "BAD_FRAME", "detail": "..." }
+```
 
 ## 14. Пагинация
 
