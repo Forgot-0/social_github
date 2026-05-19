@@ -46,11 +46,10 @@ async def lifespan(app: FastAPI) :
         await pre_start(session)
         await init_data(session)
 
-    redis_client = redis.from_url(app_config.redis_url)
+    redis_client = await app.state.dishka_container.get(redis.Redis)
     await FastAPILimiter.init(redis_client)
     message_broker: BaseMessageBroker = await app.state.dishka_container.get(BaseMessageBroker)
     await message_broker.start()
-
     connection_manager = await app.state.dishka_container.get(ChatConnectionManager)
 
     scheduler = Scheduler()
