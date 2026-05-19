@@ -4,14 +4,12 @@ from uuid import UUID
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO
 from app.chats.dtos.websocket import WSConnection
-from app.chats.exceptions import NotChatMemberException
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import WSClientOp
-from app.chats.services.message_attachments import attach_download_urls
+from app.chats.services.messages import MessageService
 from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
-from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
 
 
@@ -27,7 +25,7 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
     manager: ChatConnectionManager
     chat_repository: ChatRepository
     message_repository: MessageRepository
-    storage_service: StorageService
+    message_service: MessageService
 
     async def handle(self, command: ResumeCommand) -> None:
         if len(command.cursor) > 20:
@@ -75,10 +73,9 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                         "after_seq": cursor_seq,
                         "messages": [
                             message.model_dump(mode="json")
-                            for message in await attach_download_urls(
-                                [MessageDTO.model_validate(item.to_dict()) for item in batch],
-                                self.storage_service,
-                            )
+                            for message in await self.message_service.attach_download_urls([
+                                MessageDTO.model_validate(item.to_dict()) for item in batch
+                            ])
                         ],
                         "has_more": len(messages) > limit,
                         "next_last_seq": next_last_seq,

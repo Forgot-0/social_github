@@ -17,12 +17,10 @@ from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.access import ChatAccessService
-from app.chats.services.message_attachments import attach_download_urls
-from app.chats.services.slow_mode import SlowModeService
+from app.chats.services.messages import MessageService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
 
 
@@ -45,8 +43,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
     message_repository: MessageRepository
     attachment_repository: AttachmentRepository
     chat_access_service: ChatAccessService
-    slow_mode_service: SlowModeService
-    storage_service: StorageService
+    message_service: MessageService
     event_bus: BaseEventBus
 
     async def handle(self, command: ForwardMessageCommand) -> MessageDTO:
@@ -84,7 +81,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
         ):
             raise AccessDeniedChatException(chat_id=str(command.target_chat_id), requester_id=user_id)
 
-        await self.slow_mode_service.is_slow(
+        await self.message_service.is_slow(
             chat=target_chat,
             user_id=user_id,
             member=target_member,
@@ -143,4 +140,4 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             },
         )
         dto = MessageDTO.model_validate(forwarded_msg)
-        return await attach_download_urls(dto, self.storage_service)
+        return await self.message_service.attach_download_urls(dto)

@@ -9,8 +9,9 @@ from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.services.access import ChatAccessService
 from app.chats.services.livekit_service import LiveKitService
-from app.chats.services.slow_mode import SlowModeService
+from app.chats.services.messages import MessageService
 from app.core.services.auth.dto import UserJWTData
+from app.core.services.storage.service import StorageService
 from tests.chats.integration.mock import StubLiveKitService
 
 
@@ -45,8 +46,14 @@ def read_repository(db_session: AsyncSession) -> ReadReceiptRepository:
 
 
 @pytest.fixture
-def slow_mode_service(redis_client, chat_access_service: ChatAccessService) -> SlowModeService:
-    return SlowModeService(redis=redis_client, access_service=chat_access_service)
+def message_service(
+    redis_client, chat_access_service: ChatAccessService, mock_storage_service: StorageService
+) -> MessageService:
+    return MessageService(
+        redis=redis_client,
+        access_service=chat_access_service,
+        storage_service=mock_storage_service
+    )
 
 @pytest.fixture
 async def group_chat(db_session: AsyncSession, user_jwt: UserJWTData) -> Chat:

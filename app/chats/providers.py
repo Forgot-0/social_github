@@ -64,8 +64,8 @@ from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.services.access import ChatAccessService
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.livekit_service import LiveKitService
+from app.chats.services.messages import MessageService
 from app.chats.services.presence import PresenceService
-from app.chats.services.slow_mode import SlowModeService
 from app.chats.services.ws import ChatConnectionManager
 from app.core.events.event import EventRegisty
 from app.core.mediators.base import CommandRegisty, QueryRegistry
@@ -129,15 +129,19 @@ class ChatModuleProvider(Provider):
         scope=Scope.REQUEST
     )
 
-    repositories_and_services = provide_all(
+    repositories = provide_all(
         ChatRepository,
         MessageRepository,
         AttachmentRepository,
         ReadReceiptRepository,
-        ChatAccessService,
-        PresenceService,
-        SlowModeService,
         scope=Scope.REQUEST,
+    )
+
+    service = provide_all(
+        MessageService,
+        PresenceService,
+        ChatAccessService,
+        scope=Scope.APP
     )
 
     @decorate
