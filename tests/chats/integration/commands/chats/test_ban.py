@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from dishka import AsyncContainer
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +14,8 @@ from app.chats.models.chat import BannedChatMemberEvent, Chat
 from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
 from uuid import uuid4
+
+from app.core.utils import now_utc
 
 
 @pytest.mark.integration
@@ -38,7 +42,6 @@ class TestBanMemberCommand:
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                ban=True,
             )
         )
 
@@ -53,13 +56,11 @@ class TestBanMemberCommand:
         user_jwt: UserJWTData,
         mock_event_bus,
     ) -> None:
-        from app.chats.models.chat import BannedChatMemberEvent
         await handler.handle(
             BanMemberCommand(
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                ban=True,
             )
         )
         events = [e for e in mock_event_bus.published_events if isinstance(e, BannedChatMemberEvent)]
@@ -82,7 +83,6 @@ class TestBanMemberCommand:
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                ban=True,
             )
         )
 
@@ -101,7 +101,7 @@ class TestBanMemberCommand:
         member = await chat_repository.get_member_chat(group_chat.id, 2)
         assert member is not None
 
-        member.is_banned = True
+        member.ban(banned_by=int(user_jwt.id))
         await db_session.commit()
 
         await handler.handle(
@@ -109,7 +109,7 @@ class TestBanMemberCommand:
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                ban=False,
+                bannet_to=now_utc() - timedelta(days=1)
             )
         )
 
@@ -129,7 +129,7 @@ class TestBanMemberCommand:
         member = await chat_repository.get_member_chat(group_chat.id, 2)
         assert member is not None
 
-        member.is_banned = True
+        member.ban(banned_by=int(user_jwt.id))
         await db_session.commit()
 
         await handler.handle(
@@ -137,7 +137,7 @@ class TestBanMemberCommand:
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                ban=False,
+                bannet_to=now_utc() - timedelta(days=1)
             )
         )
         events = [e for e in mock_event_bus.published_events if isinstance(e, BannedChatMemberEvent)]
@@ -152,14 +152,17 @@ class TestBanMemberCommand:
         user_jwt: UserJWTData,
     ) -> None:
         await handler.handle(
-            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2, ban=True)
+            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2)
         )
         member = await chat_repository.get_member_chat(group_chat.id, 2)
         assert member is not None
         assert member.is_banned is True
 
         await handler.handle(
-            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2, ban=False)
+            BanMemberCommand(
+                user_jwt_data=user_jwt,
+                chat_id=group_chat.id, target_user_id=2,
+                bannet_to=now_utc() - timedelta(days=1))
         )
         member = await chat_repository.get_member_chat(group_chat.id, 2)
         assert member is not None
@@ -177,7 +180,12 @@ class TestBanMemberCommand:
         assert member.is_banned is False
 
         await handler.handle(
-            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2, ban=False)
+            BanMemberCommand(
+                user_jwt_data=user_jwt,
+                chat_id=group_chat.id,
+                target_user_id=2,
+                bannet_to=now_utc() - timedelta(days=1)
+            )
         )
 
         member = await chat_repository.get_member_chat(group_chat.id, 2)
@@ -192,10 +200,10 @@ class TestBanMemberCommand:
         user_jwt: UserJWTData,
     ) -> None:
         await handler.handle(
-            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2, ban=True)
+            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2)
         )
         await handler.handle(
-            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2, ban=True)
+            BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=2)
         )
         member = await chat_repository.get_member_chat(group_chat.id, 2)
         assert member is not None
@@ -210,7 +218,7 @@ class TestBanMemberCommand:
         member_jwt = make_user_jwt(id="2")
         with pytest.raises(AccessDeniedChatException):
             await handler.handle(
-                BanMemberCommand(user_jwt_data=member_jwt, chat_id=group_chat.id, target_user_id=3, ban=True)
+                BanMemberCommand(user_jwt_data=member_jwt, chat_id=group_chat.id, target_user_id=3)
             )
 
     async def test_cannot_ban_self(
@@ -225,7 +233,6 @@ class TestBanMemberCommand:
                     user_jwt_data=user_jwt,
                     chat_id=group_chat.id,
                     target_user_id=int(user_jwt.id),
-                    ban=True,
                 )
             )
 
@@ -237,7 +244,7 @@ class TestBanMemberCommand:
     ) -> None:
         with pytest.raises(NotChatMemberException):
             await handler.handle(
-                BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=9999, ban=True)
+                BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=9999)
             )
 
     async def test_ban_in_nonexistent_chat_raises(
@@ -247,5 +254,5 @@ class TestBanMemberCommand:
     ) -> None:
         with pytest.raises(NotFoundChatException):
             await handler.handle(
-                BanMemberCommand(user_jwt_data=user_jwt, chat_id=uuid4(), target_user_id=2, ban=True)
+                BanMemberCommand(user_jwt_data=user_jwt, chat_id=uuid4(), target_user_id=2)
             )

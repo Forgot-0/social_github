@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 from dataclasses import dataclass
 from uuid import UUID
@@ -23,7 +24,9 @@ class BanMemberCommand(BaseCommand):
     user_jwt_data: UserJWTData
     chat_id: UUID
     target_user_id: int
-    ban: bool = True
+
+    bannet_to: datetime | None = None
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -52,12 +55,13 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
             must_permissions={"member:ban"}
         ): raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=requester_id)
 
-        target.is_banned = command.ban
-        chat.ban_member(command.target_user_id, requester_id, command.ban)
+        target.ban(banned_by=requester_id, reason=command.reason, banned_to=command.bannet_to)
+        chat.ban_member(command.target_user_id, requester_id, target.is_banned)
+
         await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
 
-        action = "banned" if command.ban else "unbanned"
+        action = "banned" if target.is_banned else "unbanned"
         logger.info(
             "Member %s",
             action,

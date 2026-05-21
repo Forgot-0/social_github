@@ -50,7 +50,7 @@ async def register_user(
             username=user_request.username,
             email=user_request.email,
             password=user_request.password,
-            repeat_password=user_request.repeat_password
+            password_repeat=user_request.password_repeat
         )
     )
     return UserResponse(

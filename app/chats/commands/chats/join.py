@@ -40,16 +40,11 @@ class JoinChatCommandHandler(BaseCommandHandler[JoinChatCommand, None]):
             raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=user_id)
 
         existing = await self.chat_repository.get_member_chat(command.chat_id, user_id, with_role=False)
-        if existing is not None and not existing.is_banned:
+        if existing is not None:
             raise AlreadyMemberException(user_id=user_id, chat_id=str(command.chat_id))
 
         role_id = 6 if chat.type == ChatType.CHANNEL else 5
-        if existing is not None and existing.is_banned:
-            existing.is_banned = False
-            existing.role_id = role_id
-            chat.member_count += 1
-        else:
-            chat.add_member(user_id, role_id=role_id)
+        chat.add_member(user_id, role_id=role_id)
 
         await self.session.commit()
         await self.event_bus.publish(chat.pull_events())

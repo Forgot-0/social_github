@@ -56,7 +56,7 @@ async function register() {
     username: els.regUsername.value,
     email: els.regEmail.value,
     password: els.regPassword.value,
-    repeat_password: els.regPasswordRepeat.value,
+    password_repeat: els.regPasswordRepeat.value,
   };
   const data = await api('/users/register', { method: 'POST', json: payload });
   log('Registered:', data);

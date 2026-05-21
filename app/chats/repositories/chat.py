@@ -12,6 +12,7 @@ from app.chats.models.permission import ChatRolesEnum
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
+from app.core.utils import now_utc
 
 
 @dataclass
@@ -76,7 +77,8 @@ class ChatRepository(IRepository[Chat], CacheRepository):
     ) -> list[ChatMember]:
         conditions = [
             ChatMember.chat_id == chat_id,
-            ChatMember.is_banned.is_(False),
+            ChatMember.banned_to.is_not(None),
+            ChatMember.banned_to < now_utc()
         ]
         if cursor_user_id is not None:
             conditions.append(ChatMember.user_id > cursor_user_id)
@@ -101,7 +103,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         while True:
             conditions = [
                 ChatMember.chat_id == chat_id,
-                ChatMember.is_banned.is_(False),
+                ChatMember.banned_to.is_(False),
                 ChatMember.user_id > last_user_id,
             ]
             if role_ids is not None:
@@ -184,7 +186,8 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             )
             .where(
                 ChatMember.user_id == user_id,
-                ChatMember.is_banned.is_(False),
+                ChatMember.banned_to.is_not(None),
+                ChatMember.banned_to < now_utc(),
                 Chat.deleted_at.is_(None),
             )
             .order_by(Chat.last_activity_at.desc().nullslast(), Chat.id.desc())

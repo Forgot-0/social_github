@@ -88,14 +88,15 @@ class TestJoinChatCommand:
         target = make_user_jwt(id="2")
         member = await chat_repository.get_member_chat(public_group_chat.id, 2)
         assert member is not None
-        member.is_banned = True
+        member.ban(int(make_user_jwt(id="1").id))
         await db_session.commit()
 
-        await handler.handle(JoinChatCommand(chat_id=public_group_chat.id, user_jwt_data=target))
+        with pytest.raises(AlreadyMemberException):
+            await handler.handle(JoinChatCommand(chat_id=public_group_chat.id, user_jwt_data=target))
 
         refreshed = await chat_repository.get_member_chat(public_group_chat.id, 2)
         assert refreshed is not None
-        assert refreshed.is_banned is False
+        assert refreshed.is_banned is True
 
     async def test_join_nonexistent_chat_raises_not_found(
         self,

@@ -94,7 +94,7 @@ class TestRegisterCommand:
             username="testuser",
             email="test@example.com",
             password="TestPass123!",
-            repeat_password="DifferentPass123!",
+            password_repeat="DifferentPass123!",
         )
 
         with pytest.raises(PasswordMismatchException):

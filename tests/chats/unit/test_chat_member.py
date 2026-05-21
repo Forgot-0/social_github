@@ -1,3 +1,4 @@
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -10,6 +11,7 @@ from app.chats.models.permission import (
     OWNER_PERMISSIONS,
     ChatRolesEnum,
 )
+from app.core.utils import now_utc
 
 def make_member(
     role: ChatRole,
@@ -22,10 +24,12 @@ def make_member(
     m.user_id = 1
     m.chat_id = uuid4()
     m.role_id = role.id
-    m.is_banned = is_banned
-    m.is_muted = is_muted
     m.permissions_overrides = overrides or {}
     m.role = role
+    if is_banned:
+        m.ban(0)
+    if is_muted:
+        m.muted_to = now_utc() + timedelta(days=1)
     return m
 
 

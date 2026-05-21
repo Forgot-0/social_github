@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from httpx import AsyncClient
 
@@ -122,7 +124,7 @@ class TestMembersHttpEndpoints:
 
         ban = await client.patch(
             api_path(f"chats/{chat_id}/members/{target_id}/ban"),
-            json={"ban": True},
+            json={},
             headers=owner_headers,
         )
         assert ban.status_code == 204
@@ -136,7 +138,7 @@ class TestMembersHttpEndpoints:
 
         unban = await client.patch(
             api_path(f"chats/{chat_id}/members/{target_id}/ban"),
-            json={"ban": False},
+            json={"bannet_to": (now_utc() - timedelta(days=1)).isoformat()},
             headers=owner_headers,
         )
         assert unban.status_code == 204

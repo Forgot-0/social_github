@@ -293,7 +293,8 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             raise MemberLimitExceededException(limit=limit)
 
         self.members.append(
-            ChatMember(
+            ChatMember.create(
+                chat_id=self.id,
                 user_id=member_id,
                 role_id=role_id,
             )

@@ -1,14 +1,15 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 from uuid import UUID as PyUUID
 
-from sqlalchemy import UUID, BigInteger, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy import UUID, BigInteger, DateTime, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
 from app.chats.models.chat_roles import ChatRole
 from app.core.db.base_model import BaseModel, DateMixin
+from app.core.utils import now_utc
 
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
@@ -26,19 +27,46 @@ class ChatMember(BaseModel, DateMixin):
     )
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    is_muted:  Mapped[bool] = mapped_column(Boolean, default=False)
-    is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
+    muted_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    banned_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
     permissions_overrides: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}")
 
     chat: Mapped["Chat"] = relationship("Chat", back_populates="members", lazy="noload")
     role: Mapped["ChatRole"] = relationship("ChatRole")
+    bans: Mapped[list["ChatMemberBan"]] = relationship("ChatMemberBan", back_populates="member", lazy="noload")
 
     __table_args__ = (
         UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),
         Index("ix_chat_members_user_chat", "user_id", "chat_id"),
-        Index("ix_chat_members_chat_active_user", "chat_id", "is_banned", "user_id"),
+        Index("ix_chat_members_chat_active_user", "chat_id", "user_id"),
         Index("ix_chat_members_chat_role_user", "chat_id", "role_id", "user_id"),
     )
+
+
+    @classmethod
+    def create(cls, chat_id: PyUUID, user_id: int, role_id: int) -> Self:
+        instance = cls(
+            chat_id=chat_id,
+            user_id=user_id,
+            role_id=role_id,
+            banned_to=now_utc(),
+            muted_to=now_utc(),
+        )
+        return instance
+
+    def ban(self, banned_by: int, reason: str | None=None, banned_to: datetime | None=None) -> None:
+        self.banned_to = banned_to
+        self.bans.append(
+            ChatMemberBan(
+                member_id=self.id,
+                banned_by_user_id=banned_by,
+                reason=reason,
+                banned_at=now_utc(),
+                banned_to=banned_to,
+                
+            )
+        )
 
     def effective_permissions(self) -> dict[str, bool]:
         perms = self.role.permissions.copy()
@@ -54,6 +82,14 @@ class ChatMember(BaseModel, DateMixin):
     @property
     def role_name(self) -> str:
         return self.role.name
+
+    @property
+    def is_banned(self) -> bool:
+        return self.banned_to is None or self.banned_to > now_utc()
+
+    @property
+    def is_muted(self) -> bool:
+        return self.muted_to is None or self.muted_to > now_utc()
 
     @property
     def is_staff(self) -> bool:
@@ -73,3 +109,27 @@ class ChatMember(BaseModel, DateMixin):
 
     def can_bypass_slow_mode(self) -> bool:
         return self.is_staff or self.has_permission("slowmode:bypass")
+
+
+
+class ChatMemberBan(BaseModel):
+    __tablename__ = "chat_member_bans"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    member_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("chat_members.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    banned_by_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    reason: Mapped[str | None] = mapped_column(String(256), nullable=True)
+
+    banned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    banned_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    member = relationship("ChatMember", back_populates="bans")
+
+    __table_args__ = (
+        Index("ix_chat_member_bans_member_banned_at", "member_id", "banned_at"),
+    )

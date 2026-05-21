@@ -82,7 +82,7 @@ class TestResetPasswordCommand:
         command = ResetPasswordCommand(
             token=hashed_token,
             password=new_password,
-            repeat_password=new_password,
+            password_repeat=new_password,
         )
 
         await handler.handle(command)
@@ -99,7 +99,7 @@ class TestResetPasswordCommand:
         command = ResetPasswordCommand(
             token="invalid_token",
             password="NewPassword123!",
-            repeat_password="NewPassword123!",
+            password_repeat="NewPassword123!",
         )
 
         with pytest.raises(InvalidTokenException):
@@ -123,7 +123,7 @@ class TestResetPasswordCommand:
         command = ResetPasswordCommand(
             token=hashed_token,
             password="NewPassword123!",
-            repeat_password="DifferentPassword123!",
+            password_repeat="DifferentPassword123!",
         )
 
         with pytest.raises(PasswordMismatchException):
@@ -148,7 +148,7 @@ class TestResetPasswordCommand:
         command = ResetPasswordCommand(
             token=hashed_token,
             password=new_password,
-            repeat_password=new_password,
+            password_repeat=new_password,
         )
 
         await handler.handle(command)

@@ -1,6 +1,5 @@
 from dishka import AsyncContainer, Provider, make_async_container
 
-from app.analytics.providers import AnalyticModuleProvider
 from app.auth.providers import AuthModuleProvider
 from app.chats.providers import ChatModuleProvider
 from app.core.di import get_core_providers
@@ -20,7 +19,6 @@ def create_container(*app_providers: Provider) -> AsyncContainer:
         ChatModuleProvider(),
         ProjectModuleProvider(),
         NotificationModuleProvider(),
-        AnalyticModuleProvider()
     ]
 
     return make_async_container(*providers, *app_providers)

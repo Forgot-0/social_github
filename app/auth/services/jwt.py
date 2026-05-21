@@ -3,6 +3,7 @@ from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
+from app.auth.config import auth_config
 from app.auth.dtos.tokens import TokenGroup, TokenType
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.repositories.session import TokenBlacklistRepository
@@ -14,9 +15,6 @@ from app.core.utils import fromtimestamp, now_utc
 
 @dataclass
 class AuthJWTManager(JWTManager):
-    access_token_expire_minutes: int
-    refresh_token_expire_days: int
-
     token_blacklist: TokenBlacklistRepository
 
     def generate_payload(self, user_data: AuthUserJWTData, token_type: TokenType) -> dict[str, Any]:
@@ -29,9 +27,9 @@ class AuthJWTManager(JWTManager):
             "did": user_data.device_id,
             "jti": str(uuid4()),
             "exp": (
-                now + timedelta(minutes=self.access_token_expire_minutes)
+                now + timedelta(minutes=auth_config.ACCESS_TOKEN_EXPIRE_MINUTES)
                 if token_type == TokenType.ACCESS
-                else now + timedelta(days=self.refresh_token_expire_days)
+                else now + timedelta(days=auth_config.REFRESH_TOKEN_EXPIRE_DAYS)
             ).timestamp(),
             "iat": now.timestamp(),
         }

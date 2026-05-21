@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -37,7 +38,8 @@ class ChangeMemberRoleRequest(BaseModel):
 
 
 class BanMemberRequest(BaseModel):
-    ban: bool = True
+    reason: str | None = None
+    bannet_to: datetime | None = None
 
 
 class SendMessageRequest(BaseModel):

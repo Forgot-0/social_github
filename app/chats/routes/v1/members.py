@@ -38,7 +38,7 @@ async def list_chat_members(
 @router.post("", status_code=status.HTTP_204_NO_CONTENT)
 async def add_member(
     chat_id: UUID,
-    payload: AddMemberRequest,
+    add_member_request: AddMemberRequest,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> None:
@@ -46,8 +46,8 @@ async def add_member(
         AddMemberCommand(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
-            target_user_id=payload.user_id,
-            role_id=payload.role_id,
+            target_user_id=add_member_request.user_id,
+            role_id=add_member_request.role_id,
         )
     )
 
@@ -56,7 +56,7 @@ async def add_member(
 async def change_member_role(
     chat_id: UUID,
     user_id: int,
-    payload: ChangeMemberRoleRequest,
+    change_role_request: ChangeMemberRoleRequest,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> None:
@@ -65,7 +65,7 @@ async def change_member_role(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
             target_user_id=user_id,
-            role_id=payload.role_id,
+            role_id=change_role_request.role_id,
         )
     )
 
@@ -74,7 +74,7 @@ async def change_member_role(
 async def ban_member(
     chat_id: UUID,
     user_id: int,
-    payload: BanMemberRequest,
+    ban_member_request: BanMemberRequest,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> None:
@@ -83,7 +83,8 @@ async def ban_member(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
             target_user_id=user_id,
-            ban=payload.ban,
+            reason=ban_member_request.reason,
+            bannet_to=ban_member_request.bannet_to
         )
     )
 

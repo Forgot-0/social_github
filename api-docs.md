@@ -440,11 +440,11 @@ password: string   (обязательно)
 {
   "token": "string",
   "password": "string",
-  "repeat_password": "string"
+  "password_repeat": "string"
 }
 ```
 
-> ⚠️ Поле называется `repeat_password` (не `repeat_password`).
+> ⚠️ Поле называется `password_repeat`.
 
 **Валидация пароля** (8–128 символов):
 - минимум 1 заглавная буква `[A-Z]`
@@ -512,7 +512,7 @@ state: string  (обязательно)
   "username": "johndoe",
   "email": "user@example.com",
   "password": "Secret1!",
-  "repeat_password": "Secret1!"
+  "password_repeat": "Secret1!"
 }
 ```
 
@@ -521,7 +521,7 @@ state: string  (обязательно)
 | `username`        | string | 4–100 символов, pattern: `^[a-zA-Z0-9 ,.\'-]+$` |
 | `email`           | string | валидный email                                   |
 | `password`        | string | 8–128 символов, см. валидацию выше               |
-| `repeat_password` | string | должен совпадать с `password`                    |
+| `password_repeat` | string | должен совпадать с `password`                    |
 
 **Response 201 → `UserResponse`:**
 ```json
@@ -1844,7 +1844,7 @@ interface ErrorResponse {
 | `WRONG_LOGIN_DATA`              | 400   | Неверный логин или пароль                                  |
 | `INVALID_TOKEN`                 | 403   | Токен невалиден                                            |
 | `EXPIRED_TOKEN`                 | 400   | Токен истёк                                                |
-| `PASSWORD_MISMATCH`             | 400   | `password` и `repeat_password` не совпадают                |
+| `PASSWORD_MISMATCH`             | 400   | `password` и `password_repeat` не совпадают                |
 | `DUPLICATE_USER`                | 409   | Email/username уже занят                                   |
 | `DUPLICATE_ROLE`                | 409   | Роль с таким именем уже существует                         |
 | `NOT_FOUND_USER`                | 404   | Пользователь не найден                                     |

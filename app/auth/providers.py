@@ -118,8 +118,6 @@ class AuthModuleProvider(Provider):
         return AuthJWTManager(
             jwt_secret=app_config.JWT_SECRET_KEY,
             jwt_algorithm=app_config.JWT_ALGORITHM,
-            access_token_expire_minutes=auth_config.ACCESS_TOKEN_EXPIRE_MINUTES,
-            refresh_token_expire_days=auth_config.REFRESH_TOKEN_EXPIRE_DAYS,
             token_blacklist=token_blacklist
         )
 
