@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from jose import ExpiredSignatureError, JWTError, jwt
+import jwt
 
 from app.core.services.auth.dto import JwtTokenType, Token
 from app.core.services.auth.exceptions import ExpiredTokenException, InvalidTokenException
@@ -18,9 +18,9 @@ class JWTManager:
     def decode(self, token: str) -> dict[str, Any]:
         try:
             data = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
-        except ExpiredSignatureError as err:
+        except jwt.ExpiredSignatureError as err:
             raise ExpiredTokenException(token=token) from err
-        except JWTError as err:
+        except jwt.PyJWTError as err:
             raise InvalidTokenException(token=token) from err
         return data
 

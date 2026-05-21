@@ -3,13 +3,11 @@ from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
-from jose import ExpiredSignatureError, JWTError, jwt
-
 from app.auth.dtos.tokens import TokenGroup, TokenType
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.repositories.session import TokenBlacklistRepository
 from app.core.services.auth.dto import JwtTokenType
-from app.core.services.auth.exceptions import ExpiredTokenException, InvalidTokenException
+from app.core.services.auth.exceptions import ExpiredTokenException
 from app.core.services.auth.jwt_manager import JWTManager
 from app.core.utils import fromtimestamp, now_utc
 
