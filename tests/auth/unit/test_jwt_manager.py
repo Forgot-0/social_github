@@ -60,7 +60,7 @@ class TestJWTManager:
             user_id=123,
             exp_minutes=-1,
         )
-        expired_token = jwt.encode(payload, auth_jwt_manager.jwt_secret, algorithm=auth_jwt_manager.jwt_algorithm)
+        expired_token = auth_jwt_manager.encode(payload)
 
         with pytest.raises(ExpiredTokenError):
             await auth_jwt_manager.validate_token(expired_token, JwtTokenType.ACCESS)

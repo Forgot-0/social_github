@@ -32,29 +32,20 @@ class RefreshTokenCommandHandler(BaseCommandHandler[RefreshTokenCommand, TokenGr
         if command.refresh_token is None:
             raise InvalidTokenError(token=None)
 
-        refresh_data = await self.jwt_manager.validate_token(command.refresh_token, JwtTokenType.REFRESH)
-        session = await self.session_repository.get_active_by_device(
-            user_id=int(refresh_data.sub),
-            device_id=refresh_data.did,
-        )
-
-        if not session or not session.is_active:
-            raise NotFoundOrInactiveSessionError
-
-        session.online()
+        refresh_token = await self.jwt_manager.validate_token(command.refresh_token, JwtTokenType.REFRESH)
 
         user = await self.user_repository.get_user_with_permission_by_id(
-                int(refresh_data.sub)
+                int(refresh_token.sub)
             )
         if user is None:
             raise NotFoundUserError(user_field="id", user_by="")
 
         user_jwt_data = AuthUserJWTData.create_from_user(
-            user, session.device_id
+            user, refresh_token.did
         )
 
         token_group = await self.jwt_manager.refresh_tokens(
-            command.refresh_token, user_jwt_data
+            refresh_token, user_jwt_data
         )
 
         await self.session.commit()

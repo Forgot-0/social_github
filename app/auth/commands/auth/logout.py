@@ -32,9 +32,9 @@ class LogoutCommandHandler(BaseCommandHandler[LogoutCommand, None]):
         if command.refresh_token is None:
             raise InvalidTokenError(token=None)
 
-        refresh_data = await self.jwt_manager.validate_token(command.refresh_token, token_type=JwtTokenType.REFRESH)
-        await self.jwt_manager.revoke_token(command.refresh_token)
-        user = AuthUserJWTData.create_from_token(refresh_data)
+        refresh_token = await self.jwt_manager.validate_token(command.refresh_token, token_type=JwtTokenType.REFRESH)
+        await self.jwt_manager.revoke_token(refresh_token)
+        user = AuthUserJWTData.create_from_token(refresh_token)
 
         await self.session_repository.deactivate_user_session(
             user_id=int(user.id),
@@ -42,7 +42,7 @@ class LogoutCommandHandler(BaseCommandHandler[LogoutCommand, None]):
         )
 
         await self.token_blacklist.add_jwt_token(
-            refresh_data.jti, timedelta(days=auth_config.REFRESH_TOKEN_EXPIRE_DAYS + 1)
+            refresh_token.jti, timedelta(days=auth_config.REFRESH_TOKEN_EXPIRE_DAYS + 1)
         )
 
         await self.session.commit()

@@ -141,13 +141,13 @@ class Message(BaseModel, DateMixin):
     def create(
         cls,
         sender_id: int | None,
-        chat_id: SAUUID,
+        chat_id: UUID,
         seq: int,
         content: str | None,
-        reply_to_id: SAUUID | None = None,
+        reply_to_id: UUID | None = None,
         message_type: MessageType = MessageType.TEXT,
-        forwarded_from_chat_id: SAUUID | None = None,
-        forwarded_from_message_id: SAUUID | None = None,
+        forwarded_from_chat_id: UUID | None = None,
+        forwarded_from_message_id: UUID | None = None,
         forwarded_from_author_id: int | None=None,
         attachments: list[MessageAttachment] | None = None,
     ) -> Self:

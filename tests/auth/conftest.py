@@ -54,8 +54,8 @@ async def hash_service(di_container: AsyncContainer) -> HashService:
     return await di_container.get(HashService)
 
 @pytest.fixture
-async def auth_jwt_manager(di_container: AsyncContainer) -> AuthJWTManager:
-    return await di_container.get(AuthJWTManager)
+async def auth_jwt_manager(request_container: AsyncContainer) -> AuthJWTManager:
+    return await request_container.get(AuthJWTManager)
 
 @pytest.fixture
 async def rbac_manager(di_container: AsyncContainer) -> AuthRBACManager:
