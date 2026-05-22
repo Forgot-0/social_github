@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -13,7 +12,7 @@ from app.chats.commands.chats.update import UpdateChatCommand
 from app.chats.dtos.chats import ChatDetaiDTO, ChatDTO, ListChats
 from app.chats.queries.chats.get_detail import GetChatDetailQuery
 from app.chats.queries.chats.get_list import GetListChatUserQuery
-from app.chats.schemas.rest import CreateChatRequest, UpdateChatRequest
+from app.chats.schemas.rest import CreateChatRequest, GetListUserChatsRequest, UpdateChatRequest
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 
@@ -24,16 +23,14 @@ router = APIRouter(route_class=DishkaRoute)
 async def list_my_chats(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-    limit: Annotated[int, Query(default=50, ge=1, le=100)],
-    last_chat_id: Annotated[UUID | None, Query(None)],
-    last_activity_at: Annotated[datetime | None, Query(None)],
+    get_request: Annotated[GetListUserChatsRequest, Query()],
 ) -> ListChats:
     return await mediator.handle_query(
         GetListChatUserQuery(
             user_jwt_data=user_jwt_data,
-            limit=limit,
-            last_chat_id=last_chat_id,
-            last_activity_at=last_activity_at,
+            limit=get_request.limit,
+            last_chat_id=get_request.last_chat_id,
+            last_activity_at=get_request.last_activity_at,
         )
     )
 

@@ -28,6 +28,13 @@ class UpdateChatRequest(BaseModel):
     permissions: dict[str, bool] | None = None
 
 
+class GetListUserChatsRequest(BaseModel):
+    limit: int = Field(default=50, ge=1, le=100)
+    last_chat_id: UUID | None = Field(None)
+    last_activity_at: datetime | None =  Field(None)
+
+
+
 class AddMemberRequest(BaseModel):
     user_id: int = Field(gt=0)
     role_id: int = Field(default=5, gt=0)

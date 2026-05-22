@@ -34,8 +34,8 @@ async def list_messages(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-    limit: Annotated[int, Query(default=30, ge=1, le=100)],
-    cursor_message_seq: Annotated[int | None, Query(default=None, ge=0)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+    cursor_message_seq: Annotated[int | None, Query(ge=0)] = None,
 ) -> MessagesDTO:
     return await mediator.handle_query(
         GetMessagesQuery(
@@ -53,7 +53,7 @@ async def get_message_context(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
     target_seq: Annotated[int, Query(ge=0)],
-    limit: Annotated[int, Query(default=40, ge=1, le=100)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 40,
 ) -> MessagesDTO:
     return await mediator.handle_query(
         GetMessageContextQuery(
@@ -72,7 +72,7 @@ async def send_message(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
     redis: FromDishka[Redis],
-    idempotency_key: Annotated[str | None, Header(default=None, alias="Idempotency-Key")],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> MessageDTO:
     cache_key = None
     lock_key = None

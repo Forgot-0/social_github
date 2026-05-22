@@ -22,9 +22,9 @@ async def list_chat_members(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-    limit: Annotated[int, Query(default=100, ge=1, le=500)],
-    cursor_user_id: Annotated[int | None, Query(default=None, ge=1)],
-    include_presence: Annotated[bool, Query(default=False)],
+    limit: Annotated[int, Query(ge=1, le=500)] = 50,
+    cursor_user_id: Annotated[int | None, Query(ge=1)] = None,
+    include_presence: Annotated[bool, Query()] = False,
 ) -> ListMembers:
     return await mediator.handle_query(
         GetChatMembersQuery(
