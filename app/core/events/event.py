@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Generic, TypeVar
 from uuid import UUID, uuid4
 
-from app.core.exceptions import FieldRequiredException
+from app.core.exceptions import FieldRequiredError
 from app.core.utils import now_utc
 
 
@@ -19,7 +19,7 @@ class BaseEvent(ABC):
     def get_name(cls) -> str:
         name = getattr(cls, "__event_name__", None)
         if name is None:
-            raise FieldRequiredException
+            raise FieldRequiredError
         return name
 
     @abstractmethod

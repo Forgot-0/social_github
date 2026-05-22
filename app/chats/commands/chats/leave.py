@@ -1,16 +1,15 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import NotChatMemberException, NotFoundChatException
+from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +30,13 @@ class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
     async def handle(self, command: LeaveChatCommand) -> None:
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         user_id = int(command.user_jwt_data.id)
 
         member = await self.chat_repository.get_member_chat(command.chat_id, member_id=user_id)
         if member is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
 
         chat.leave(user_id=user_id)
         await self.chat_repository.delete_member(member)

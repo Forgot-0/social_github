@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.messages.send import SendMessageCommand, SendMessageCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotFoundChatException, SlowModeLimitException
+from app.chats.exceptions import AccessDeniedChatError, NotFoundChatError, SlowModeLimitError
 from app.chats.models.message import MessageType
 from app.chats.repositories.message import MessageRepository
 from app.core.services.auth.dto import UserJWTData
@@ -94,7 +94,7 @@ class TestSendMessageCommand:
     ) -> None:
         chat = await create_group_chat([2, 3])
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 SendMessageCommand(chat_id=chat.id, content="Hack", user_jwt_data=make_user_jwt(id="99"))
             )
@@ -104,7 +104,7 @@ class TestSendMessageCommand:
         handler: SendMessageCommandHandler,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotFoundChatException):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 SendMessageCommand(chat_id=uuid4(), content="X", user_jwt_data=user_jwt)
             )
@@ -121,7 +121,7 @@ class TestSendMessageCommand:
             SendMessageCommand(chat_id=chat.id, content="First", user_jwt_data=make_user_jwt(id="2"))
         )
 
-        with pytest.raises(SlowModeLimitException):
+        with pytest.raises(SlowModeLimitError):
             await handler.handle(
                 SendMessageCommand(chat_id=chat.id, content="Too fast", user_jwt_data=make_user_jwt(id="2"))
             )
@@ -168,7 +168,7 @@ class TestSendMessageCommand:
     ) -> None:
         chat = await create_group_chat([2, 3], 0, admin_only=True)
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 SendMessageCommand(chat_id=chat.id, content="Blocked", user_jwt_data=make_user_jwt(id="2"))
             )

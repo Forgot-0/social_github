@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.profiles.config import profile_config
-from app.profiles.exceptions import TooLongBioException, TooLongDisplayNameException, TooLongSkillNameException
+from app.profiles.exceptions import TooLongBioError, TooLongDisplayNameError, TooLongSkillNameError
 from app.profiles.models.contact import Contact
 
 
@@ -76,13 +76,13 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
 
     def change_display_name(self, name: str | None) -> None:
         if name and len(name) >= profile_config.MAX_LEN_DISPLAY_NAME:
-            raise TooLongDisplayNameException(name=name)
+            raise TooLongDisplayNameError(name=name)
 
         self.display_name = name
 
     def change_bio(self, bio: str | None) -> None:
         if bio and len(bio) >= profile_config.MAX_LEN_BIO:
-            raise TooLongBioException(bio=bio)
+            raise TooLongBioError(bio=bio)
 
         self.bio = bio
 
@@ -100,13 +100,13 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
 
     def add_skill(self, skill: str) -> None:
         if len(skill) > profile_config.MAX_LEN_SKILL_NAME:
-            raise TooLongSkillNameException(name=skill)
+            raise TooLongSkillNameError(name=skill)
 
         self.skills.append(skill.lower())
 
     def update_skills(self, skills: set[str]) -> None:
         if any(len(skill) > profile_config.MAX_LEN_SKILL_NAME for skill in skills):
-            raise TooLongSkillNameException(name=max(skills, key=lambda x: len(x)))
+            raise TooLongSkillNameError(name=max(skills, key=lambda x: len(x)))
 
         self.skills = [skill.lower() for skill in skills]
 
@@ -134,6 +134,6 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
 
         for tag in value:
             if len(tag) > profile_config.MAX_LEN_SKILL_NAME:
-                raise TooLongSkillNameException(name=tag)
+                raise TooLongSkillNameError(name=tag)
 
         return value

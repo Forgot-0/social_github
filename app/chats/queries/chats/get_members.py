@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.chats.dtos.members import ListMembers, MemberChatDTO, MemberPresenceDTO
-from app.chats.exceptions import NotChatMemberException, NotFoundChatException
+from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.presence import PresenceService
 from app.core.queries import BaseQuery, BaseQueryHandler
@@ -28,11 +28,11 @@ class GetChatMembersQueryHandler(BaseQueryHandler[GetChatMembersQuery, ListMembe
 
         chat = await self.chat_repository.get_by_id(query.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(query.chat_id))
+            raise NotFoundChatError(chat_id=str(query.chat_id))
 
         requester = await self.chat_repository.get_member_chat(query.chat_id, requester_id, with_role=False)
         if requester is None or requester.is_banned:
-            raise NotChatMemberException(chat_id=str(query.chat_id), user_id=requester_id)
+            raise NotChatMemberError(chat_id=str(query.chat_id), user_id=requester_id)
 
         limit = min(max(query.limit, 1), 500)
         members = await self.chat_repository.get_chat_members(

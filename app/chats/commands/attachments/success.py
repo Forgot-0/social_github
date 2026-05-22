@@ -1,12 +1,11 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
-import logging
 
 from app.chats.tasks.success_attachment import AttachmentProccessTask
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.queues.service import QueueService
-
 
 logger = logging.getLogger(__name__)
 

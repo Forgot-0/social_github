@@ -1,17 +1,16 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import AccessDeniedChatException, NotChatMemberException, NotFoundMessageException
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError, NotFoundMessageError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +36,11 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
 
         message = await self.message_repository.get_by_id(command.message_id)
         if message is None or message.chat_id != command.chat_id:
-            raise NotFoundMessageException(message_id=str(command.message_id))
+            raise NotFoundMessageError(message_id=str(command.message_id))
 
         member = await self.chat_repository.get_member_chat(command.chat_id, user_id)
         if member is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
 
         if (
             message.author_id != user_id and
@@ -50,7 +49,8 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
                 member=member,
                 must_permissions={"message:delete"}
             )
-        ): raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=user_id)
+        ):
+            raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=user_id)
 
         message.delete(deleted_by=user_id)
         await self.session.commit()

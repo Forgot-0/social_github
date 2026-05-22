@@ -7,11 +7,11 @@ import pytest
 
 from app.auth.commands.users.send_verify import SendVerifyCommand, SendVerifyCommandHandler
 from app.auth.commands.users.verify import VerifyCommand, VerifyCommandHandler
-from app.auth.exceptions import NotFoundUserException
+from app.auth.exceptions import NotFoundUserError
 from app.auth.models.user import User
 from app.auth.repositories.session import TokenBlacklistRepository
 from app.auth.repositories.user import UserRepository
-from app.core.services.auth.exceptions import InvalidTokenException
+from app.core.services.auth.exceptions import InvalidTokenError
 from tests.mocks import MockMailService
 
 
@@ -44,7 +44,7 @@ class TestSendVerifyEmailCommand:
     ) -> None:
         command = SendVerifyCommand(email="nonexistent@example.com")
 
-        with pytest.raises(NotFoundUserException):
+        with pytest.raises(NotFoundUserError):
             await handler.handle(command)
 
 
@@ -88,7 +88,7 @@ class TestVerifyEmailCommand:
     ) -> None:
         command = VerifyCommand(token="invalid_token_123")
 
-        with pytest.raises(InvalidTokenException):
+        with pytest.raises(InvalidTokenError):
             await handler.handle(command)
 
     async def test_verify_email_already_verified(

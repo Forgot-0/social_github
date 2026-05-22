@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
-from uuid import UUID as PyUUID, uuid4
+from uuid import UUID, uuid4
 
-from sqlalchemy import UUID, BigInteger, DateTime, Enum as SAEnum, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import UUID as SAUUID, BigInteger, DateTime, Enum as SAEnum, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin
@@ -27,15 +27,15 @@ class Application(BaseModel, DateMixin):
         UniqueConstraint("project_id", "position_id", "candidate_id", name="unique_id"),
     )
 
-    id: Mapped[PyUUID] = mapped_column(UUID, primary_key=True)
+    id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
 
     project_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("projects.id"),
         nullable=False, index=True
     )
 
-    position_id: Mapped[PyUUID] = mapped_column(
-        UUID, ForeignKey("positions.id"),
+    position_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("positions.id"),
         nullable=False, index=True
     )
 
@@ -56,7 +56,7 @@ class Application(BaseModel, DateMixin):
     def create(
         cls,
         project_id: int,
-        position_id: PyUUID,
+        position_id: UUID,
         candidate_id: int,
         message: str | None = None,
     ) -> "Application":

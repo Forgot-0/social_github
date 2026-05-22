@@ -5,7 +5,7 @@ from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class InvalidTokenException(ApplicationError):
+class InvalidTokenError(ApplicationError):
     token: str | None = None
 
     code: str = "INVALID_TOKEN"
@@ -21,7 +21,7 @@ class InvalidTokenException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class ExpiredTokenException(ApplicationError):
+class ExpiredTokenError(ApplicationError):
     token: str | None = None
 
     code: str = "EXPIRED_TOKEN"
@@ -36,7 +36,7 @@ class ExpiredTokenException(ApplicationError):
         return {}
 
 @dataclass
-class NotAuthenticatedException(ApplicationError):
+class NotAuthenticatedError(ApplicationError):
     code: str = "NOT_AUTHNTICATED"
     status: int = 401
 
@@ -50,7 +50,7 @@ class NotAuthenticatedException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class AccessDeniedException(ApplicationError):
+class AccessDeniedError(ApplicationError):
     need_permissions: set[str]
 
     code: str = "ACCESS_DENIED"

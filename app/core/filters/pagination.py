@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from app.core.filters.exceptions import PaginationParamsException
+from app.core.filters.exceptions import PaginationParamsError
 
 
 @dataclass(frozen=True)
@@ -14,11 +14,11 @@ class Pagination:
 
     def __post_init__(self) -> None:
         if self.page < 1:
-            raise PaginationParamsException(field="page", limit=1)
+            raise PaginationParamsError(field="page", limit=1)
         if self.page_size < 1:
-            raise PaginationParamsException(field="page_size", limit=1)
+            raise PaginationParamsError(field="page_size", limit=1)
         if self.page_size > self.MAX_PAGE_SIZE:
-            raise PaginationParamsException(field="page_size", limit=self.MAX_PAGE_SIZE)
+            raise PaginationParamsError(field="page_size", limit=self.MAX_PAGE_SIZE)
 
     @property
     def offset(self) -> int:

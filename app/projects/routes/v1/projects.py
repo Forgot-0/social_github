@@ -16,7 +16,7 @@ from app.projects.commands.projects.delete import DeleteProjectCommand
 from app.projects.commands.projects.invite import InviteMemberCommand
 from app.projects.commands.projects.update import UpdateProjectCommand
 from app.projects.dtos.projects import ProjectDTO
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundProjectError
 from app.projects.queries.positions.get_list import GetProjectPositionsQuery
 from app.projects.queries.projects.get_by_id import GetProjectByIdQuery
 from app.projects.queries.projects.get_list import GetProjectsQuery
@@ -92,7 +92,7 @@ async def get_my_projects(
 
 @router.get(
     "/{project_id}", status_code=status.HTTP_200_OK,
-    responses={404: create_response(NotFoundProjectException(project_id=123))}
+    responses={404: create_response(NotFoundProjectError(project_id=123))}
 )
 async def get_project(
     project_id: int,

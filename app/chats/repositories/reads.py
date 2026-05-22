@@ -3,10 +3,10 @@ from uuid import UUID
 
 from sqlalchemy import Select
 from sqlalchemy.dialects.postgresql import insert
+
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import IRepository
 from app.core.filters.base import BaseFilter
-
 
 
 @dataclass

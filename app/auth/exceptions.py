@@ -5,7 +5,7 @@ from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundUserException(ApplicationError):
+class NotFoundUserError(ApplicationError):
     user_by: str | int
     user_field: str
 
@@ -22,7 +22,7 @@ class NotFoundUserException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class WrongLoginDataException(ApplicationError):
+class WrongLoginDataError(ApplicationError):
     username: str
 
     code: str = "WRONG_LOGIN_DATA"
@@ -38,7 +38,7 @@ class WrongLoginDataException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class OAuthStateNotFoundException(ApplicationError):
+class OAuthStateNotFoundError(ApplicationError):
     state: str
 
     code: str = "OAUTH_STATE_NOT_FOUND"
@@ -54,7 +54,7 @@ class OAuthStateNotFoundException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class LinkedAnotherUserOAuthException(ApplicationError):
+class LinkedAnotherUserOAuthError(ApplicationError):
     provider: str
 
     code: str = "LINKED_ANOTHER_USER_OAUTH"
@@ -70,7 +70,7 @@ class LinkedAnotherUserOAuthException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotFoundRoleException(ApplicationError):
+class NotFoundRoleError(ApplicationError):
     name: str
 
     code: str = "NOT_FOUND_ROLE"
@@ -86,7 +86,7 @@ class NotFoundRoleException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class InvalidRoleNameException(ApplicationError):
+class InvalidRoleNameError(ApplicationError):
     name: str
 
     code: str = "INVALID_ROLE_NAME"
@@ -102,7 +102,7 @@ class InvalidRoleNameException(ApplicationError):
 
 
 @dataclass
-class NotFoundOrInactiveSessionException(ApplicationError):
+class NotFoundOrInactiveSessionError(ApplicationError):
     code: str = "NOT_FOUND_OR_INACTIVE_SESSION"
     status: int = 400
 
@@ -116,7 +116,7 @@ class NotFoundOrInactiveSessionException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotFoundPermissionsException(ApplicationError):
+class NotFoundPermissionsError(ApplicationError):
     missing: set[str]
 
     code: str = "NOT_FOUND_PERMISSIONS"
@@ -132,7 +132,7 @@ class NotFoundPermissionsException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class ProtectedPermissionException(ApplicationError):
+class ProtectedPermissionError(ApplicationError):
     name: str
 
     code: str = "PROTECTED_PERMISSION"
@@ -148,7 +148,7 @@ class ProtectedPermissionException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class DuplicateUserException(ApplicationError):
+class DuplicateUserError(ApplicationError):
     field: str
     value: str
 
@@ -165,7 +165,7 @@ class DuplicateUserException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class DuplicateRoleException(ApplicationError):
+class DuplicateRoleError(ApplicationError):
     name: str
 
     code: str = "DUPLICATE_ROLE"
@@ -180,7 +180,7 @@ class DuplicateRoleException(ApplicationError):
         return {"name": self.name}
 
 @dataclass(kw_only=True)
-class DuplicatePermissionException(ApplicationError):
+class DuplicatePermissionError(ApplicationError):
     name: str
 
     code: str = "DUPLICATE_PERMISSION"
@@ -196,7 +196,7 @@ class DuplicatePermissionException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class PasswordMismatchException(ApplicationError):
+class PasswordMismatchError(ApplicationError):
     code: str = "PASSWORD_MISMATCH"
     status: int = 400
 
@@ -210,7 +210,7 @@ class PasswordMismatchException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class EmailNotConfirmedException(ApplicationError):
+class EmailNotConfirmedError(ApplicationError):
     email: str
 
     code: str = "EMAIL_NOT_CONFIRMED"
@@ -226,7 +226,7 @@ class EmailNotConfirmedException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotExistProviderOAuthException(ApplicationError):
+class NotExistProviderOAuthError(ApplicationError):
     provider: str
 
     code: str = "NOT_EXIST_PROVIDER_OAUTH"

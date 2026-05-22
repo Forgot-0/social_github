@@ -2,7 +2,7 @@ from dishka import AsyncContainer
 import pytest
 
 from app.chats.commands.chats.change_role import ChangeMemberRoleCommand, ChangeMemberRoleCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotChatMemberException
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
@@ -47,7 +47,7 @@ class TestChangeMemberRoleCommand:
         make_user_jwt,
         group_chat: Chat,
     ) -> None:
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 ChangeMemberRoleCommand(
                     user_jwt_data=make_user_jwt(id="2"),
@@ -63,7 +63,7 @@ class TestChangeMemberRoleCommand:
         user_jwt: UserJWTData,
         group_chat: Chat,
     ) -> None:
-        with pytest.raises(NotChatMemberException):
+        with pytest.raises(NotChatMemberError):
             await handler.handle(
                 ChangeMemberRoleCommand(
                     user_jwt_data=user_jwt,

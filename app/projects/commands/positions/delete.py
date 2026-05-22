@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import AccessDeniedProjectError, NotFoundProjectError
 from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.services.permission_service import ProjectPermissionService
@@ -29,19 +29,19 @@ class DeletePositionCommandHandler(BaseCommandHandler[DeletePositionCommand, Non
 
     async def handle(self, command: DeletePositionCommand) -> None:
         position = await self.position_repository.get_by_id(str(command.position_id))
-        if not position:
-            raise NotFoundProjectException(project_id=0)
+        if position is None:
+            raise NotFoundProjectError(project_id=0)
 
         project = await self.project_repository.get_by_id(position.project_id, with_member=True, with_positon=False)
-        if not project:
-            raise NotFoundProjectException(project_id=position.project_id)
+        if project is None:
+            raise NotFoundProjectError(project_id=position.project_id)
 
         if not self.project_permission_service.can_update(
             user_jwt_data=command.user_jwt_data,
             project=project,
             must_permissions={"position:delete"},
         ):
-            raise
+            raise AccessDeniedProjectError
 
         position.soft_delete()
         await self.session.commit()

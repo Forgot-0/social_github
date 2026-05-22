@@ -1,6 +1,6 @@
 import logging
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.chats.config import chat_config
 from app.chats.dtos.attachments import UploadSlotDTO
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    AttachmentLimitExceededException,
-    AttachmentValidationException,
-    EmptyAttachmentUploadRequestException,
-    NotChatMemberException,
-    NotFoundChatException,
+    AccessDeniedChatError,
+    AttachmentLimitExceededError,
+    AttachmentValidationError,
+    EmptyAttachmentUploadRequestError,
+    NotChatMemberError,
+    NotFoundChatError,
 )
 from app.chats.models.attachment import AttachmentType, MessageAttachment
 from app.chats.repositories.attachment import AttachmentRepository
@@ -22,7 +22,6 @@ from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.storage.service import StorageService
-
 
 logger = logging.getLogger(__name__)
 clean_filename = re.compile(r"[^\w.\-]")
@@ -54,23 +53,23 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
 
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         member = await self.chat_repository.get_member_chat(
             command.chat_id, user_id
         )
         if member is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
 
         if not await self.chat_access_service.can_send_message(
             user_jwt_data=command.user_jwt_data,
             chat=chat,
             member=member,
         ):
-            raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=user_id)
+            raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=user_id)
 
         if len(command.uploads) == 0:
-            raise EmptyAttachmentUploadRequestException()
+            raise EmptyAttachmentUploadRequestError
 
         media_count = 0
         file_count = 0
@@ -78,7 +77,7 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
 
         for req in command.uploads:
             if req.mime_type not in chat_config.ALL_ALLOWED_MIMES:
-                raise AttachmentValidationException(mime_type=req.mime_type)
+                raise AttachmentValidationError(mime_type=req.mime_type)
 
             if req.mime_type in chat_config.ALLOWED_IMAGE_MIMES or req.mime_type in chat_config.ALLOWED_VIDEO_MIMES:
                 att_type = (
@@ -87,25 +86,25 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
                     else AttachmentType.VIDEO
                 )
                 if req.file_size > chat_config.MAX_MEDIA_SIZE:
-                    raise AttachmentValidationException(mime_type=req.mime_type)
+                    raise AttachmentValidationError(mime_type=req.mime_type)
                 media_count += 1
             else:
                 att_type = AttachmentType.FILE
                 if req.file_size > chat_config.MAX_FILE_SIZE:
-                    raise AttachmentValidationException(mime_type=req.mime_type)
+                    raise AttachmentValidationError(mime_type=req.mime_type)
                 file_count += 1
 
             att_types.append(att_type)
 
         if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
-            raise AttachmentLimitExceededException(count=media_count)
+            raise AttachmentLimitExceededError(count=media_count)
 
         if file_count > chat_config.MAX_FILES_PER_MESSAGE:
-            raise AttachmentLimitExceededException(count=file_count)
+            raise AttachmentLimitExceededError(count=file_count)
 
         slots = []
 
-        for slot, att_type in zip(command.uploads, att_types):
+        for slot, att_type in zip(command.uploads, att_types, strict=False):
             new_file_name = clean_filename.sub("_", slot.filename.strip())[:200]
             s3_key = f"chats/{command.chat_id}/{uuid4()}/{new_file_name}"
 

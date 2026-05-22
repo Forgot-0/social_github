@@ -1,21 +1,20 @@
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
+import structlog
 from dishka.integrations.faststream import FastStreamProvider, setup_dishka
 from faststream import ContextRepo
 from faststream.asgi import AsgiFastStream
 from faststream.kafka import KafkaBroker
 from faststream.kafka.prometheus import KafkaPrometheusMiddleware
 from prometheus_client import CollectorRegistry, make_asgi_app
-import structlog
 
+from app.chats.consumers import delivery as chat_delivery
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
 from app.core.log.init import configure_logging
 from app.core.message_brokers.base import BaseMessageBroker
-
-from app.chats.consumers import delivery as chat_delivery
 from app.profiles.consumers import user
 
 logger = logging.getLogger(__name__)

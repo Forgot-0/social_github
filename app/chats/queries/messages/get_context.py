@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.chats.dtos.messages import MessageDTO, MessagesDTO
-from app.chats.exceptions import NotChatMemberException
+from app.chats.exceptions import NotChatMemberError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.messages import MessageService
@@ -29,7 +29,7 @@ class GetMessageContextQueryHandler(BaseQueryHandler[GetMessageContextQuery, Mes
 
         member = await self.chat_repository.get_member_chat(query.chat_id, user_id, with_role=False)
         if not member or member.is_banned:
-            raise NotChatMemberException(chat_id=str(query.chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(query.chat_id), user_id=user_id)
 
         limit = min(max(query.limit, 1), 100)
         messages = await self.message_repository.get_message_context(

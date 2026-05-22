@@ -288,7 +288,7 @@ class ChatConnectionManager:
             try:
                 await asyncio.wait_for(self._shutdown_event.wait(), timeout=float(interval))
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
             try:

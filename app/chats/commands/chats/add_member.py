@@ -5,10 +5,10 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    AlreadyMemberException,
-    NotChatMemberException,
-    NotFoundChatException,
+    AccessDeniedChatError,
+    AlreadyMemberError,
+    NotChatMemberError,
+    NotFoundChatError,
 )
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
@@ -38,21 +38,22 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
         requester_id = int(command.user_jwt_data.id)
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         requester = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
         if requester is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=requester_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=requester_id)
 
         if not await self.chat_access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
             member=requester,
             must_permissions={"member:invite"}
-        ): raise AccessDeniedChatException(chat_id=str(chat.id), requester_id=requester_id)
+        ):
+            raise AccessDeniedChatError(chat_id=str(chat.id), requester_id=requester_id)
 
         existing = await self.chat_repository.get_member_chat(command.chat_id, command.target_user_id)
         if existing:
-            raise AlreadyMemberException(user_id=command.target_user_id, chat_id=str(command.chat_id))
+            raise AlreadyMemberError(user_id=command.target_user_id, chat_id=str(command.chat_id))
 
         chat.add_member(
             member_id=command.target_user_id,

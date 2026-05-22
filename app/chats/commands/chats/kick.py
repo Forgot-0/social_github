@@ -5,9 +5,9 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    NotChatMemberException,
-    NotFoundChatException,
+    AccessDeniedChatError,
+    NotChatMemberError,
+    NotFoundChatError,
 )
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
@@ -35,21 +35,22 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
     async def handle(self, command: KickMemberCommand) -> None:
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         requester_id = int(command.user_jwt_data.id)
         requester = await self.chat_repository.get_member_chat(command.chat_id, member_id=requester_id)
 
         target = await self.chat_repository.get_member_chat(command.chat_id, member_id=command.target_user_id)
         if target is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=command.target_user_id)
 
         if not await self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,
             must_permissions={"member:kick"}
-        ): raise AccessDeniedChatException(chat_id=str(chat.id), requester_id=requester_id)
+        ):
+            raise AccessDeniedChatError(chat_id=str(chat.id), requester_id=requester_id)
 
         chat.kick_member(command.target_user_id, requester_id=requester_id)
 

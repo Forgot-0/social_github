@@ -1,8 +1,8 @@
 import logging
 from typing import Any
 
-from dishka import AsyncContainer
 import orjson
+from dishka import AsyncContainer
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, WebSocket
 from pydantic import ValidationError

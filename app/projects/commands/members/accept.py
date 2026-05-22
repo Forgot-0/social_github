@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundProjectError
 from app.projects.repositories.projects import ProjectRepository
 
 logger = logging.getLogger(__name__)
@@ -27,8 +27,8 @@ class AcceptInviteCommandHandler(BaseCommandHandler[AcceptInviteCommand, None]):
     async def handle(self, command: AcceptInviteCommand) -> None:
         user_id = int(command.user_jwt_data.id)
         membership = await self.project_repository.get_membership(command.project_id, user_id)
-        if not membership:
-            raise NotFoundProjectException(project_id=command.project_id)
+        if membership is None:
+            raise NotFoundProjectError(project_id=command.project_id)
 
         membership.accept_invite()
 

@@ -3,11 +3,11 @@ from redis.asyncio import Redis
 
 from app.chats.commands.attachments.request_upload import (
     RequestAttachmentUploadCommand,
-    RequestAttachmentUploadCommandHandler
+    RequestAttachmentUploadCommandHandler,
 )
 from app.chats.commands.attachments.success import (
     SuccessUploadAttachmentsCommand,
-    SuccessUploadAttachmentsCommandHandler
+    SuccessUploadAttachmentsCommandHandler,
 )
 from app.chats.commands.calls.join import JoinCallCommand, JoinCallCommandHandler
 from app.chats.commands.calls.mute import MuteParticipantCommand, MuteParticipantCommandHandler
@@ -47,10 +47,7 @@ from app.chats.models.message import (
     ReadedMessageEvent,
     SendedMessageEvent,
 )
-from app.chats.queries.attachments.get_url import (
-    GetAttachmentDownloadUrlQuery,
-    GetAttachmentDownloadUrlQueryHandler
-)
+from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler
 from app.chats.queries.chats.get_detail import GetChatDetailQuery, GetChatDetailQueryHandler
 from app.chats.queries.chats.get_list import GetListChatUserQuery, GetListChatUserQueryHandler
 from app.chats.queries.chats.get_members import GetChatMembersQuery, GetChatMembersQueryHandler

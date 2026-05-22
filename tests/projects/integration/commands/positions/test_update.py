@@ -4,7 +4,7 @@ from dishka import AsyncContainer
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.positions.update import UpdatePositionCommand, UpdatePositionCommandHandler
 from app.projects.exceptions import (
-    NotFoundProjectException,
+    NotFoundProjectError,
 )
 from app.projects.models.position import Position, PositionLocationType
 from app.projects.repositories.positions import PositionRepository
@@ -114,7 +114,7 @@ class TestUpdatePositionCommand:
             **PositionCommandFactory.update_command(title="Doesn't matter"),
         )
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(command)
 
     async def test_update_without_permission_raises(

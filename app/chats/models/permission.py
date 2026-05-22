@@ -2,7 +2,6 @@ from enum import Enum
 
 from app.chats.models.chat_roles import ChatRole
 
-
 OWNER_PERMISSIONS = {
     "chat:delete": True, "chat:update": True, "chat:get": True,
     "member:invite": True, "member:kick": True, "member:ban": True, "member:mute": True,

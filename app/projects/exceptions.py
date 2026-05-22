@@ -4,7 +4,7 @@ from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundProjectException(ApplicationError):
+class NotFoundProjectError(ApplicationError):
     project_id: int
 
     code: str = "NOT_FOUND_PROJECT"
@@ -20,7 +20,7 @@ class NotFoundProjectException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotFoundPositionException(ApplicationError):
+class NotFoundPositionError(ApplicationError):
     position_id: str
 
     code: str = "NOT_FOUND_POSTION"
@@ -36,7 +36,7 @@ class NotFoundPositionException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotFoundMemberException(ApplicationError):
+class NotFoundMemberError(ApplicationError):
     member_id: int
 
     code: str = "NOT_FOUND_MEMBER"
@@ -52,7 +52,7 @@ class NotFoundMemberException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class AlreadyMemberException(ApplicationError):
+class AlreadyMemberError(ApplicationError):
     code: str = "ALREADY_MEMBER"
     status: int = 409
 
@@ -79,7 +79,7 @@ class NotPendingStatusApplicationError(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class TooLongTagNameException(ApplicationError):
+class TooLongTagNameError(ApplicationError):
     name: str
     code: str = "TOO_LONG_TAG_NAME"
     status: int = 400
@@ -96,7 +96,7 @@ class TooLongTagNameException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class TooLongNameException(ApplicationError):
+class TooLongNameError(ApplicationError):
     name: str
     code: str = "TOO_LONG_NAME"
     status: int = 400
@@ -113,7 +113,7 @@ class TooLongNameException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotValidMemberStatusException(ApplicationError):
+class NotValidMemberStatusError(ApplicationError):
     member_status: str
     action: str
 
@@ -130,7 +130,7 @@ class NotValidMemberStatusException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotFoundProjectRoleException(ApplicationError):
+class NotFoundProjectRoleError(ApplicationError):
     role_id: int
 
     code: str = "NOT_FOUND_PROJECT_ROLE"
@@ -146,7 +146,7 @@ class NotFoundProjectRoleException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class RoleAlreadyExsistsException(ApplicationError):
+class RoleAlreadyExsistsError(ApplicationError):
     role_name: str
 
     code: str = "ROLE_ALREADY_EXISTS"
@@ -162,7 +162,7 @@ class RoleAlreadyExsistsException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class MaxProjectsLimitExceededException(ApplicationError):
+class MaxProjectsLimitExceededError(ApplicationError):
     owner_id: int
     limit: int
 
@@ -182,7 +182,7 @@ class MaxProjectsLimitExceededException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class MaxPositionsPerProjectLimitExceededException(ApplicationError):
+class MaxPositionsPerProjectLimitExceededError(ApplicationError):
     project_id: int
     limit: int
 
@@ -201,7 +201,7 @@ class MaxPositionsPerProjectLimitExceededException(ApplicationError):
         }
 
 @dataclass(kw_only=True)
-class AlreadySlugProjectExistsException(ApplicationError):
+class AlreadySlugProjectExistsError(ApplicationError):
     slug: str
     code: str = "ALREADY_EXISTS"
     status: int = 409
@@ -215,3 +215,18 @@ class AlreadySlugProjectExistsException(ApplicationError):
         return {
             "slug": self.slug,
         }
+
+
+@dataclass(kw_only=True)
+class AccessDeniedProjectError(ApplicationError):
+    code: str = "PROJECT_ACCESS_DENIED"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return "Insufficient project permissions"
+
+    @property
+    def detail(self) -> dict:
+        return {}
+

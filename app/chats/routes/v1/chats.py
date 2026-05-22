@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
@@ -9,7 +10,7 @@ from app.chats.commands.chats.delete import DeleteChatCommand
 from app.chats.commands.chats.join import JoinChatCommand
 from app.chats.commands.chats.leave import LeaveChatCommand
 from app.chats.commands.chats.update import UpdateChatCommand
-from app.chats.dtos.chats import ChatDTO, ChatDetaiDTO, ListChats
+from app.chats.dtos.chats import ChatDetaiDTO, ChatDTO, ListChats
 from app.chats.queries.chats.get_detail import GetChatDetailQuery
 from app.chats.queries.chats.get_list import GetListChatUserQuery
 from app.chats.schemas.rest import CreateChatRequest, UpdateChatRequest
@@ -23,9 +24,9 @@ router = APIRouter(route_class=DishkaRoute)
 async def list_my_chats(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-    limit: int = Query(default=50, ge=1, le=100),
-    last_chat_id: UUID | None = None,
-    last_activity_at: datetime | None = None,
+    limit: Annotated[int, Query(default=50, ge=1, le=100)],
+    last_chat_id: Annotated[UUID | None, Query(None)],
+    last_activity_at: Annotated[datetime | None, Query(None)],
 ) -> ListChats:
     return await mediator.handle_query(
         GetListChatUserQuery(
@@ -68,7 +69,7 @@ async def get_chat_detail(
     return await mediator.handle_query(GetChatDetailQuery(user_jwt_data=user_jwt_data, chat_id=chat_id))
 
 
-@router.patch("/{chat_id}", response_model=ChatDTO)
+@router.patch("/{chat_id}")
 async def update_chat(
     chat_id: UUID,
     payload: UpdateChatRequest,

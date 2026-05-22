@@ -3,7 +3,7 @@ from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.projects.update import UpdateProjectCommand, UpdateProjectCommandHandler
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundProjectError
 from app.projects.models.project import Project, ProjectVisibility
 from app.projects.repositories.projects import ProjectRepository
 from tests.projects.integration.factories import ProjectCommandFactory
@@ -129,7 +129,7 @@ class TestUpdateProjectCommand:
             **ProjectCommandFactory.update_command(name="Doesn't matter"),
         )
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(command)
 
     async def test_non_owner_without_permission_cannot_update(

@@ -2,7 +2,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.chats.kick import KickMemberCommand, KickMemberCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotChatMemberException
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError
 from app.chats.models.chat import Chat
 from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
@@ -45,7 +45,7 @@ class TestKickMemberCommand:
         user_jwt: UserJWTData,
     ) -> None:
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 KickMemberCommand(
                     user_jwt_data=user_jwt,
@@ -61,7 +61,7 @@ class TestKickMemberCommand:
         group_chat: Chat,
     ) -> None:
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 KickMemberCommand(
                     user_jwt_data=make_user_jwt(id="2"),
@@ -76,7 +76,7 @@ class TestKickMemberCommand:
         user_jwt: UserJWTData,
         group_chat: Chat,
     ) -> None:
-        with pytest.raises(NotChatMemberException):
+        with pytest.raises(NotChatMemberError):
             await handler.handle(
                 KickMemberCommand(
                     user_jwt_data=user_jwt,

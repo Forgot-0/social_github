@@ -29,11 +29,7 @@ class ChatAccessService:
             return False
 
         member_permissions = member.effective_permissions()
-        for perm in must_permissions:
-            if not member_permissions.get(perm, False):
-                return False
-
-        return True
+        return all(member_permissions.get(perm, False) for perm in must_permissions)
 
     async def can_send_message(
         self,

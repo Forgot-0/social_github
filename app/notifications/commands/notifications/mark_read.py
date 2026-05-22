@@ -1,13 +1,12 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.notifications.exceptions import NotFoundNotificationException, NotificationAccessDeniedException
+from app.notifications.exceptions import NotFoundNotificationError, NotificationAccessDeniedError
 from app.notifications.repositories.notifications import NotificationRepository
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +27,10 @@ class MarkNotificationAsReadCommandHandler(BaseCommandHandler[MarkNotificationAs
     async def handle(self, command: MarkNotificationAsReadCommand) -> None:
         notification = await self.notification_repository.get_by_id(command.notification_id)
         if notification is None:
-            raise NotFoundNotificationException(notification_id=command.notification_id)
+            raise NotFoundNotificationError(notification_id=command.notification_id)
 
         if notification.user_id != int(command.user_jwt_data.id):
-            raise NotificationAccessDeniedException(notification_id=command.notification_id)
+            raise NotificationAccessDeniedError(notification_id=command.notification_id)
 
         notification.is_read = command.is_read
         await self.notification_repository.invalidate_cache()

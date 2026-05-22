@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.core.api.filter_mapper import FilterMapper
 from app.core.filters.pagination import Pagination
-from app.profiles.exceptions import AvatarNotImageType
+from app.profiles.exceptions import AvatarNotImageTypeError
 from app.profiles.filters.profiles import ProfileFilter
 
 
@@ -65,7 +65,7 @@ class AvatarPreSignUrlRequest(BaseModel):
     @classmethod
     def validate_content_type(cls, v: str) -> str:
         if v.split("/")[0] != "image":
-            raise AvatarNotImageType(type_avatar="")
+            raise AvatarNotImageTypeError(type_avatar="")
         return v
 
 

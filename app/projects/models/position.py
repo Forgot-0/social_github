@@ -1,14 +1,14 @@
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Self
-from uuid import UUID as PyUUID, uuid4
+from uuid import UUID, uuid4
 
-from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
+from sqlalchemy import UUID as SAUUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.projects.config import project_config
-from app.projects.exceptions import AlreadyMemberException, TooLongTagNameException
+from app.projects.exceptions import AlreadyMemberError, TooLongTagNameError
 from app.projects.models.application import Application
 from app.projects.models.member import MembershipStatus
 
@@ -35,7 +35,7 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
     )
 
 
-    id: Mapped[PyUUID] = mapped_column(UUID, primary_key=True)
+    id: Mapped[UUID] = mapped_column(SAUUID(as_uuid=True), primary_key=True)
     project_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey("projects.id"),
@@ -91,7 +91,7 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
     ) -> None:
         member = self.project.get_memeber_by_user_id(candidate_id)
         if member and member.status != MembershipStatus.active:
-            raise AlreadyMemberException
+            raise AlreadyMemberError
 
         self.applications.append(
             Application.create(
@@ -113,6 +113,6 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
 
         for tag in value:
             if len(tag) > project_config.MAX_LEN_TAG:
-                raise TooLongTagNameException(name=tag)
+                raise TooLongTagNameError(name=tag)
 
         return value

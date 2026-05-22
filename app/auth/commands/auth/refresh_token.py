@@ -5,13 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dtos.tokens import TokenGroup
 from app.auth.dtos.user import AuthUserJWTData
-from app.auth.exceptions import NotFoundOrInactiveSessionException, NotFoundUserException
+from app.auth.exceptions import NotFoundOrInactiveSessionError, NotFoundUserError
 from app.auth.repositories.session import SessionRepository
 from app.auth.repositories.user import UserRepository
 from app.auth.services.jwt import AuthJWTManager
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import JwtTokenType
-from app.core.services.auth.exceptions import InvalidTokenException
+from app.core.services.auth.exceptions import InvalidTokenError
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class RefreshTokenCommandHandler(BaseCommandHandler[RefreshTokenCommand, TokenGr
 
     async def handle(self, command: RefreshTokenCommand) -> TokenGroup:
         if command.refresh_token is None:
-            raise InvalidTokenException(token=None)
+            raise InvalidTokenError(token=None)
 
         refresh_data = await self.jwt_manager.validate_token(command.refresh_token, JwtTokenType.REFRESH)
         session = await self.session_repository.get_active_by_device(
@@ -39,7 +39,7 @@ class RefreshTokenCommandHandler(BaseCommandHandler[RefreshTokenCommand, TokenGr
         )
 
         if not session or not session.is_active:
-            raise NotFoundOrInactiveSessionException
+            raise NotFoundOrInactiveSessionError
 
         session.online()
 
@@ -47,7 +47,7 @@ class RefreshTokenCommandHandler(BaseCommandHandler[RefreshTokenCommand, TokenGr
                 int(refresh_data.sub)
             )
         if user is None:
-            raise NotFoundUserException(user_field="id", user_by="")
+            raise NotFoundUserError(user_field="id", user_by="")
 
         user_jwt_data = AuthUserJWTData.create_from_user(
             user, session.device_id

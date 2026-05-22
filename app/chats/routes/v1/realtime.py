@@ -12,7 +12,7 @@ from app.core.services.auth.depends import CurrentUserJWTData
 router = APIRouter(route_class=DishkaRoute)
 
 
-@router.post("/presence", response_model=list[MemberPresenceDTO])
+@router.post("/presence")
 async def get_presence_batch(
     payload: PresenceBatchRequest,
     _user_jwt_data: CurrentUserJWTData,

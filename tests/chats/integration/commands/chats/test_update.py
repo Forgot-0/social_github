@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.chats.update import UpdateChatCommand, UpdateChatCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotFoundChatException, SlowModeOutOfRangeException
+from app.chats.exceptions import AccessDeniedChatError, NotFoundChatError, SlowModeOutOfRangeError
 from app.chats.models.chat import Chat
 from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
@@ -53,7 +53,7 @@ class TestUpdateChatCommand:
         make_user_jwt
     ) -> None:
         outsider = make_user_jwt(id="99")
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 UpdateChatCommand(
                     chat_id=group_chat.id,
@@ -71,7 +71,7 @@ class TestUpdateChatCommand:
         user_jwt: UserJWTData,
     ) -> None:
 
-        with pytest.raises(SlowModeOutOfRangeException):
+        with pytest.raises(SlowModeOutOfRangeError):
             await handler.handle(
                 UpdateChatCommand(
                     chat_id=group_chat.id,
@@ -88,7 +88,7 @@ class TestUpdateChatCommand:
         handler: UpdateChatCommandHandler,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotFoundChatException):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 UpdateChatCommand(
                     chat_id=uuid4(),

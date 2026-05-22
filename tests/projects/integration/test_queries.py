@@ -6,7 +6,7 @@ from app.core.filters.pagination import Pagination
 from app.core.services.auth.dto import UserJWTData
 from app.projects.dtos.positions import PositionDTO
 from app.projects.dtos.projects import ProjectDTO
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundProjectError
 from app.projects.filters.applications import ApplicationFilter
 from app.projects.filters.positions import PositionFilter
 from app.projects.filters.projects import ProjectFilter
@@ -60,7 +60,7 @@ class TestGetProjectByIdQuery:
         user_jwt: UserJWTData,
         handler: GetProjectByIdQueryHandler,
     ) -> None:
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(
                 GetProjectByIdQuery(project_id=999999, user_jwt_data=user_jwt)
             )
@@ -177,7 +177,7 @@ class TestGetPositionByIdQuery:
     ) -> None:
         from uuid import uuid4
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(GetPositionByIdQuery(position_id=uuid4()))
 
 

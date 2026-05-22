@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.dtos.livekit import JoinTokenDTO
-from app.chats.exceptions import NotChatMemberException, NotFoundChatException
+from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.models.message import Message, MessageType
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
@@ -15,7 +15,6 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.utils import now_utc
-
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +40,11 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
 
         member = await self.chat_repository.get_member_chat(command.chat_id, user_id)
         if member is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
 
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         token = self.livekit_service.generate_join_token(
             slug=str(chat.id),
@@ -58,7 +57,7 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
             message_date=message_date,
         )
         if next_seq is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         msg = Message.create(
             sender_id=None,

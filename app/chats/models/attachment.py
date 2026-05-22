@@ -1,8 +1,8 @@
 from enum import Enum as PyEnum
 from typing import Self
-from uuid import UUID as PyUUID, uuid7
+from uuid import UUID, uuid7
 
-from sqlalchemy import UUID, BigInteger, Enum, ForeignKey, Index, Integer, String
+from sqlalchemy import UUID as SAUUID, BigInteger, Enum, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base_model import BaseModel, DateMixin
@@ -21,12 +21,12 @@ class AttachmentStatus(str, PyEnum):
 class MessageAttachment(BaseModel, DateMixin):
     __tablename__ = "message_attachments"
 
-    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    message_id: Mapped[PyUUID | None] = mapped_column(
-        UUID, ForeignKey("messages.id", ondelete="CASCADE"),
+    id: Mapped[UUID] = mapped_column(SAUUID(as_uuid=True), primary_key=True)
+    message_id: Mapped[UUID | None] = mapped_column(
+        SAUUID, ForeignKey("messages.id", ondelete="CASCADE"),
         nullable=True, index=True,
     )
-    chat_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    chat_id: Mapped[UUID] = mapped_column(SAUUID(as_uuid=True), nullable=False)
 
     uploader_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
@@ -46,7 +46,7 @@ class MessageAttachment(BaseModel, DateMixin):
     height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    source_attachment_id: Mapped[PyUUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    source_attachment_id: Mapped[UUID | None] = mapped_column(SAUUID(as_uuid=True), nullable=True)
 
     __table_args__ = (
         Index("ix_msg_attachments_message_id", "message_id"),
@@ -55,7 +55,7 @@ class MessageAttachment(BaseModel, DateMixin):
 
     @classmethod
     def create(
-        cls, chat_id: PyUUID, uploader_id: int,
+        cls, chat_id: UUID, uploader_id: int,
         attachment_type: AttachmentType, s3_key: str, mime_type: str,
         original_filename: str, size: int
     ) -> Self:
@@ -69,7 +69,7 @@ class MessageAttachment(BaseModel, DateMixin):
         )
         return instance
 
-    def create_for_forward(self, chat_id: PyUUID) -> MessageAttachment:
+    def create_for_forward(self, chat_id: UUID) -> MessageAttachment:
         instance = MessageAttachment(
             id=uuid7(),
             chat_id=chat_id,

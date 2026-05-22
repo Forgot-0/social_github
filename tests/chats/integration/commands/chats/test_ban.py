@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.ban_member import BanMemberCommand, BanMemberCommandHandler
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    NotChatMemberException,
-    NotFoundChatException,
+    AccessDeniedChatError,
+    NotChatMemberError,
+    NotFoundChatError,
 )
 from app.chats.models.chat import BannedChatMemberEvent, Chat
 from app.chats.repositories.chat import ChatRepository
@@ -216,7 +216,7 @@ class TestBanMemberCommand:
         make_user_jwt,
     ) -> None:
         member_jwt = make_user_jwt(id="2")
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 BanMemberCommand(user_jwt_data=member_jwt, chat_id=group_chat.id, target_user_id=3)
             )
@@ -227,7 +227,7 @@ class TestBanMemberCommand:
         group_chat: Chat,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 BanMemberCommand(
                     user_jwt_data=user_jwt,
@@ -242,7 +242,7 @@ class TestBanMemberCommand:
         group_chat: Chat,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotChatMemberException):
+        with pytest.raises(NotChatMemberError):
             await handler.handle(
                 BanMemberCommand(user_jwt_data=user_jwt, chat_id=group_chat.id, target_user_id=9999)
             )
@@ -252,7 +252,7 @@ class TestBanMemberCommand:
         handler: BanMemberCommandHandler,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotFoundChatException):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 BanMemberCommand(user_jwt_data=user_jwt, chat_id=uuid4(), target_user_id=2)
             )

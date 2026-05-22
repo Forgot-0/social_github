@@ -3,11 +3,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.permissions.create import CreatePermissionCommand, CreatePermissionCommandHandler
-from app.auth.exceptions import DuplicatePermissionException
+from app.auth.exceptions import DuplicatePermissionError
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
 from app.auth.repositories.permission import PermissionRepository
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from tests.support.jwt import jwt_from_user
 
 
@@ -57,7 +57,7 @@ class TestCreatePermissionCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(DuplicatePermissionException):
+        with pytest.raises(DuplicatePermissionError):
             await handler.handle(command)
 
     async def test_create_permission_insufficient_permissions(
@@ -72,5 +72,5 @@ class TestCreatePermissionCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await handler.handle(command)

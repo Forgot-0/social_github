@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.notifications.repositories.notifications import NotificationRepository
-
 
 logger = logging.getLogger(__name__)
 

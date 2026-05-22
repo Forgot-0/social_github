@@ -4,7 +4,7 @@ from app.core.exceptions import ApplicationError
 
 
 @dataclass(eq=False, kw_only=True)
-class AttributeNotExistException(ApplicationError):
+class AttributeNotExistError(ApplicationError):
     field: str
     code: int = 400
     status: str = "ATTRIBUTE_NOT_EXIST"

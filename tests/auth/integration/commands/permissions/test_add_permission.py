@@ -7,13 +7,13 @@ from app.auth.commands.permissions.add_permission_user import (
     AddPermissionToUserCommandHandler,
 )
 from app.auth.exceptions import (
-    NotFoundPermissionsException,
-    NotFoundUserException,
+    NotFoundPermissionsError,
+    NotFoundUserError,
 )
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
 from app.auth.repositories.user import UserRepository
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from tests.support.jwt import jwt_from_user
 
 
@@ -70,7 +70,7 @@ class TestAddPermissionToUserCommand:
             permissions={"nonexistent:permission"},
         )
 
-        with pytest.raises(NotFoundPermissionsException):
+        with pytest.raises(NotFoundPermissionsError):
             await handler.handle(command)
 
     async def test_add_permission_to_nonexistent_user(
@@ -91,7 +91,7 @@ class TestAddPermissionToUserCommand:
             permissions={"test:perm"},
         )
 
-        with pytest.raises(NotFoundUserException):
+        with pytest.raises(NotFoundUserError):
             await handler.handle(command)
 
     async def test_add_multiple_permissions_to_user(
@@ -144,7 +144,7 @@ class TestAddPermissionToUserCommand:
             permissions={"test:perm"},
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await handler.handle(command)
 
     async def test_add_same_permission_twice(

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Query, status
 
@@ -18,7 +20,7 @@ router = APIRouter(route_class=DishkaRoute)
 async def get_notifications(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-    params: GetNotificationListRequest = Query(),
+    params: Annotated[GetNotificationListRequest, Query()],
 ) -> PageResult[NotificationDTO]:
     return await mediator.handle_query(
         GetNotificationsQuery(

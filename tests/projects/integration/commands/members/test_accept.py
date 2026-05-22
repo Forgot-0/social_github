@@ -4,7 +4,7 @@ from dishka import AsyncContainer
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.members.accept import AcceptInviteCommand, AcceptInviteCommandHandler
 from app.projects.commands.projects.invite import InviteMemberCommand, InviteMemberCommandHandler
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundProjectError
 from app.projects.models.member import MembershipStatus
 from app.projects.models.project import Project
 from app.projects.models.role_permissions import ProjectRolesEnum
@@ -72,7 +72,7 @@ class TestAcceptInviteCommand:
     ) -> None:
         stranger_jwt = make_user_jwt(id="700", username="stranger")
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(
                 AcceptInviteCommand(
                     user_jwt_data=stranger_jwt,

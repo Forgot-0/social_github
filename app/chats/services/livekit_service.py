@@ -6,7 +6,7 @@ from livekit import api as lk_api
 
 from app.chats.config import chat_config
 from app.chats.dtos.livekit import LiveKitParticipantsDTO
-from app.chats.exceptions import LiveKitServiceException
+from app.chats.exceptions import LiveKitServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class LiveKitService:
             logger.info("LiveKit room created", extra={"slug": slug})
         except Exception as exc:
             logger.exception("Failed to create LiveKit room", extra={"slug": slug})
-            raise LiveKitServiceException(reason=str(exc)) from exc
+            raise LiveKitServiceError(reason=str(exc)) from exc
 
     async def delete_room(self, slug: str) -> None:
         try:
@@ -51,7 +51,7 @@ class LiveKitService:
             logger.info("LiveKit room deleted", extra={"slug": slug})
         except Exception as exc:
             logger.exception("Failed to delete LiveKit room", extra={"slug": slug})
-            raise LiveKitServiceException(reason=str(exc)) from exc
+            raise LiveKitServiceError(reason=str(exc)) from exc
 
     def generate_join_token(
         self,
@@ -126,7 +126,7 @@ class LiveKitService:
                 "Could not mute LiveKit participant",
                 extra={"slug": slug, "identity": identity, "error": str(exc)},
             )
-            raise LiveKitServiceException(reason=str(exc)) from exc
+            raise LiveKitServiceError(reason=str(exc)) from exc
 
     async def list_participants(self, slug: str) -> list[LiveKitParticipantsDTO]:
         try:
@@ -160,4 +160,4 @@ class LiveKitService:
             return receiver.receive(raw_body, auth_header)
         except Exception as exc:
             logger.warning("Webhook verification failed: %s", exc)
-            raise LiveKitServiceException(reason=f"Invalid webhook signature: {exc}") from exc
+            raise LiveKitServiceError(reason=f"Invalid webhook signature: {exc}") from exc

@@ -3,11 +3,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.permissions.delete import DeletePermissionCommand, DeletePermissionCommandHandler
-from app.auth.exceptions import ProtectedPermissionException
+from app.auth.exceptions import ProtectedPermissionError
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
 from app.auth.repositories.permission import PermissionRepository
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from tests.support.jwt import jwt_from_user
 
 
@@ -58,7 +58,7 @@ class TestDeletePermissionCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(ProtectedPermissionException):
+        with pytest.raises(ProtectedPermissionError):
             await handler.handle(command)
 
     async def test_delete_permission_insufficient_permissions(
@@ -78,5 +78,5 @@ class TestDeletePermissionCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await handler.handle(command)

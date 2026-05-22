@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from app.projects.dtos.projects import ProjectDTO
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundProjectError
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.services.permission_service import ProjectPermissionService
 
@@ -22,13 +22,13 @@ class GetProjectByIdQueryHandler(BaseQueryHandler[GetProjectByIdQuery, ProjectDT
 
     async def handle(self, query: GetProjectByIdQuery) -> ProjectDTO:
         project = await self.project_repository.get_by_id(query.project_id, with_member=True, with_positon=True)
-        if not project:
-            raise NotFoundProjectException(project_id=query.project_id)
+        if project is None:
+            raise NotFoundProjectError(project_id=query.project_id)
 
         if not self.project_permission_servise.can_view(
             user_jwt_data=query.user_jwt_data,
             project=project
         ):
-            raise AccessDeniedException(need_permissions={"project:view" })
+            raise AccessDeniedError(need_permissions={"project:view" })
 
         return ProjectDTO.model_validate(project.to_dict())

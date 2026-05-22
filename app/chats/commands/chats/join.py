@@ -5,9 +5,9 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    AlreadyMemberException,
-    NotFoundChatException,
+    AccessDeniedChatError,
+    AlreadyMemberError,
+    NotFoundChatError,
 )
 from app.chats.models.chat import ChatType
 from app.chats.repositories.chat import ChatRepository
@@ -34,14 +34,14 @@ class JoinChatCommandHandler(BaseCommandHandler[JoinChatCommand, None]):
         user_id = int(command.user_jwt_data.id)
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         if chat.type == ChatType.DIRECT or not chat.is_public:
-            raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=user_id)
+            raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=user_id)
 
         existing = await self.chat_repository.get_member_chat(command.chat_id, user_id, with_role=False)
         if existing is not None:
-            raise AlreadyMemberException(user_id=user_id, chat_id=str(command.chat_id))
+            raise AlreadyMemberError(user_id=user_id, chat_id=str(command.chat_id))
 
         role_id = 6 if chat.type == ChatType.CHANNEL else 5
         chat.add_member(user_id, role_id=role_id)

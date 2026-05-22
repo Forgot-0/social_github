@@ -4,14 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.roles.create import CreateRoleCommand, CreateRoleCommandHandler
 from app.auth.exceptions import (
-    DuplicateRoleException,
-    InvalidRoleNameException,
-    NotFoundPermissionsException,
+    DuplicateRoleError,
+    InvalidRoleNameError,
+    NotFoundPermissionsError,
 )
 from app.auth.models.permission import Permission
 from app.auth.models.user import User
 from app.auth.repositories.role import RoleRepository
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from tests.support.jwt import jwt_from_user
 
 
@@ -101,7 +101,7 @@ class TestCreateRoleCommand:
             permissions=set(),
         )
 
-        with pytest.raises(DuplicateRoleException):
+        with pytest.raises(DuplicateRoleError):
             await handler.handle(command2)
 
     async def test_create_role_insufficient_permissions(
@@ -119,7 +119,7 @@ class TestCreateRoleCommand:
             permissions=set(),
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await handler.handle(command)
 
     async def test_create_role_invalid_name(
@@ -137,7 +137,7 @@ class TestCreateRoleCommand:
             permissions=set(),
         )
 
-        with pytest.raises(InvalidRoleNameException):
+        with pytest.raises(InvalidRoleNameError):
             await handler.handle(command)
 
     async def test_create_role_nonexistent_permission(
@@ -155,7 +155,7 @@ class TestCreateRoleCommand:
             permissions={"nonexistent:permission"},
         )
 
-        with pytest.raises(NotFoundPermissionsException):
+        with pytest.raises(NotFoundPermissionsError):
             await handler.handle(command)
 
     async def test_create_role_security_level_too_high(
@@ -173,7 +173,7 @@ class TestCreateRoleCommand:
             permissions=set(),
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await handler.handle(command)
 
     async def test_create_role_empty_name(
@@ -191,7 +191,7 @@ class TestCreateRoleCommand:
             permissions=set(),
         )
 
-        with pytest.raises(InvalidRoleNameException):
+        with pytest.raises(InvalidRoleNameError):
             await handler.handle(command)
 
     async def test_create_role_with_invalid_security_level(
@@ -209,7 +209,7 @@ class TestCreateRoleCommand:
             permissions=set(),
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await handler.handle(command)
 
     async def test_create_role_preserves_description(

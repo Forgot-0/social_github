@@ -5,7 +5,7 @@ from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundNotificationException(ApplicationError):
+class NotFoundNotificationError(ApplicationError):
     notification_id: int
 
     status: int = 404
@@ -21,7 +21,7 @@ class NotFoundNotificationException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class NotificationAccessDeniedException(ApplicationError):
+class NotificationAccessDeniedError(ApplicationError):
     notification_id: int
 
     status: int = 403

@@ -59,7 +59,7 @@ class WSConnection:
                     payload = await asyncio.wait_for(
                         self.send_queue.get(), timeout=5.0
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
                 await self.websocket.send_text(payload.decode())
         except asyncio.CancelledError:
@@ -102,9 +102,10 @@ class WSConnection:
             return False
         try:
             self.send_queue.put_nowait(orjson.dumps(event))
-            return True
         except asyncio.QueueFull:
             return False
+        else:
+            return True
 
     async def close(self, code: int = 1000, reason: str = "") -> None:
         if self.closed:

@@ -61,7 +61,6 @@ async def confirm_attachment_upload(
 
 @router.get(
     "/messages/{message_id}/attachments/{attachment_id}/download-url",
-    response_model=AttachmentDownloadUrlDTO
 )
 async def get_attachment_download_url(
     chat_id: UUID,

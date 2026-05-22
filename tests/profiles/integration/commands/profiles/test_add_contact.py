@@ -2,9 +2,9 @@ import pytest
 from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand, AddContactToProfileCommandHandler
-from app.profiles.exceptions import NotFoundProfileException
+from app.profiles.exceptions import NotFoundProfileError
 from app.profiles.models.profile import Profile
 from app.profiles.repositories.profiles import ProfileRepository
 
@@ -90,7 +90,7 @@ class TestAddContactToProfileCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(NotFoundProfileException):
+        with pytest.raises(NotFoundProfileError):
             await handler.handle(command)
 
     async def test_forbidden_if_not_owner_and_no_permission(
@@ -106,7 +106,7 @@ class TestAddContactToProfileCommand:
             user_jwt_data=make_user_jwt(id="3", username="other_user"),
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await handler.handle(command)
 
     async def test_allowed_if_not_owner_but_has_permission(

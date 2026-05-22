@@ -3,7 +3,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.users.register import RegisterCommand, RegisterCommandHandler
-from app.auth.exceptions import DuplicateUserException, PasswordMismatchException
+from app.auth.exceptions import DuplicateUserError, PasswordMismatchError
 from app.auth.models.user import User
 from app.auth.repositories.user import UserRepository
 from app.auth.services.hash import HashService
@@ -62,7 +62,7 @@ class TestRegisterCommand:
 
         command = RegisterCommand(**cmd_data)
 
-        with pytest.raises(DuplicateUserException) as exc_info:
+        with pytest.raises(DuplicateUserError) as exc_info:
             await handler.handle(command)
 
         assert exc_info.value.field == "username"
@@ -80,7 +80,7 @@ class TestRegisterCommand:
 
         command = RegisterCommand(**cmd_data)
 
-        with pytest.raises(DuplicateUserException) as exc_info:
+        with pytest.raises(DuplicateUserError) as exc_info:
             await handler.handle(command)
 
         assert exc_info.value.field == "email"
@@ -97,7 +97,7 @@ class TestRegisterCommand:
             password_repeat="DifferentPass123!",
         )
 
-        with pytest.raises(PasswordMismatchException):
+        with pytest.raises(PasswordMismatchError):
             await handler.handle(command)
 
     async def test_register_user_has_default_role(

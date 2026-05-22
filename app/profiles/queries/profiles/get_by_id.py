@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.profiles.dtos.profiles import ProfileDTO
-from app.profiles.exceptions import NotFoundProfileException
+from app.profiles.exceptions import NotFoundProfileError
 from app.profiles.repositories.profiles import ProfileRepository
 
 
@@ -24,6 +24,6 @@ class GetProfileByIdQueryHandler(BaseQueryHandler[GetProfileByIdQuery, ProfileDT
     async def _handle(self, query: GetProfileByIdQuery) -> ProfileDTO:
         profile = await self.profile_repository.get_by_id(query.profile_id)
         if profile is None:
-            raise NotFoundProfileException(profile_id=query.profile_id)
+            raise NotFoundProfileError(profile_id=query.profile_id)
 
         return ProfileDTO.model_validate(profile.to_dict())

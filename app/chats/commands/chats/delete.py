@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import AccessDeniedChatException, NotChatMemberException, NotFoundChatException
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -31,18 +31,18 @@ class DeleteChatCommandHandler(BaseCommandHandler[DeleteChatCommand, None]):
         requester_id = int(command.user_jwt_data.id)
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         member = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
         if member is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=requester_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=requester_id)
 
         if not await self.access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
             member=member,
             must_permissions={"chat:delete"},
         ):
-            raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=requester_id)
+            raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=requester_id)
 
         chat.delete(deleted_by=requester_id)
         await self.session.commit()

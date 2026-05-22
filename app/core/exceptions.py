@@ -17,7 +17,7 @@ class ApplicationError(Exception):
 
 
 @dataclass(kw_only=True)
-class NotHandlerRegisterException(ApplicationError):
+class NotHandlerRegisterError(ApplicationError):
     classes: list[str]
     code: str = "INTERNAL_EXCEPTION"
     status: int = 503
@@ -32,7 +32,7 @@ class NotHandlerRegisterException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class FieldRequiredException(ApplicationError):
+class FieldRequiredError(ApplicationError):
     code: str = "INTERNAL_EXCEPTION"
     status: int = 500
 
@@ -46,7 +46,7 @@ class FieldRequiredException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class ValidationException(ApplicationError):
+class ValidationError(ApplicationError):
     code: str = "VALIDATION_EXCEPTION"
     status: int = 422
 

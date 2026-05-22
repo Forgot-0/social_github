@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.chats.delete import DeleteChatCommand, DeleteChatCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotFoundChatException
+from app.chats.exceptions import AccessDeniedChatError, NotFoundChatError
 from app.chats.models.chat import Chat
 from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
@@ -44,7 +44,7 @@ class TestDeleteChatCommand:
     ) -> None:
 
         member = make_user_jwt(id="2")
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 DeleteChatCommand(chat_id=group_chat.id, user_jwt_data=member)
             )
@@ -54,7 +54,7 @@ class TestDeleteChatCommand:
         handler: DeleteChatCommandHandler,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotFoundChatException):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 DeleteChatCommand(chat_id=uuid4(), user_jwt_data=user_jwt)
             )

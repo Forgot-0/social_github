@@ -4,7 +4,6 @@ from datetime import timedelta
 from redis.asyncio import Redis
 from sqlalchemy import Select, select
 
-from app.auth.exceptions import OAuthStateNotFoundException
 from app.auth.models.oauth import OAuthAccount, OAuthProviderEnum
 from app.core.db.repository import IRepository
 from app.core.filters.base import BaseFilter

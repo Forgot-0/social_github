@@ -4,7 +4,7 @@ from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundProfileException(ApplicationError):
+class NotFoundProfileError(ApplicationError):
     profile_id: int
 
     code: str = "NOT_FOUND_PROFILE"
@@ -20,7 +20,7 @@ class NotFoundProfileException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class AlreadeExistProfileException(ApplicationError):
+class AlreadeExistProfileError(ApplicationError):
     code: str = "ALREADE_EXIST_PROFILE"
     status: int = 409
 
@@ -34,7 +34,7 @@ class AlreadeExistProfileException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class TooLongSkillNameException(ApplicationError):
+class TooLongSkillNameError(ApplicationError):
     name: str
     code: str = "TOO_LONG_SKILL_NAME"
     status: int = 400
@@ -51,7 +51,7 @@ class TooLongSkillNameException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class TooLongDisplayNameException(ApplicationError):
+class TooLongDisplayNameError(ApplicationError):
     name: str
     code: str = "TOO_LONG_DISPLAY_NAME"
     status: int = 400
@@ -68,7 +68,7 @@ class TooLongDisplayNameException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class TooLongBioException(ApplicationError):
+class TooLongBioError(ApplicationError):
     bio: str
     code: str = "TOO_LONG_BIO"
     status: int = 400
@@ -85,7 +85,7 @@ class TooLongBioException(ApplicationError):
 
 
 @dataclass(kw_only=True)
-class AvatarNotImageType(ApplicationError):
+class AvatarNotImageTypeError(ApplicationError):
     type_avatar: str
 
     code: str = "AVATAR_NOT_TYPE_IMAGE"

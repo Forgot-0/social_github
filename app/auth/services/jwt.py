@@ -8,7 +8,7 @@ from app.auth.dtos.tokens import TokenGroup, TokenType
 from app.auth.dtos.user import AuthUserJWTData
 from app.auth.repositories.session import TokenBlacklistRepository
 from app.core.services.auth.dto import JwtTokenType
-from app.core.services.auth.exceptions import ExpiredTokenException
+from app.core.services.auth.exceptions import ExpiredTokenError
 from app.core.services.auth.jwt_manager import JWTManager
 from app.core.utils import fromtimestamp, now_utc
 
@@ -61,11 +61,11 @@ class AuthJWTManager(JWTManager):
 
         blacklisted_token_date = await self.token_blacklist.get_token_backlist(token.jti)
         if blacklisted_token_date and blacklisted_token_date > token_iat_dt:
-            raise ExpiredTokenException(token=refresh_token)
+            raise ExpiredTokenError(token=refresh_token)
 
         blacklisted_user_date = await self.token_blacklist.get_user_backlist(int(token.sub))
         if blacklisted_user_date and blacklisted_user_date > token_iat_dt:
-            raise ExpiredTokenException(token=refresh_token)
+            raise ExpiredTokenError(token=refresh_token)
 
         await self.revoke_token(refresh_token)
 

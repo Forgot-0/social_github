@@ -39,7 +39,7 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
                 "ts": now_utc().isoformat()
             }
             command.conn.try_send(event)
-            return 
+            return
 
         await self.manager.subscribe_chat(command.conn, command.chat_id)
         event = {

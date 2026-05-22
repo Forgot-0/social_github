@@ -1,15 +1,15 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.dtos.messages import MessageDTO
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    NotChatMemberException,
-    NotFoundChatException,
-    NotFoundMessageException,
+    AccessDeniedChatError,
+    NotChatMemberError,
+    NotFoundChatError,
+    NotFoundMessageError,
 )
 from app.chats.models.attachment import AttachmentStatus
 from app.chats.models.message import Message, MessageType
@@ -22,7 +22,6 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.utils import now_utc
-
 
 logger = logging.getLogger(__name__)
 
@@ -53,33 +52,33 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             command.source_chat_id, user_id
         )
         if source_member is None:
-            raise NotChatMemberException(chat_id=str(command.source_chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(command.source_chat_id), user_id=user_id)
 
         source_msg = await self.message_repository.get_by_id(command.source_message_id, with_attachment=True)
         if source_msg is None or source_msg.chat_id != command.source_chat_id or source_msg.is_deleted:
-            raise NotFoundMessageException(message_id=str(command.source_message_id))
+            raise NotFoundMessageError(message_id=str(command.source_message_id))
 
         if not await self.chat_access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
             member=source_member,
             must_permissions={"message:read"},
         ):
-            raise AccessDeniedChatException(chat_id=str(command.source_chat_id), requester_id=user_id)
+            raise AccessDeniedChatError(chat_id=str(command.source_chat_id), requester_id=user_id)
 
         target_chat = await self.chat_repository.get_by_id(command.target_chat_id)
         if target_chat is None:
-            raise NotFoundChatException(chat_id=str(command.target_chat_id))
+            raise NotFoundChatError(chat_id=str(command.target_chat_id))
 
         target_member = await self.chat_repository.get_member_chat(command.target_chat_id, user_id)
         if target_member is None:
-            raise NotChatMemberException(chat_id=str(command.target_chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(command.target_chat_id), user_id=user_id)
 
         if not await self.chat_access_service.can_send_message(
             user_jwt_data=command.user_jwt_data,
             chat=target_chat,
             member=target_member,
         ):
-            raise AccessDeniedChatException(chat_id=str(command.target_chat_id), requester_id=user_id)
+            raise AccessDeniedChatError(chat_id=str(command.target_chat_id), requester_id=user_id)
 
         await self.message_service.is_slow(
             chat=target_chat,
@@ -101,7 +100,7 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             message_date=message_date,
         )
         if next_seq is None:
-            raise NotFoundChatException(chat_id=str(command.target_chat_id))
+            raise NotFoundChatError(chat_id=str(command.target_chat_id))
 
         forwarded_msg = Message.create(
             sender_id=user_id,

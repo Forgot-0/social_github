@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.messages.forward import ForwardMessageCommand, ForwardMessageCommandHandler
-from app.chats.exceptions import NotChatMemberException, NotFoundMessageException
+from app.chats.exceptions import NotChatMemberError, NotFoundMessageError
 from app.chats.models.message import MessageType
 from app.core.services.auth.dto import UserJWTData
 
@@ -79,7 +79,7 @@ class TestForwardMessageCommand:
         src = await create_group_chat([2, 3])
         tgt = await create_group_chat([2, 3])
 
-        with pytest.raises(NotFoundMessageException):
+        with pytest.raises(NotFoundMessageError):
             await handler.handle(
                 ForwardMessageCommand(
                     user_jwt_data=user_jwt,
@@ -102,7 +102,7 @@ class TestForwardMessageCommand:
 
         original = await create_message(src, user_jwt, "Test")
 
-        with pytest.raises(NotChatMemberException):
+        with pytest.raises(NotChatMemberError):
             await handler.handle(
                 ForwardMessageCommand(
                     user_jwt_data=make_user_jwt(id="3"),

@@ -1,6 +1,7 @@
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import redis.asyncio as redis
 from aiojobs import Scheduler
@@ -22,7 +23,7 @@ from app.core.api.builder import create_response
 from app.core.api.schemas import ErrorDetail, ErrorResponse, ORJSONResponse
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
-from app.core.exceptions import ApplicationError, ValidationException
+from app.core.exceptions import ApplicationError, ValidationError
 from app.core.log.init import configure_logging
 from app.core.message_brokers.base import BaseMessageBroker
 from app.core.middlewares.context import ContextMiddleware
@@ -30,10 +31,10 @@ from app.core.middlewares.log import LoggingMiddleware
 from app.core.routers import router as core_router
 from app.core.utils import now_utc
 from app.init_data import init_data
+from app.notifications.routers import router_v1 as notification_router_v1
 from app.pre_start import pre_start
 from app.profiles.routers import router_v1 as profile_router_v1
 from app.projects.routers import router_v1 as project_router_v1
-from app.notifications.routers import router_v1 as notification_router_v1
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ def custom_openapi(app: FastAPI) -> dict[str, Any]:
         routes=app.routes,
     )
 
-    response_def = create_response(ValidationException(), description="Validation error")
+    response_def = create_response(ValidationError(), description="Validation error")
 
     components = openapi_schema.setdefault("components", {})
     responses = components.setdefault("responses", {})

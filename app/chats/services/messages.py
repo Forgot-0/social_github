@@ -1,18 +1,20 @@
 import asyncio
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import overload
+from typing import TYPE_CHECKING, overload
 
 from redis.asyncio import Redis
 
 from app.chats.config import chat_config
-from app.chats.dtos.attachments import AttachmentDTO
 from app.chats.dtos.messages import MessageDTO
-from app.chats.exceptions import SlowModeLimitException
+from app.chats.exceptions import SlowModeLimitError
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
 from app.chats.services.access import ChatAccessService
 from app.core.services.storage.service import StorageService
+
+if TYPE_CHECKING:
+    from app.chats.dtos.attachments import AttachmentDTO
 
 
 SCRIPT_SLOW_MODE = """
@@ -43,7 +45,7 @@ class MessageService:
 
         if allowed:
             return
-        raise SlowModeLimitException(chat_id=str(chat.id), retry_after=max(1, int(ttl)))
+        raise SlowModeLimitError(chat_id=str(chat.id), retry_after=max(1, int(ttl)))
 
     @overload
     async def attach_download_urls(
@@ -71,7 +73,7 @@ class MessageService:
         keys = tuple(attachments_by_key)
         urls = await asyncio.gather(
             *(
-                self.get_attachmnent_url_by_key(s3_key=s3_key,)
+                self.get_attachmnent_url_by_key(s3_key=s3_key)
                 for s3_key in keys
             )
         )

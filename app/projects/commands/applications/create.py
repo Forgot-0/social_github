@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.projects.exceptions import NotFoundPositionException
+from app.projects.exceptions import NotFoundPositionError
 from app.projects.repositories.applications import ApplicationRepository
 from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.projects import ProjectRepository
@@ -30,8 +30,8 @@ class CreateApplicationCommandHandler(BaseCommandHandler[CreateApplicationComman
 
     async def handle(self, command: CreateApplicationCommand) -> None:
         position = await self.position_repository.get_by_id(str(command.position_id), with_project=True)
-        if not position:
-            raise NotFoundPositionException(position_id=str(command.position_id))
+        if position is None:
+            raise NotFoundPositionError(position_id=str(command.position_id))
 
         position.add_application(
             candidate_id=int(command.user_jwt_data.id),

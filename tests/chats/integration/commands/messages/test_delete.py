@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.messages.delete import DeleteMessageCommand, DeleteMessageCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotFoundMessageException
+from app.chats.exceptions import AccessDeniedChatError, NotFoundMessageError
 from app.chats.models.chat import Chat
 from app.chats.repositories.message import MessageRepository
 from app.core.services.auth.dto import UserJWTData
@@ -73,7 +73,7 @@ class TestDeleteMessageCommand:
     ) -> None:
         msg = await create_message(group_chat, make_user_jwt(id="2"), "Delete")
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 DeleteMessageCommand(
                     chat_id=group_chat.id,
@@ -88,7 +88,7 @@ class TestDeleteMessageCommand:
         group_chat: Chat,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotFoundMessageException):
+        with pytest.raises(NotFoundMessageError):
             await handler.handle(
                 DeleteMessageCommand(
                     chat_id=group_chat.id,

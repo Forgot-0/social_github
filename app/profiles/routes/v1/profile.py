@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Query, status
 
@@ -13,7 +15,7 @@ from app.profiles.commands.profiles.remove_contact import RemoveContactToProfile
 from app.profiles.commands.profiles.update import UpdateProfileCommand
 from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatarCommand
 from app.profiles.dtos.profiles import AvatarPresignResponse, ProfileDTO
-from app.profiles.exceptions import NotFoundProfileException
+from app.profiles.exceptions import NotFoundProfileError
 from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery
 from app.profiles.queries.profiles.get_list import GetProfilesQuery
 from app.profiles.queries.profiles.get_url import GetAvatrProfileUrlQuery
@@ -54,7 +56,7 @@ async def create_profile(
 )
 async def get_profiles(
     mediator: FromDishka[BaseMediator],
-    params: GetProfilesRequest = Query()
+    params: Annotated[GetProfilesRequest, Query(...)]
 ) -> PageResult[ProfileDTO]:
     return await mediator.handle_query(
         GetProfilesQuery(params.to_profile_filter())
@@ -64,7 +66,7 @@ async def get_profiles(
     "/{profile_id}",
     status_code=status.HTTP_200_OK,
     responses={
-        404: create_response(NotFoundProfileException(profile_id=123))
+        404: create_response(NotFoundProfileError(profile_id=123))
     }
 )
 async def update_profile(
@@ -89,7 +91,7 @@ async def update_profile(
     "/{profile_id}",
     status_code=status.HTTP_200_OK,
     responses={
-        404: create_response(NotFoundProfileException(profile_id=123))
+        404: create_response(NotFoundProfileError(profile_id=123))
     },
 )
 async def get_profile(

@@ -107,7 +107,7 @@ class ChatDeliveryRouter:
         routes_by_gateway: RouteMap = {}
         stale_routes_by_user: list[tuple[int, str]] = []
 
-        for user_id, route_set in zip(ids, results):
+        for user_id, route_set in zip(ids, results, strict=False):
             for route in route_set or ():
                 gateway_id, sep, connection_id = route.partition(":")
                 if not sep or not gateway_id or not connection_id:
@@ -154,7 +154,7 @@ class ChatDeliveryRouter:
 
         stale: list[str] = []
         routes_by_gateway: RouteMap = {}
-        for (user_id, gateway_id, _connection_id, route), alive in zip(routes, alive_flags):
+        for (user_id, gateway_id, _connection_id, route), alive in zip(routes, alive_flags, strict=False):
             if alive:
                 routes_by_gateway.setdefault(gateway_id, set()).add(user_id)
             else:

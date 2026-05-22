@@ -1,7 +1,7 @@
 import pytest
 
 from app.chats.config import chat_config
-from app.chats.exceptions import AccessDeniedChatException, MemberLimitExceededException, SlowModeOutOfRangeException
+from app.chats.exceptions import AccessDeniedChatError, MemberLimitExceededError, SlowModeOutOfRangeError
 from app.chats.models.chat import (
     BannedChatMemberEvent,
     Chat,
@@ -91,19 +91,19 @@ class TestChatModel:
         assert all(member.role_id == 6 for member in subscribers)
 
     def test_create_direct_chat_with_wrong_participant_count_raises(self) -> None:
-        with pytest.raises(MemberLimitExceededException):
+        with pytest.raises(MemberLimitExceededError):
             Chat.create(created_by=1, members_ids=[1], chat_type=ChatType.DIRECT)
 
     def test_create_group_chat_exceeding_limit_raises(self) -> None:
         too_many_members = [1] + list(range(2, chat_config.MAX_GROUP_MEMBERS + 2))
 
-        with pytest.raises(MemberLimitExceededException) as exc_info:
+        with pytest.raises(MemberLimitExceededError) as exc_info:
             Chat.create(created_by=1, members_ids=too_many_members, chat_type=ChatType.GROUP)
 
         assert exc_info.value.limit == chat_config.MAX_GROUP_MEMBERS
 
     def test_create_with_invalid_slow_mode_raises(self) -> None:
-        with pytest.raises(SlowModeOutOfRangeException):
+        with pytest.raises(SlowModeOutOfRangeError):
             Chat.create(
                 created_by=1,
                 members_ids=[1, 2],
@@ -154,7 +154,7 @@ class TestChatModel:
         chat = make_group_chat(created_by=1, members_ids=[1, 2, 3])
         chat.member_count = chat_config.MAX_GROUP_MEMBERS
 
-        with pytest.raises(MemberLimitExceededException):
+        with pytest.raises(MemberLimitExceededError):
             chat.add_member(member_id=999, role_id=5)
 
     def test_leave_decrements_member_count_and_registers_event(self) -> None:
@@ -172,7 +172,7 @@ class TestChatModel:
     def test_leave_owner_raises_access_denied(self) -> None:
         chat = make_group_chat(created_by=1, members_ids=[1, 2, 3])
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             chat.leave(user_id=1)
 
     def test_kick_member_decrements_count_and_registers_event(self) -> None:
@@ -191,7 +191,7 @@ class TestChatModel:
     def test_kick_self_raises_access_denied(self) -> None:
         chat = make_group_chat(created_by=1, members_ids=[1, 2, 3])
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             chat.kick_member(target=1, requester_id=1)
 
     def test_ban_member_registers_event(self) -> None:
@@ -209,7 +209,7 @@ class TestChatModel:
     def test_ban_self_raises_access_denied(self) -> None:
         chat = make_group_chat(created_by=1, members_ids=[1, 2, 3])
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             chat.ban_member(target=1, requester_id=1, ban=True)
 
     def test_update_last_activity_sets_timestamp(self) -> None:

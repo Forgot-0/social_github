@@ -2,21 +2,21 @@ from dataclasses import dataclass
 from enum import Enum as PyEnum
 from html import escape
 from typing import TYPE_CHECKING, Optional, Self
-from uuid import UUID as PyUUID, uuid7
+from uuid import UUID, uuid7
 
-from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String
+from sqlalchemy import UUID as SAUUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
 from app.chats.exceptions import (
-    AttachmentLimitExceededException,
-    AttachmentNotFoundException,
-    MessageTooLongException,
-    InvalidMessageException,
+    AttachmentLimitExceededError,
+    AttachmentNotFoundError,
+    InvalidMessageError,
+    MessageTooLongError,
 )
+from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.events.event import BaseEvent
-from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
 
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
@@ -92,10 +92,10 @@ class DeletedMessageEvent(BaseEvent):
 class Message(BaseModel, DateMixin):
     __tablename__ = "messages"
 
-    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False, primary_key=True)
+    id: Mapped[UUID] = mapped_column(SAUUID(as_uuid=True), nullable=False, primary_key=True)
 
-    chat_id: Mapped[PyUUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
+    chat_id: Mapped[UUID] = mapped_column(
+        SAUUID(as_uuid=True), ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
     )
     seq: Mapped[int] = mapped_column(BigInteger, default=0)
 
@@ -105,15 +105,15 @@ class Message(BaseModel, DateMixin):
     )
     content: Mapped[str | None] = mapped_column(String(chat_config.MAX_MESSAGE_LENGTH))
 
-    reply_to_id: Mapped[PyUUID | None] = mapped_column(
-        UUID, ForeignKey("messages.id"), nullable=True
+    reply_to_id: Mapped[UUID | None] = mapped_column(
+        SAUUID, ForeignKey("messages.id"), nullable=True
     )
 
-    forwarded_from_chat_id: Mapped[PyUUID | None] = mapped_column(
-        UUID, ForeignKey("chats.id", ondelete="SET NULL"), nullable=True
+    forwarded_from_chat_id: Mapped[UUID | None] = mapped_column(
+        SAUUID, ForeignKey("chats.id", ondelete="SET NULL"), nullable=True
     )
-    forwarded_from_message_id: Mapped[PyUUID | None] = mapped_column(
-        UUID, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
+    forwarded_from_message_id: Mapped[UUID | None] = mapped_column(
+        SAUUID, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
     )
     forwarded_from_author_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
@@ -132,7 +132,7 @@ class Message(BaseModel, DateMixin):
     )
 
     __table_args__ = (
-        Index("ix_messages_chat_not_deleted", "chat_id", "seq", 
+        Index("ix_messages_chat_not_deleted", "chat_id", "seq",
               postgresql_where="is_deleted = false"),
         Index("ix_messages_chat_id_seq", "chat_id", "seq", unique=True)
     )
@@ -141,18 +141,18 @@ class Message(BaseModel, DateMixin):
     def create(
         cls,
         sender_id: int | None,
-        chat_id: PyUUID,
+        chat_id: SAUUID,
         seq: int,
         content: str | None,
-        reply_to_id: PyUUID | None = None,
+        reply_to_id: SAUUID | None = None,
         message_type: MessageType = MessageType.TEXT,
-        forwarded_from_chat_id: PyUUID | None = None,
-        forwarded_from_message_id: PyUUID | None = None,
+        forwarded_from_chat_id: SAUUID | None = None,
+        forwarded_from_message_id: SAUUID | None = None,
         forwarded_from_author_id: int | None=None,
         attachments: list[MessageAttachment] | None = None,
     ) -> Self:
         if message_type == MessageType.REPLY and reply_to_id is None:
-            raise InvalidMessageException(reason="reply_to_id is required for reply messages")
+            raise InvalidMessageError(reason="reply_to_id is required for reply messages")
 
         instance = cls(
             id=uuid7(),
@@ -215,15 +215,15 @@ class Message(BaseModel, DateMixin):
         assert isinstance(self.content, str)
 
         if len(self.content) > chat_config.MAX_MESSAGE_LENGTH:
-            raise MessageTooLongException(
+            raise MessageTooLongError(
                 length=len(self.content),
                 max_length=chat_config.MAX_MESSAGE_LENGTH
             )
 
         self.content = escape(self.content, quote=True)
 
-        if self.content is not None and '\x00' in self.content:  # type: ignore
-            raise InvalidMessageException(reason="message content contains null byte")
+        if self.content is not None and "\x00" in self.content:  # type: ignore
+            raise InvalidMessageError(reason="message content contains null byte")
 
     def validate_attachments(self) -> None:
 
@@ -235,9 +235,9 @@ class Message(BaseModel, DateMixin):
         success = all(a.attachment_status == AttachmentStatus.SUCCESS for a in self.attachments)
 
         if media_count > chat_config.MAX_MEDIA_PER_MESSAGE:
-            raise AttachmentLimitExceededException(count=media_count)
+            raise AttachmentLimitExceededError(count=media_count)
         if file_count > chat_config.MAX_FILES_PER_MESSAGE:
-            raise AttachmentLimitExceededException(count=file_count)
+            raise AttachmentLimitExceededError(count=file_count)
 
         if success is False:
-            raise AttachmentNotFoundException(attachment_id="")
+            raise AttachmentNotFoundError(attachment_id="")

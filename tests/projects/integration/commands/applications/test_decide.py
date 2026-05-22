@@ -3,7 +3,7 @@ from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.applications.decision import DecideApplicationCommand, DecideApplicationCommandHandler
-from app.projects.exceptions import NotFoundProjectException
+from app.projects.exceptions import NotFoundProjectError
 from app.projects.models.application import Application, ApplicationStatus
 from app.projects.models.member import MembershipStatus
 from app.projects.repositories.applications import ApplicationRepository
@@ -120,7 +120,7 @@ class TestDecideApplicationCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(command)
 
     async def test_approve_without_permission_raises(

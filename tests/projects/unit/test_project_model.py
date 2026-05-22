@@ -2,8 +2,8 @@ import pytest
 
 from app.projects.config import project_config
 from app.projects.exceptions import (
-    MaxPositionsPerProjectLimitExceededException,
-    TooLongTagNameException,
+    MaxPositionsPerProjectLimitExceededError,
+    TooLongTagNameError,
 )
 from app.projects.models.member import MembershipStatus
 from app.projects.models.project import CreatedPositionEvent, Project, ProjectVisibility
@@ -49,7 +49,7 @@ class TestProjectCreate:
         assert set(project.tags) == {"python", "fastapi"}
 
     def test_create_with_too_long_tag_raises(self) -> None:
-        with pytest.raises(TooLongTagNameException):
+        with pytest.raises(TooLongTagNameError):
             Project.create(
                 owner_id=1,
                 name="Bad tags",
@@ -154,7 +154,7 @@ class TestProjectNewPosition:
                 expected_load=None,
             )
 
-        with pytest.raises(MaxPositionsPerProjectLimitExceededException):
+        with pytest.raises(MaxPositionsPerProjectLimitExceededError):
             project.new_position(
                 title="Overflow",
                 description="desc",
@@ -191,5 +191,5 @@ class TestProjectUpdate:
 
     def test_update_tags_with_too_long_name_raises(self) -> None:
         project = make_project()
-        with pytest.raises(TooLongTagNameException):
+        with pytest.raises(TooLongTagNameError):
             project.update_tags({"x" * (project_config.MAX_LEN_TAG + 1)})

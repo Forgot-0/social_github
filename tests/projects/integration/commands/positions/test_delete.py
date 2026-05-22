@@ -4,7 +4,7 @@ from dishka import AsyncContainer
 from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.positions.delete import DeletePositionCommand, DeletePositionCommandHandler
 from app.projects.exceptions import (
-    NotFoundProjectException,
+    NotFoundProjectError,
 )
 from app.projects.models.position import Position
 from app.projects.repositories.positions import PositionRepository
@@ -52,7 +52,7 @@ class TestDeletePositionCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(command)
 
     async def test_delete_without_permission_raises(

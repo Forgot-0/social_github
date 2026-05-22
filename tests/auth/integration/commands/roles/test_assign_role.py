@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.roles.assign_role_to_user import AssignRoleCommand, AssignRoleCommandHandler
 from app.auth.commands.roles.remove_role_user import RemoveRoleCommand, RemoveRoleCommandHandler
-from app.auth.exceptions import NotFoundRoleException, NotFoundUserException
+from app.auth.exceptions import NotFoundRoleError, NotFoundUserError
 from app.auth.models.user import User
 from app.auth.repositories.user import UserRepository
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from tests.auth.integration.factories import RoleFactory, UserFactory
 from tests.support.jwt import jwt_from_user
 
@@ -76,7 +76,7 @@ class TestAssignRoleCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(NotFoundUserException):
+        with pytest.raises(NotFoundUserError):
             await assign_role_handler.handle(command)
 
     async def test_assign_nonexistent_role(
@@ -93,7 +93,7 @@ class TestAssignRoleCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(NotFoundRoleException):
+        with pytest.raises(NotFoundRoleError):
             await assign_role_handler.handle(command)
 
     async def test_assign_role_insufficient_permissions(
@@ -122,7 +122,7 @@ class TestAssignRoleCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await assign_role_handler.handle(command)
 
     async def test_remove_role_success(
@@ -274,5 +274,5 @@ class TestAssignRoleCommand:
             user_jwt_data=user_jwt,
         )
 
-        with pytest.raises(AccessDeniedException):
+        with pytest.raises(AccessDeniedError):
             await remove_role_handler.handle(command)

@@ -2,14 +2,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Self
-from uuid import UUID as PyUUID, uuid7
+from uuid import UUID, uuid7
 
-from sqlalchemy import UUID, BigInteger, Boolean, DateTime, Enum, Index, Integer, String
+from sqlalchemy import UUID as SAUUID, BigInteger, Boolean, DateTime, Enum, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
-from app.chats.exceptions import AccessDeniedChatException, MemberLimitExceededException, SlowModeOutOfRangeException
+from app.chats.exceptions import AccessDeniedChatError, MemberLimitExceededError, SlowModeOutOfRangeError
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.message import Message
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -123,7 +123,7 @@ class LeftChatMemberEvent(BaseEvent):
 class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "chats"
 
-    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    id: Mapped[UUID] = mapped_column(SAUUID(as_uuid=True), primary_key=True)
     seq_counter: Mapped[int] = mapped_column(BigInteger, default=0)
 
     type: Mapped[ChatType] = mapped_column(Enum(ChatType), nullable=False)
@@ -141,7 +141,9 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     members: Mapped[list["ChatMember"]] = relationship(back_populates="chat", lazy="noload")
-    messages: Mapped[list["Message"]] = relationship(back_populates="chat", foreign_keys=[Message.chat_id], lazy="noload")
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="chat", foreign_keys=[Message.chat_id], lazy="noload"
+    )
 
     __table_args__ = (
         Index("ix_chats_type_public", "type", "is_public"),
@@ -188,12 +190,12 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             members_ids.remove(created_by)
 
         if chat_type == ChatType.DIRECT and len(members_ids) != 1:
-            raise MemberLimitExceededException(limit=2)
+            raise MemberLimitExceededError(limit=2)
 
         participant_count = len(members_ids) + 1
         limit = cls.member_limit(chat_type)
         if participant_count > limit:
-            raise MemberLimitExceededException(limit=limit)
+            raise MemberLimitExceededError(limit=limit)
 
         cls._validate_slow_mode(slow_mode_seconds)
 
@@ -214,12 +216,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             instance.add_member(created_by, role_id=4)
             instance.add_member(members_ids[0], role_id=4)
 
-        elif chat_type == ChatType.GROUP:
-            instance.add_member(created_by, role_id=1)
-            for m_id in members_ids:
-                instance.add_member(m_id, role_id=5)
-
-        elif chat_type == ChatType.SUPERGROUP:
+        elif chat_type in (ChatType.GROUP, ChatType.SUPERGROUP):
             instance.add_member(created_by, role_id=1)
             for m_id in members_ids:
                 instance.add_member(m_id, role_id=5)
@@ -290,7 +287,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     def add_member(self, member_id: int, role_id: int) -> None:
         limit = self.member_limit(self.type)
         if self.member_count >= limit:
-            raise MemberLimitExceededException(limit=limit)
+            raise MemberLimitExceededError(limit=limit)
 
         self.members.append(
             ChatMember.create(
@@ -310,7 +307,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
 
     def leave(self, user_id: int) -> None:
         if self.created_by == user_id:
-            raise AccessDeniedChatException(chat_id=str(self.id), requester_id=user_id)
+            raise AccessDeniedChatError(chat_id=str(self.id), requester_id=user_id)
 
         self.member_count -= 1
         self.register_event(LeftChatMemberEvent(
@@ -320,7 +317,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
 
     def kick_member(self, target: int, requester_id: int) -> None:
         if target == requester_id:
-            raise AccessDeniedChatException(chat_id=str(self.id), requester_id=requester_id)
+            raise AccessDeniedChatError(chat_id=str(self.id), requester_id=requester_id)
         self.member_count -= 1
         self.register_event(KickedChatMemberEvent(
             chat_id=str(self.id),
@@ -330,7 +327,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
 
     def ban_member(self, target: int, requester_id: int, ban: bool) -> None:
         if target == requester_id:
-            raise AccessDeniedChatException(chat_id=str(self.id), requester_id=requester_id)
+            raise AccessDeniedChatError(chat_id=str(self.id), requester_id=requester_id)
         self.register_event(BannedChatMemberEvent(
             chat_id=str(self.id),
             requester_id=requester_id,
@@ -344,4 +341,4 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     @staticmethod
     def _validate_slow_mode(slow_mode_seconds: int) -> None:
         if slow_mode_seconds < 0 or slow_mode_seconds > chat_config.MAX_SLOW_MODE_SECONDS:
-            raise SlowModeOutOfRangeException(seconds=slow_mode_seconds)
+            raise SlowModeOutOfRangeError(seconds=slow_mode_seconds)

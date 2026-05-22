@@ -2,9 +2,9 @@ import pytest
 
 from app.chats.config import chat_config
 from app.chats.exceptions import (
-    AttachmentLimitExceededException,
-    InvalidMessageException,
-    MessageTooLongException,
+    AttachmentLimitExceededError,
+    InvalidMessageError,
+    MessageTooLongError,
 )
 from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
 from app.chats.models.message import (
@@ -70,16 +70,16 @@ class TestMessageModel:
         assert "&lt;script&gt;" in msg.content
 
     def test_content_too_long_raises(self) -> None:
-        with pytest.raises(MessageTooLongException) as exc:
+        with pytest.raises(MessageTooLongError) as exc:
             create_message("x" * (chat_config.MAX_MESSAGE_LENGTH + 1))
         assert exc.value.max_length == chat_config.MAX_MESSAGE_LENGTH
 
     def test_null_byte_in_content_raises(self) -> None:
-        with pytest.raises(InvalidMessageException):
+        with pytest.raises(InvalidMessageError):
             create_message("hello\x00world")
 
     def test_reply_without_reply_to_id_raises(self) -> None:
-        with pytest.raises(InvalidMessageException) as exc:
+        with pytest.raises(InvalidMessageError) as exc:
             create_message(msg_type=MessageType.REPLY, reply_to_id=None)
         assert "reply_to_id" in exc.value.reason
 
@@ -128,7 +128,7 @@ class TestMessageModel:
             create_attachment(AttachmentType.IMAGE)
             for _ in range(chat_config.MAX_MEDIA_PER_MESSAGE + 1)
         ]
-        with pytest.raises(AttachmentLimitExceededException):
+        with pytest.raises(AttachmentLimitExceededError):
             Message.create(
                 sender_id=1,
                 chat_id=uuid4(),
@@ -142,7 +142,7 @@ class TestMessageModel:
             create_attachment(AttachmentType.FILE)
             for _ in range(chat_config.MAX_FILES_PER_MESSAGE + 1)
         ]
-        with pytest.raises(AttachmentLimitExceededException):
+        with pytest.raises(AttachmentLimitExceededError):
             Message.create(
                 sender_id=1,
                 chat_id=uuid4(),
@@ -152,9 +152,9 @@ class TestMessageModel:
             )
 
     def test_pending_attachment_raises_not_found(self) -> None:
-        from app.chats.exceptions import AttachmentNotFoundException
+        from app.chats.exceptions import AttachmentNotFoundError
         pending = create_attachment(status=AttachmentStatus.PENDING)
-        with pytest.raises(AttachmentNotFoundException):
+        with pytest.raises(AttachmentNotFoundError):
             Message.create(
                 sender_id=1,
                 chat_id=uuid4(),

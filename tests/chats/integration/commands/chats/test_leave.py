@@ -2,7 +2,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.chats.leave import LeaveChatCommand, LeaveChatCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotChatMemberException
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError
 from app.chats.models.chat import Chat
 from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
@@ -41,7 +41,7 @@ class TestLeaveChatCommand:
         user_jwt: UserJWTData,
         handler: LeaveChatCommandHandler,
     ) -> None: 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(LeaveChatCommand(chat_id=group_chat.id, user_jwt_data=user_jwt))
 
     async def test_non_member_cannot_leave(
@@ -50,7 +50,7 @@ class TestLeaveChatCommand:
         handler: LeaveChatCommandHandler,
         make_user_jwt
     ) -> None: 
-        with pytest.raises(NotChatMemberException):
+        with pytest.raises(NotChatMemberError):
             await handler.handle(
                 LeaveChatCommand(chat_id=group_chat.id, user_jwt_data=make_user_jwt(id="999"))
             )

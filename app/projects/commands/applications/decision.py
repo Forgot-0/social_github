@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.exceptions import AccessDeniedException
-from app.projects.exceptions import AlreadyMemberException, NotFoundProjectException
+from app.core.services.auth.exceptions import AccessDeniedError
+from app.projects.exceptions import AlreadyMemberError, NotFoundProjectError
 from app.projects.models.role_permissions import ProjectRolesEnum
 from app.projects.repositories.applications import ApplicationRepository
 from app.projects.repositories.positions import PositionRepository
@@ -34,29 +34,29 @@ class DecideApplicationCommandHandler(BaseCommandHandler[DecideApplicationComman
 
     async def handle(self, command: DecideApplicationCommand) -> None:
         application = await self.application_repository.get_by_id(command.application_id, with_position=True)
-        if not application:
-            raise NotFoundProjectException(project_id=0)
+        if application is None:
+            raise NotFoundProjectError(project_id=0)
 
         project = await self.project_repository.get_by_id(
             application.project_id,
             with_member=True, with_positon=True
         )
-        if not project:
-            raise NotFoundProjectException(project_id=application.project_id)
+        if project is None:
+            raise NotFoundProjectError(project_id=application.project_id)
 
         if not self.project_permission_service.can_update(
             user_jwt_data=command.user_jwt_data,
             project=project,
             must_permissions={"member:invite"},
         ):
-            raise AccessDeniedException(need_permissions={"member:invite"})
+            raise AccessDeniedError(need_permissions={"member:invite"})
 
         if command.approve:
             application.accept(decided_by=int(command.user_jwt_data.id))
 
             existing_member = project.get_memeber_by_user_id(application.candidate_id)
             if existing_member is not None:
-                raise AlreadyMemberException
+                raise AlreadyMemberError
 
             project.invite_memeber(
                 user_id=application.candidate_id,

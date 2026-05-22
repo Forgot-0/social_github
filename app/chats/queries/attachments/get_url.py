@@ -4,8 +4,8 @@ from uuid import UUID
 from app.chats.config import chat_config
 from app.chats.dtos.attachments import AttachmentDownloadUrlDTO
 from app.chats.exceptions import (
-    AttachmentNotFoundException,
-    NotChatMemberException,
+    AttachmentNotFoundError,
+    NotChatMemberError,
 )
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
@@ -35,7 +35,7 @@ class GetAttachmentDownloadUrlQueryHandler(
 
         member = await self.chat_repository.get_member_chat(query.chat_id, user_id)
         if not member:
-            raise NotChatMemberException(chat_id=str(query.chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(query.chat_id), user_id=user_id)
 
         attachment = await self.attachment_repository.get_by_id(query.attachment_id)
         if (
@@ -43,7 +43,7 @@ class GetAttachmentDownloadUrlQueryHandler(
             or attachment.message_id != query.message_id
             or attachment.chat_id != query.chat_id
         ):
-            raise AttachmentNotFoundException(attachment_id=str(query.attachment_id))
+            raise AttachmentNotFoundError(attachment_id=str(query.attachment_id))
 
         return await self.attachment_repository.cache(
             AttachmentDownloadUrlDTO,  self._handle, chat_config.DOWNLOAD_URL_TTL,

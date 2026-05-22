@@ -12,10 +12,10 @@ from app.core.events.event import BaseEvent
 from app.core.utils import now_utc
 from app.projects.config import project_config
 from app.projects.exceptions import (
-    AlreadyMemberException,
-    MaxPositionsPerProjectLimitExceededException,
-    TooLongNameException,
-    TooLongTagNameException,
+    AlreadyMemberError,
+    MaxPositionsPerProjectLimitExceededError,
+    TooLongNameError,
+    TooLongTagNameError,
 )
 from app.projects.models.application import Application
 from app.projects.models.member import MembershipStatus, ProjectMembership
@@ -126,11 +126,11 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
             permissions_overrides: dict | None=None
         ) -> None:
         if user_id == invited_by:
-            raise AlreadyMemberException
+            raise AlreadyMemberError
 
         already_member = self.get_memeber_by_user_id(user_id=user_id)
         if already_member is not None:
-            raise AlreadyMemberException
+            raise AlreadyMemberError
 
         self.memberships.append(
             ProjectMembership(
@@ -154,7 +154,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         expected_load: str | None,
     ) -> None:
         if len(self.positions) >= project_config.MAX_POSITIONS_PER_PROJECT:
-            raise MaxPositionsPerProjectLimitExceededException(
+            raise MaxPositionsPerProjectLimitExceededError(
                 project_id=self.id,
                 limit=project_config.MAX_POSITIONS_PER_PROJECT,
             )
@@ -212,14 +212,14 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
         for tag in value:
             if len(tag) > project_config.MAX_LEN_TAG:
-                raise TooLongTagNameException(name=tag)
+                raise TooLongTagNameError(name=tag)
 
         return value
 
     def _validate_name(self, name: str) -> None:
         if len(name) > project_config.MAX_LEN_NAME:
-            raise TooLongNameException(name=name)
+            raise TooLongNameError(name=name)
 
     def _validate_slug(self, slug: str) -> None:
         if len(slug) > project_config.MAX_LEN_SLUG:
-            raise TooLongNameException(name=slug)
+            raise TooLongNameError(name=slug)

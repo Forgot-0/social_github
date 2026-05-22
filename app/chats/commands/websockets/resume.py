@@ -44,7 +44,7 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                     "ts": now_utc().isoformat()
                 }
                 command.conn.try_send(event)
-                return 
+                return
 
             await self.manager.subscribe_chat(command.conn, chat_id)
             event = {

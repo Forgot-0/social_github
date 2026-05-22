@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
-from app.projects.exceptions import NotValidMemberStatusException
+from app.projects.exceptions import NotValidMemberStatusError
 
 if TYPE_CHECKING:
     from app.projects.models.project import Project
@@ -57,7 +57,7 @@ class ProjectMembership(BaseModel, DateMixin):
 
     def accept_invite(self) -> None:
         if self.status not in (MembershipStatus.invited, MembershipStatus.pending):
-            raise NotValidMemberStatusException(
+            raise NotValidMemberStatusError(
                 member_status=self.status.value,
                 action="accept"
             )
@@ -67,7 +67,7 @@ class ProjectMembership(BaseModel, DateMixin):
 
     def reject_invite(self) -> None:
         if self.status not in (MembershipStatus.invited, MembershipStatus.pending):
-            raise NotValidMemberStatusException(
+            raise NotValidMemberStatusError(
                 member_status=self.status.value,
                 action="reject"
             )

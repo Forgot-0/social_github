@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.exceptions import AccessDeniedException
+from app.core.services.auth.exceptions import AccessDeniedError
 from app.core.services.auth.rbac import RBACManager
-from app.projects.exceptions import NotFoundProjectRoleException
+from app.projects.exceptions import NotFoundProjectRoleError
 from app.projects.repositories.roles import ProjectRoleRepository
 
 logger = logging.getLogger(__name__)
@@ -29,11 +29,11 @@ class UpdateProjectRoleCommandHandler(BaseCommandHandler[UpdateProjectRoleComman
 
     async def handle(self, command: UpdateProjectRoleCommand) -> None:
         if not self.rbac_manager.check_permission(command.user_jwt_data, {"role:update"}):
-            raise AccessDeniedException(need_permissions={"role:update" })
+            raise AccessDeniedError(need_permissions={"role:update" })
 
         role = await self.project_role_repository.get_by_id(command.role_id)
-        if not role:
-            raise NotFoundProjectRoleException(role_id=command.role_id)
+        if role is None:
+            raise NotFoundProjectRoleError(role_id=command.role_id)
 
         role.permissions = command.permissions
         await self.session.commit()

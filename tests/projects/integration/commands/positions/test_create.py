@@ -5,8 +5,8 @@ from app.core.services.auth.dto import UserJWTData
 from app.projects.commands.positions.create import CreatePositionCommand, CreatePositionCommandHandler
 from app.projects.config import project_config
 from app.projects.exceptions import (
-    MaxPositionsPerProjectLimitExceededException,
-    NotFoundProjectException,
+    MaxPositionsPerProjectLimitExceededError,
+    NotFoundProjectError,
 )
 from app.projects.models.project import Project
 from app.projects.repositories.positions import PositionRepository
@@ -83,7 +83,7 @@ class TestCreatePositionCommand:
             **PositionCommandFactory.create_command(project_id=999999),
         )
 
-        with pytest.raises(NotFoundProjectException):
+        with pytest.raises(NotFoundProjectError):
             await handler.handle(command)
 
     async def test_create_limit_exceeded_raises(
@@ -103,7 +103,7 @@ class TestCreatePositionCommand:
                 )
             )
 
-        with pytest.raises(MaxPositionsPerProjectLimitExceededException):
+        with pytest.raises(MaxPositionsPerProjectLimitExceededError):
             await handler.handle(
                 CreatePositionCommand(
                     user_jwt_data=user_jwt,

@@ -7,7 +7,7 @@ from app.auth.models.user import User
 from app.auth.repositories.session import SessionRepository
 from app.auth.services.jwt import AuthJWTManager
 from app.core.services.auth.dto import JwtTokenType
-from app.core.services.auth.exceptions import InvalidTokenException
+from app.core.services.auth.exceptions import InvalidTokenError
 from tests.auth.integration.factories import AuthCommandFactory
 
 
@@ -59,7 +59,7 @@ class TestLogoutCommand:
     ) -> None:
         logout_command = LogoutCommand(refresh_token="invalid_token")
 
-        with pytest.raises(InvalidTokenException):
+        with pytest.raises(InvalidTokenError):
             await logout_handler.handle(logout_command)
 
     async def test_logout_none_token(
@@ -68,5 +68,5 @@ class TestLogoutCommand:
     ) -> None:
         logout_command = LogoutCommand(refresh_token=None)
 
-        with pytest.raises(InvalidTokenException):
+        with pytest.raises(InvalidTokenError):
             await logout_handler.handle(logout_command)

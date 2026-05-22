@@ -3,7 +3,7 @@ from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.change_role import ChangeMemberRoleCommand, ChangeMemberRoleCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotChatMemberException
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
@@ -189,7 +189,7 @@ class TestChangeMemberRoleDowngrade:
         user_jwt: UserJWTData,
     ) -> None:
         member_jwt = make_user_jwt(id="2")
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 ChangeMemberRoleCommand(
                     user_jwt_data=member_jwt,
@@ -214,7 +214,7 @@ class TestChangeMemberRoleDowngrade:
         await db_session.commit()
 
         admin_jwt = make_user_jwt(id="2")
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 ChangeMemberRoleCommand(
                     user_jwt_data=admin_jwt,
@@ -230,7 +230,7 @@ class TestChangeMemberRoleDowngrade:
         group_chat: Chat,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotChatMemberException):
+        with pytest.raises(NotChatMemberError):
             await handler.handle(
                 ChangeMemberRoleCommand(
                     user_jwt_data=user_jwt,

@@ -3,10 +3,10 @@ from dishka import AsyncContainer
 
 from app.profiles.commands.profiles.create import CreateProfileCommand, CreateProfileCommandHanler
 from app.profiles.exceptions import (
-    AlreadeExistProfileException,
-    TooLongBioException,
-    TooLongDisplayNameException,
-    TooLongSkillNameException,
+    AlreadeExistProfileError,
+    TooLongBioError,
+    TooLongDisplayNameError,
+    TooLongSkillNameError,
 )
 from app.profiles.repositories.profiles import ProfileRepository
 from tests.profiles.integration.factories import ProfileCommandFactory
@@ -53,7 +53,7 @@ class TestCreateCommand:
         command = CreateProfileCommand(**cmd_data)
         await handler.handle(command)
 
-        with pytest.raises(AlreadeExistProfileException):
+        with pytest.raises(AlreadeExistProfileError):
             await handler.handle(command)
 
     async def test_create_long_skill_name(
@@ -64,7 +64,7 @@ class TestCreateCommand:
             1, "test", skills={"1" * 1024}
         )
         command = CreateProfileCommand(**cmd_data)
-        with pytest.raises(TooLongSkillNameException):
+        with pytest.raises(TooLongSkillNameError):
             await handler.handle(command)
 
     async def test_create_long_display_name(
@@ -75,7 +75,7 @@ class TestCreateCommand:
             1, "test", display_name="ab" * 1024
         )
         command = CreateProfileCommand(**cmd_data)
-        with pytest.raises(TooLongDisplayNameException):
+        with pytest.raises(TooLongDisplayNameError):
             await handler.handle(command)
 
     async def test_create_long_bio(
@@ -86,5 +86,5 @@ class TestCreateCommand:
             1, "test", bio="ab" * 1024
         )
         command = CreateProfileCommand(**cmd_data)
-        with pytest.raises(TooLongBioException):
+        with pytest.raises(TooLongBioError):
             await handler.handle(command)

@@ -3,7 +3,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.auth.login import LoginCommand, LoginCommandHandler
-from app.auth.exceptions import WrongLoginDataException
+from app.auth.exceptions import WrongLoginDataError
 from app.auth.models.user import User
 from app.auth.repositories.role import RoleRepository
 from app.auth.repositories.session import SessionRepository
@@ -67,7 +67,7 @@ class TestLoginCommand:
             user_agent="Mozilla/5.0",
         )
 
-        with pytest.raises(WrongLoginDataException) as exc_info:
+        with pytest.raises(WrongLoginDataError) as exc_info:
             await handler.handle(command)
 
         assert exc_info.value.username == standard_user.username
@@ -82,7 +82,7 @@ class TestLoginCommand:
             user_agent="Mozilla/5.0",
         )
 
-        with pytest.raises(WrongLoginDataException):
+        with pytest.raises(WrongLoginDataError):
             await handler.handle(command)
 
     async def test_login_creates_session(
@@ -155,7 +155,7 @@ class TestLoginCommand:
             user_agent="Mozilla/5.0",
         )
 
-        with pytest.raises(WrongLoginDataException):
+        with pytest.raises(WrongLoginDataError):
             await handler.handle(command)
 
     async def test_login_tokens_contain_user_data(

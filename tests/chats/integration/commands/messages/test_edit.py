@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.messages.modify import EditMessageCommand, EditMessageCommandHandler
-from app.chats.exceptions import AccessDeniedChatException, NotFoundMessageException
+from app.chats.exceptions import AccessDeniedChatError, NotFoundMessageError
 from app.chats.models.chat import Chat
 from app.chats.repositories.message import MessageRepository
 from app.core.services.auth.dto import UserJWTData
@@ -54,7 +54,7 @@ class TestEditMessageCommand:
     ) -> None:
         msg = await create_message(group_chat, make_user_jwt(id="2"), "Original")
 
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 EditMessageCommand(
                     user_jwt_data=user_jwt,
@@ -70,7 +70,7 @@ class TestEditMessageCommand:
         group_chat: Chat,
         user_jwt: UserJWTData,
     ) -> None:
-        with pytest.raises(NotFoundMessageException):
+        with pytest.raises(NotFoundMessageError):
             await handler.handle(
                 EditMessageCommand(
                     user_jwt_data=user_jwt,
@@ -92,7 +92,7 @@ class TestEditMessageCommand:
 
         msg_in_a = await create_message(chat_a, user_jwt, "In A")
 
-        with pytest.raises(NotFoundMessageException):
+        with pytest.raises(NotFoundMessageError):
             await handler.handle(
                 EditMessageCommand(
                     user_jwt_data=user_jwt,

@@ -1,7 +1,7 @@
 import pytest
 
 from app.projects.config import project_config
-from app.projects.exceptions import MaxPositionsPerProjectLimitExceededException
+from app.projects.exceptions import MaxPositionsPerProjectLimitExceededError
 from app.projects.models.project import Project, ProjectVisibility
 
 
@@ -30,7 +30,7 @@ class TestProjectModelLimits:
                 expected_load=None,
             )
 
-        with pytest.raises(MaxPositionsPerProjectLimitExceededException):
+        with pytest.raises(MaxPositionsPerProjectLimitExceededError):
             project.new_position(
                 title="overflow",
                 description="desc",

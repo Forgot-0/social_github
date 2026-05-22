@@ -26,7 +26,5 @@ class BaseTemplate(ABC):
         return {k: v for k, v in vars(self).items() if not k.startswith("_") and not k.startswith("__")}
 
     def render(self) -> str:
-        try:
-            return self.env.get_template(self._get_name()).render(self._get_data())
-        except Exception as exc:
-            raise
+        return self.env.get_template(self._get_name()).render(self._get_data())
+

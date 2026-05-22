@@ -1,9 +1,9 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
-from dishka.integrations.taskiq import FromDishka, inject
 import magic
+from dishka.integrations.taskiq import FromDishka, inject
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
@@ -14,7 +14,6 @@ from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
 from app.chats.services.ws import ChatConnectionManager
 from app.core.services.queues.task import BaseTask
 from app.core.services.storage.service import StorageService
-
 
 logger = logging.getLogger(__name__)
 

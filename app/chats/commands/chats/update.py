@@ -1,17 +1,16 @@
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.dtos.chats import ChatDTO
-from app.chats.exceptions import AccessDeniedChatException, NotFoundChatException
+from app.chats.exceptions import AccessDeniedChatError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDTO]):
     async def handle(self, command: UpdateChatCommand) -> ChatDTO:
         chat = await self.chat_repository.get_by_id(chat_id=command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         user_id = int(command.user_jwt_data.id)
 
@@ -51,7 +50,7 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDTO]):
             member=member,
             must_permissions={"chat:update"}
         ):
-            raise AccessDeniedChatException(
+            raise AccessDeniedChatError(
                 chat_id=str(command.chat_id), requester_id=user_id
             )
 

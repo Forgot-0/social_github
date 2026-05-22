@@ -7,12 +7,12 @@ import pytest
 
 from app.auth.commands.users.reset_password import ResetPasswordCommand, ResetPasswordCommandHandler
 from app.auth.commands.users.send_reset_password import SendResetPasswordCommand, SendResetPasswordCommandHandler
-from app.auth.exceptions import NotFoundUserException, PasswordMismatchException
+from app.auth.exceptions import NotFoundUserError, PasswordMismatchError
 from app.auth.models.user import User
 from app.auth.repositories.session import TokenBlacklistRepository
 from app.auth.repositories.user import UserRepository
 from app.auth.services.hash import HashService
-from app.core.services.auth.exceptions import InvalidTokenException
+from app.core.services.auth.exceptions import InvalidTokenError
 from tests.conftest import MockMailService
 
 
@@ -46,7 +46,7 @@ class TestSendResetPasswordCommand:
     ) -> None:
         command = SendResetPasswordCommand(email="nonexistent@example.com")
 
-        with pytest.raises(NotFoundUserException):
+        with pytest.raises(NotFoundUserError):
             await handler.handle(command)
 
 
@@ -102,7 +102,7 @@ class TestResetPasswordCommand:
             password_repeat="NewPassword123!",
         )
 
-        with pytest.raises(InvalidTokenException):
+        with pytest.raises(InvalidTokenError):
             await handler.handle(command)
 
     async def test_reset_password_mismatch(
@@ -126,7 +126,7 @@ class TestResetPasswordCommand:
             password_repeat="DifferentPassword123!",
         )
 
-        with pytest.raises(PasswordMismatchException):
+        with pytest.raises(PasswordMismatchError):
             await handler.handle(command)
 
     async def test_reset_password_token_invalidated_after_use(
@@ -153,5 +153,5 @@ class TestResetPasswordCommand:
 
         await handler.handle(command)
 
-        with pytest.raises(InvalidTokenException):
+        with pytest.raises(InvalidTokenError):
             await handler.handle(command)

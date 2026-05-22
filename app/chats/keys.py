@@ -1,7 +1,7 @@
 
 class ChatKeys:
     _NAMESPACE = "chat:v1:"
-    
+
     @staticmethod
     def presence_last_seen_zset() -> str:
         return f"{ChatKeys._NAMESPACE}presence:last_seen"

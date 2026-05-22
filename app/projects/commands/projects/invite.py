@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.exceptions import AccessDeniedException
-from app.projects.exceptions import NotFoundProjectException, NotFoundProjectRoleException
+from app.core.services.auth.exceptions import AccessDeniedError
+from app.projects.exceptions import NotFoundProjectError, NotFoundProjectRoleError
 from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.services.permission_service import ProjectPermissionService
@@ -35,19 +35,19 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
 
     async def handle(self, command: InviteMemberCommand) -> None:
         project = await self.project_repository.get_by_id(command.project_id, with_member=True)
-        if not project:
-            raise NotFoundProjectException(project_id=command.project_id)
+        if project is None:
+            raise NotFoundProjectError(project_id=command.project_id)
 
         role = await self.project_role_repository.get_by_id(command.role_id)
-        if not role:
-            raise NotFoundProjectRoleException(role_id=command.role_id)
+        if role is None:
+            raise NotFoundProjectRoleError(role_id=command.role_id)
 
         if not self.project_permission_service.can_invite(
             user_jwt_data=command.user_jwt_data,
             project=project,
             role=role
         ):
-            raise AccessDeniedException(need_permissions={"member:invite" })
+            raise AccessDeniedError(need_permissions={"member:invite" })
 
         project.invite_memeber(
             user_id=command.user_id,

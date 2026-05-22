@@ -3,7 +3,7 @@ from uuid import UUID
 
 from app.chats.dtos.chats import ChatDetaiDTO
 from app.chats.dtos.members import MemberChatDTO
-from app.chats.exceptions import NotChatMemberException, NotFoundChatException
+from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
@@ -24,11 +24,11 @@ class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetaiDT
 
         chat = await self.chat_repository.get_by_id(query.chat_id, with_members=True)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(query.chat_id))
+            raise NotFoundChatError(chat_id=str(query.chat_id))
 
         member = await self.chat_repository.get_member_chat(query.chat_id, user_id, with_role=False)
         if member is None or member.is_banned:
-            raise NotChatMemberException(chat_id=str(query.chat_id), user_id=user_id)
+            raise NotChatMemberError(chat_id=str(query.chat_id), user_id=user_id)
 
         return ChatDetaiDTO(
             id=chat.id,

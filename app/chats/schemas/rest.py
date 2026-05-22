@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from app.chats.config import chat_config
 from app.chats.models.chat import ChatType
@@ -70,11 +70,17 @@ class UploadRequestItem(BaseModel):
 
 
 class RequestAttachmentUploadRequest(BaseModel):
-    uploads: list[UploadRequestItem] = Field(min_length=1, max_length=chat_config.MAX_MEDIA_PER_MESSAGE + chat_config.MAX_FILES_PER_MESSAGE)
+    uploads: list[UploadRequestItem] = Field(
+        min_length=1,
+        max_length=chat_config.MAX_MEDIA_PER_MESSAGE + chat_config.MAX_FILES_PER_MESSAGE
+    )
 
 
 class ConfirmAttachmentUploadRequest(BaseModel):
-    upload_tokens: list[UUID] = Field(min_length=1, max_length=chat_config.MAX_MEDIA_PER_MESSAGE + chat_config.MAX_FILES_PER_MESSAGE)
+    upload_tokens: list[UUID] = Field(
+        min_length=1,
+        max_length=chat_config.MAX_MEDIA_PER_MESSAGE + chat_config.MAX_FILES_PER_MESSAGE
+    )
 
 
 class MuteParticipantRequest(BaseModel):

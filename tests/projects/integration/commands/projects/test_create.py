@@ -3,7 +3,7 @@ from dishka import AsyncContainer
 
 from app.projects.commands.projects.create import CreateProjectCommand, CreateProjectCommandHandler
 from app.projects.config import project_config
-from app.projects.exceptions import AlreadySlugProjectExistsException, MaxProjectsLimitExceededException
+from app.projects.exceptions import AlreadySlugProjectExistsError, MaxProjectsLimitExceededError
 from app.projects.repositories.projects import ProjectRepository
 from tests.projects.integration.factories import ProjectCommandFactory
 
@@ -62,7 +62,7 @@ class TestCreateProjectCommand:
         )
         command = CreateProjectCommand(**cmd_data)
 
-        with pytest.raises(MaxProjectsLimitExceededException):
+        with pytest.raises(MaxProjectsLimitExceededError):
             await handler.handle(command)
 
 
@@ -75,5 +75,5 @@ class TestCreateProjectCommand:
         command = CreateProjectCommand(**cmd_data)
         await handler.handle(command)
 
-        with pytest.raises(AlreadySlugProjectExistsException):
+        with pytest.raises(AlreadySlugProjectExistsError):
             await handler.handle(command)

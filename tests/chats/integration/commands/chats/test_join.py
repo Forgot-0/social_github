@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.join import JoinChatCommand, JoinChatCommandHandler
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    AlreadyMemberException,
-    NotFoundChatException,
+    AccessDeniedChatError,
+    AlreadyMemberError,
+    NotFoundChatError,
 )
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
@@ -49,7 +49,7 @@ class TestJoinChatCommand:
         group_chat: Chat,
         make_user_jwt,
     ) -> None:
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 JoinChatCommand(chat_id=group_chat.id, user_jwt_data=make_user_jwt(id="99"))
             )
@@ -61,7 +61,7 @@ class TestJoinChatCommand:
         make_user_jwt,
     ) -> None:
         outsider = make_user_jwt(id="99")
-        with pytest.raises(AccessDeniedChatException):
+        with pytest.raises(AccessDeniedChatError):
             await handler.handle(
                 JoinChatCommand(chat_id=direct_chat.id, user_jwt_data=outsider)
             )
@@ -72,7 +72,7 @@ class TestJoinChatCommand:
         user_jwt: UserJWTData,
         public_group_chat: Chat,
     ) -> None:
-        with pytest.raises(AlreadyMemberException):
+        with pytest.raises(AlreadyMemberError):
             await handler.handle(
                 JoinChatCommand(chat_id=public_group_chat.id, user_jwt_data=user_jwt)
             )
@@ -91,7 +91,7 @@ class TestJoinChatCommand:
         member.ban(int(make_user_jwt(id="1").id))
         await db_session.commit()
 
-        with pytest.raises(AlreadyMemberException):
+        with pytest.raises(AlreadyMemberError):
             await handler.handle(JoinChatCommand(chat_id=public_group_chat.id, user_jwt_data=target))
 
         refreshed = await chat_repository.get_member_chat(public_group_chat.id, 2)
@@ -103,7 +103,7 @@ class TestJoinChatCommand:
         handler: JoinChatCommandHandler,
         make_user_jwt,
     ) -> None:
-        with pytest.raises(NotFoundChatException):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 JoinChatCommand(chat_id=uuid4(), user_jwt_data=make_user_jwt(id="99"))
             )

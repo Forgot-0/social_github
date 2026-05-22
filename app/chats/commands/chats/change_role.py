@@ -5,8 +5,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    NotChatMemberException,
+    AccessDeniedChatError,
+    NotChatMemberError,
 )
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
@@ -36,14 +36,15 @@ class ChangeMemberRoleCommandHandler(BaseCommandHandler[ChangeMemberRoleCommand,
 
         target = await self.chat_repository.get_member_chat(command.chat_id, command.target_user_id)
         if target is None:
-            raise NotChatMemberException(chat_id=str(command.chat_id), user_id=command.target_user_id)
+            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=command.target_user_id)
 
         if not await self.chat_access_service.update_member(
             user_jwt_data=command.user_jwt_data,
             requester=requester,
             target=target,
             must_permissions={"role:change" }
-        ): raise AccessDeniedChatException(chat_id=str(command.chat_id), requester_id=requester_id)
+        ):
+            raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=requester_id)
 
         target.role_id = command.role_id
         await self.session.commit()

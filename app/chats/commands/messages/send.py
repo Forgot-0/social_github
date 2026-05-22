@@ -1,15 +1,15 @@
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.dtos.messages import MessageDTO
 from app.chats.exceptions import (
-    AccessDeniedChatException,
-    AttachmentNotFoundException,
-    NotFoundChatException,
-    NotFoundMessageException,
+    AccessDeniedChatError,
+    AttachmentNotFoundError,
+    NotFoundChatError,
+    NotFoundMessageError,
 )
 from app.chats.models.message import Message, MessageType
 from app.chats.repositories.attachment import AttachmentRepository
@@ -21,7 +21,6 @@ from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.utils import now_utc
-
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +49,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
     async def handle(self, command: SendMessageCommand) -> MessageDTO:
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         user_id = int(command.user_jwt_data.id)
         member = await self.chat_repository.get_member_chat(
@@ -62,7 +61,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
             chat=chat,
             member=member,
         ):
-            raise AccessDeniedChatException(
+            raise AccessDeniedChatError(
                 chat_id=str(command.chat_id), requester_id=user_id
             )
 
@@ -73,12 +72,12 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
             claimed = await self.attachment_repository.get_by_ids(command.upload_tokens)
 
         if claimed and len(command.upload_tokens) != len(claimed):
-            raise AttachmentNotFoundException(attachment_id="")
+            raise AttachmentNotFoundError(attachment_id="")
 
         if command.reply_to_id is not None:
             reply_msg = await self.message_repository.get_by_id(command.reply_to_id)
             if reply_msg is None:
-                raise NotFoundMessageException(message_id=str(command.reply_to_id))
+                raise NotFoundMessageError(message_id=str(command.reply_to_id))
 
         message_date = now_utc()
         next_seq = await self.chat_repository.allocate_message_seq(
@@ -86,7 +85,7 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
             message_date=message_date,
         )
         if next_seq is None:
-            raise NotFoundChatException(chat_id=str(command.chat_id))
+            raise NotFoundChatError(chat_id=str(command.chat_id))
 
         msg = Message.create(
             sender_id=user_id,

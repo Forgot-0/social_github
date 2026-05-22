@@ -4,7 +4,7 @@ from app.core.exceptions import ApplicationError
 
 
 @dataclass(eq=False, kw_only=True)
-class PaginationParamsException(ApplicationError):
+class PaginationParamsError(ApplicationError):
     field: str
     limit: int
     code: int = 400
@@ -22,7 +22,7 @@ class PaginationParamsException(ApplicationError):
 
 
 @dataclass(eq=False, kw_only=True)
-class ValueMustNotNoneException(ApplicationError):
+class ValueMustNotNoneError(ApplicationError):
     field: str
     code: int = 400
     status: str = "VALUE_MUST_NOT_NONE"

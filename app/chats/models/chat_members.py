@@ -1,18 +1,18 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Self
-from uuid import UUID as PyUUID
+from uuid import UUID
 
-from sqlalchemy import UUID, BigInteger, DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy import UUID as SAUUID, BigInteger, DateTime, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
-from app.chats.models.chat_roles import ChatRole
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
 
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
+    from app.chats.models.chat_roles import ChatRole
 
 
 class ChatMember(BaseModel, DateMixin):
@@ -20,7 +20,10 @@ class ChatMember(BaseModel, DateMixin):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
-    chat_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
+    chat_id: Mapped[UUID] = mapped_column(
+        SAUUID(as_uuid=True),
+        ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
+    )
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     role_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("chat_roles.id", ondelete="CASCADE"), index=True
@@ -45,7 +48,7 @@ class ChatMember(BaseModel, DateMixin):
 
 
     @classmethod
-    def create(cls, chat_id: PyUUID, user_id: int, role_id: int) -> Self:
+    def create(cls, chat_id: UUID, user_id: int, role_id: int) -> Self:
         instance = cls(
             chat_id=chat_id,
             user_id=user_id,
@@ -64,7 +67,7 @@ class ChatMember(BaseModel, DateMixin):
                 reason=reason,
                 banned_at=now_utc(),
                 banned_to=banned_to,
-                
+
             )
         )
 

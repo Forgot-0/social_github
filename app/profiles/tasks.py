@@ -12,7 +12,7 @@ from app.core.services.storage.dtos import UploadFile
 from app.core.services.storage.service import StorageService
 from app.profiles.config import profile_config
 from app.profiles.events.avatars.uploaded import UploadedAvatarsEvent
-from app.profiles.exceptions import AvatarNotImageType
+from app.profiles.exceptions import AvatarNotImageTypeError
 from app.profiles.models.profile import SizeAvatar
 
 
@@ -40,7 +40,7 @@ class AvatarUploadTask(BaseTask):
         mime = magic.from_buffer(data, mime=True)
 
         if not mime.startswith("image/"):
-            raise AvatarNotImageType(type_avatar=mime)
+            raise AvatarNotImageTypeError(type_avatar=mime)
 
         img: pyvips.Image = pyvips.Image.new_from_buffer(data, "") # type: ignore
         versions = {}

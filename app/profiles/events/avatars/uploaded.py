@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events.event import BaseEvent, BaseEventHandler
-from app.profiles.exceptions import NotFoundProfileException
+from app.profiles.exceptions import NotFoundProfileError
 from app.profiles.repositories.profiles import ProfileRepository
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class UploadedAvatarsEventHandler(BaseEventHandler[UploadedAvatarsEvent, None]):
     async def __call__(self, event: UploadedAvatarsEvent) -> None:
         profile = await self.profile_repository.get_by_id(event.profile_id)
         if profile is None:
-            raise NotFoundProfileException(profile_id=event.profile_id)
+            raise NotFoundProfileError(profile_id=event.profile_id)
 
         profile.avatars = event.versions # type: ignore
         await self.session.commit()

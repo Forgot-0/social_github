@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.auth.login import LoginCommand, LoginCommandHandler
 from app.auth.commands.auth.refresh_token import RefreshTokenCommand, RefreshTokenCommandHandler
-from app.auth.exceptions import NotFoundOrInactiveSessionException
+from app.auth.exceptions import NotFoundOrInactiveSessionError
 from app.auth.models.user import User
 from app.auth.repositories.session import SessionRepository
 from app.auth.services.jwt import AuthJWTManager
 from app.core.services.auth.dto import JwtTokenType
-from app.core.services.auth.exceptions import InvalidTokenException
+from app.core.services.auth.exceptions import InvalidTokenError
 from tests.auth.integration.factories import AuthCommandFactory
 
 
@@ -66,7 +66,7 @@ class TestRefreshTokenCommand:
             refresh_token="invalid_token",
         )
 
-        with pytest.raises(InvalidTokenException):
+        with pytest.raises(InvalidTokenError):
             await refresh_handler.handle(refresh_command)
 
     async def test_refresh_token_inactive_session(
@@ -96,7 +96,7 @@ class TestRefreshTokenCommand:
             refresh_token=tokens.refresh_token,
         )
 
-        with pytest.raises(NotFoundOrInactiveSessionException):
+        with pytest.raises(NotFoundOrInactiveSessionError):
             await refresh_handler.handle(refresh_command)
 
     async def test_refresh_token_updates_session_activity(

@@ -1,3 +1,4 @@
+from typing import Annotated
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
@@ -11,7 +12,7 @@ from app.chats.commands.messages.modify import EditMessageCommand
 from app.chats.commands.messages.send import SendMessageCommand
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO, MessagesDTO
-from app.chats.exceptions import IdempotencyConflictException
+from app.chats.exceptions import IdempotencyConflictError
 from app.chats.queries.messages.get_context import GetMessageContextQuery
 from app.chats.queries.messages.get_detail import GetMessageDetailQuery
 from app.chats.queries.messages.get_list import GetMessagesQuery
@@ -33,8 +34,8 @@ async def list_messages(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-    limit: int = Query(default=30, ge=1, le=100),
-    cursor_message_seq: int | None = Query(default=None, ge=0),
+    limit: Annotated[int, Query(default=30, ge=1, le=100)],
+    cursor_message_seq: Annotated[int | None, Query(default=None, ge=0)],
 ) -> MessagesDTO:
     return await mediator.handle_query(
         GetMessagesQuery(
@@ -51,8 +52,8 @@ async def get_message_context(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-    target_seq: int = Query(ge=0),
-    limit: int = Query(default=40, ge=1, le=100),
+    target_seq: Annotated[int, Query(ge=0)],
+    limit: Annotated[int, Query(default=40, ge=1, le=100)],
 ) -> MessagesDTO:
     return await mediator.handle_query(
         GetMessageContextQuery(
@@ -71,7 +72,7 @@ async def send_message(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
     redis: FromDishka[Redis],
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key: Annotated[str | None, Header(default=None, alias="Idempotency-Key")],
 ) -> MessageDTO:
     cache_key = None
     lock_key = None
@@ -83,7 +84,7 @@ async def send_message(
             return MessageDTO.model_validate_json(cached)
         locked = await redis.set(lock_key, "1", ex=30, nx=True)
         if not locked:
-            raise IdempotencyConflictException(key=idempotency_key)
+            raise IdempotencyConflictError(key=idempotency_key)
 
     try:
         result, *_ = await mediator.handle_command(

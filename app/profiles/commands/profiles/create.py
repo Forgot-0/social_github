@@ -5,7 +5,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
-from app.profiles.exceptions import AlreadeExistProfileException
+from app.profiles.exceptions import AlreadeExistProfileError
 from app.profiles.models.profile import Profile
 from app.profiles.repositories.profiles import ProfileRepository
 
@@ -31,7 +31,7 @@ class CreateProfileCommandHanler(BaseCommandHandler[CreateProfileCommand, None])
     async def handle(self, command: CreateProfileCommand) -> None:
         profile = await self.profile_repository.get_by_id(command.user_id)
         if profile:
-            raise AlreadeExistProfileException
+            raise AlreadeExistProfileError
 
         profile = Profile.create(
             username=command.username,
