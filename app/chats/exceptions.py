@@ -337,3 +337,23 @@ class EmptyAttachmentUploadRequestError(ApplicationError):
     @property
     def detail(self) -> dict[str, Any]:
         return {}
+
+
+@dataclass(kw_only=True)
+class MaxLimitCursorError(ApplicationError):
+    max_len: int
+    current_len: int
+
+    code: str = "MAX_LIMIT_CURSOR"
+    status: int = 429
+
+    @property
+    def message(self) -> str:
+        return "Max limit cursor"
+
+    @property
+    def detail(self) -> dict:
+        return {
+            "max": self.max_len,
+            "current": self.current_len
+        }

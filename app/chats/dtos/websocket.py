@@ -92,7 +92,7 @@ class WSConnection:
         except asyncio.CancelledError:
             raise
         except Exception:
-            pass
+            return
 
     def touch(self) -> None:
         self.last_seen_at = now_utc()

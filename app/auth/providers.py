@@ -132,9 +132,9 @@ class AuthModuleProvider(Provider):
                     client_id=auth_config.OAUTH_GOOGLE_CLIENT_ID,
                     client_secret=auth_config.OAUTH_GOOGLE_CLIENT_SECRET,
                     redirect_uri=auth_config.OAUTH_GOOGLE_REDIRECT_URI,
-                    base_auth_url="https://accounts.google.com/o/oauth2/v2/auth",
-                    token_url="https://oauth2.googleapis.com/token",
-                    userinfo_url="https://openidconnect.googleapis.com/v1/userinfo"
+                    base_auth_url=auth_config.OAUTH_GOOGLE_BASE_AUTH_URL,
+                    token_url=auth_config.OAUTH_GOOGLE_TOKEN_URL,
+                    userinfo_url=auth_config.OAUTH_GOOGLE_USERINFO_URL
                 )
             )
 
@@ -145,9 +145,9 @@ class AuthModuleProvider(Provider):
                     client_id=auth_config.OAUTH_YANDEX_CLIENT_ID,
                     client_secret=auth_config.OAUTH_YANDEX_CLIENT_SECRET,
                     redirect_uri=auth_config.OAUTH_YANDEX_REDIRECT_URI,
-                    base_auth_url="https://oauth.yandex.ru/authorize",
-                    token_url="https://oauth.yandex.ru/token",
-                    userinfo_url="https://login.yandex.ru/info"
+                    base_auth_url=auth_config.OAUTH_YANDEX_BASE_AUTH_URL,
+                    token_url=auth_config.OAUTH_YANDEX_TOKEN_URL,
+                    userinfo_url=auth_config.OAUTH_YANDEX_USERINFO_URL
                 )
             )
 
@@ -158,9 +158,9 @@ class AuthModuleProvider(Provider):
                     client_id=auth_config.OAUTH_GITHUB_CLIENT_ID,
                     client_secret=auth_config.OAUTH_GITHUB_CLIENT_SECRET,
                     redirect_uri=auth_config.OAUTH_GITHUB_REDIRECT_URI,
-                    base_auth_url="https://github.com/login/oauth/authorize",
-                    token_url="https://github.com/login/oauth/access_token",
-                    userinfo_url="https://api.github.com/user"
+                    base_auth_url=auth_config.OAUTH_GITHUB_BASE_AUTH_URL,
+                    token_url=auth_config.OAUTH_GITHUB_TOKEN_URL,
+                    userinfo_url=auth_config.OAUTH_GITHUB_USERINFO_URL
                 )
             )
 

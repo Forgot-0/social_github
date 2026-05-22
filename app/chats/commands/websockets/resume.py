@@ -4,6 +4,7 @@ from uuid import UUID
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO
 from app.chats.dtos.websocket import WSConnection
+from app.chats.exceptions import MaxLimitCursorError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import WSClientOp
@@ -29,7 +30,7 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
 
     async def handle(self, command: ResumeCommand) -> None:
         if len(command.cursor) > 20:
-            raise
+            raise MaxLimitCursorError(max_len=20, current_len=len(command.cursor))
 
         for chat_id, cursor_seq in command.cursor.items():
             member = await self.chat_repository.get_member_chat(
