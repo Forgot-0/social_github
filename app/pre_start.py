@@ -20,8 +20,8 @@ async def init(db: AsyncSession) -> None:
     try:
         await db.execute(select(1))
     except Exception as exc:
-        logger.error("database_init_error", extra={"error": exc}, exc_info=exc)
-        raise exc
+        logger.exception("database_init_error", extra={"error": exc}, exc_info=exc)
+        raise
 
 
 async def pre_start(db: AsyncSession) -> None:

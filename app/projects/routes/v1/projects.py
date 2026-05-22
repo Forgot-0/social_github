@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Query, status
 
@@ -61,7 +63,7 @@ async def create_project(
 async def get_projects(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-    project_filter: GetProjectsRequest = Query(...),
+    project_filter: Annotated[GetProjectsRequest, Query()],
 ) -> PageResult[ProjectDTO]:
     return await mediator.handle_query(
         GetProjectsQuery(
@@ -77,7 +79,7 @@ async def get_projects(
 async def get_my_projects(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-    request: GetMyProjectsRequest = Query(...),
+    request: Annotated[GetMyProjectsRequest, Query()],
 ) -> PageResult[ProjectDTO]:
     return await mediator.handle_query(
         GetMyProjectsQuery(
@@ -147,7 +149,7 @@ async def delete_project(
 async def get_project_positions(
     project_id: int,
     mediator: FromDishka[BaseMediator],
-    filters: GetProjectPositionRequest=Query(...),
+    filters: Annotated[GetProjectPositionRequest, Query()],
 ) -> None:
     return await mediator.handle_query(
         GetProjectPositionsQuery(

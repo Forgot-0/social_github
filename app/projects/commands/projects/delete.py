@@ -37,7 +37,8 @@ class DeleteProjectCommandHandler(BaseCommandHandler[DeleteProjectCommand, None]
             user_jwt_data=command.user_jwt_data,
             project=project,
             must_permissions={"project:delete"}
-        ): raise AccessDeniedException(need_permissions={"project:delete" })
+        ):
+            raise AccessDeniedException(need_permissions={"project:delete" })
 
         project.soft_delete()
         await self.session.commit()

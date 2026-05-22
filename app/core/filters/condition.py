@@ -38,6 +38,6 @@ class FilterCondition:
     operator: FilterOperator
     value: Any
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.value is None and self.operator not in null_set:
             raise ValueMustNotNoneException(field=self.field)

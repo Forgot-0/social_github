@@ -1,7 +1,6 @@
 
 from dishka import Provider, Scope, provide
 from minio import Minio
-from redis.asyncio import Redis
 
 from app.core.configs.app import app_config
 from app.core.services.storage.aminio.policy import Policy
@@ -17,7 +16,7 @@ class CoreProvider(Provider):
             endpoint=app_config.storage_url,
             access_key=app_config.STORAGE_ACCESS_KEY,
             secret_key=app_config.STORAGE_SECRET_KEY,
-            secure=True if app_config.ENVIRONMENT == "production" else False
+            secure=app_config.ENVIRONMENT == "production",
         )
 
     @provide(scope=Scope.APP)

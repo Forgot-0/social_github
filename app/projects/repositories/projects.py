@@ -13,8 +13,8 @@ from app.projects.models.project import Project
 class ProjectRepository(IRepository[Project], CacheRepository):
     _LIST_VERSION_KEY = "project:list"
 
-    async def get_by_id(self, id: int, with_member: bool=False, with_positon: bool=False) -> Project | None:
-        stmt = select(Project).where(Project.id==id)
+    async def get_by_id(self, project_id: int, with_member: bool=False, with_positon: bool=False) -> Project | None:
+        stmt = select(Project).where(Project.id==project_id)
         if with_member:
             stmt = stmt.options(selectinload(Project.memberships))
 
@@ -58,7 +58,7 @@ class ProjectRepository(IRepository[Project], CacheRepository):
         )
         return list(result.scalars().all())
 
-    async def list_my_projects(self, user_id: int, page: int = 1, page_size: int = 20):
+    async def list_my_projects(self, user_id: int, page: int = 1, page_size: int = 20) -> PageResult[Project]:
         stmt = (
             select(Project)
             .outerjoin(ProjectMembership, ProjectMembership.project_id == Project.id)

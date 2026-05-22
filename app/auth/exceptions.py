@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Any
 
-from app.core.exceptions import ApplicationException
+from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundUserException(ApplicationException):
+class NotFoundUserException(ApplicationError):
     user_by: str | int
     user_field: str
 
@@ -22,7 +22,7 @@ class NotFoundUserException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class WrongLoginDataException(ApplicationException):
+class WrongLoginDataException(ApplicationError):
     username: str
 
     code: str = "WRONG_LOGIN_DATA"
@@ -38,7 +38,7 @@ class WrongLoginDataException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class OAuthStateNotFoundException(ApplicationException):
+class OAuthStateNotFoundException(ApplicationError):
     state: str
 
     code: str = "OAUTH_STATE_NOT_FOUND"
@@ -54,7 +54,7 @@ class OAuthStateNotFoundException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class LinkedAnotherUserOAuthException(ApplicationException):
+class LinkedAnotherUserOAuthException(ApplicationError):
     provider: str
 
     code: str = "LINKED_ANOTHER_USER_OAUTH"
@@ -70,7 +70,7 @@ class LinkedAnotherUserOAuthException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotFoundRoleException(ApplicationException):
+class NotFoundRoleException(ApplicationError):
     name: str
 
     code: str = "NOT_FOUND_ROLE"
@@ -86,7 +86,7 @@ class NotFoundRoleException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class InvalidRoleNameException(ApplicationException):
+class InvalidRoleNameException(ApplicationError):
     name: str
 
     code: str = "INVALID_ROLE_NAME"
@@ -102,7 +102,7 @@ class InvalidRoleNameException(ApplicationException):
 
 
 @dataclass
-class NotFoundOrInactiveSessionException(ApplicationException):
+class NotFoundOrInactiveSessionException(ApplicationError):
     code: str = "NOT_FOUND_OR_INACTIVE_SESSION"
     status: int = 400
 
@@ -116,7 +116,7 @@ class NotFoundOrInactiveSessionException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotFoundPermissionsException(ApplicationException):
+class NotFoundPermissionsException(ApplicationError):
     missing: set[str]
 
     code: str = "NOT_FOUND_PERMISSIONS"
@@ -132,7 +132,7 @@ class NotFoundPermissionsException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class ProtectedPermissionException(ApplicationException):
+class ProtectedPermissionException(ApplicationError):
     name: str
 
     code: str = "PROTECTED_PERMISSION"
@@ -148,7 +148,7 @@ class ProtectedPermissionException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class DuplicateUserException(ApplicationException):
+class DuplicateUserException(ApplicationError):
     field: str
     value: str
 
@@ -165,7 +165,7 @@ class DuplicateUserException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class DuplicateRoleException(ApplicationException):
+class DuplicateRoleException(ApplicationError):
     name: str
 
     code: str = "DUPLICATE_ROLE"
@@ -180,7 +180,7 @@ class DuplicateRoleException(ApplicationException):
         return {"name": self.name}
 
 @dataclass(kw_only=True)
-class DuplicatePermissionException(ApplicationException):
+class DuplicatePermissionException(ApplicationError):
     name: str
 
     code: str = "DUPLICATE_PERMISSION"
@@ -196,7 +196,7 @@ class DuplicatePermissionException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class PasswordMismatchException(ApplicationException):
+class PasswordMismatchException(ApplicationError):
     code: str = "PASSWORD_MISMATCH"
     status: int = 400
 
@@ -210,7 +210,7 @@ class PasswordMismatchException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class EmailNotConfirmedException(ApplicationException):
+class EmailNotConfirmedException(ApplicationError):
     email: str
 
     code: str = "EMAIL_NOT_CONFIRMED"
@@ -226,7 +226,7 @@ class EmailNotConfirmedException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotExistProviderOAuthException(ApplicationException):
+class NotExistProviderOAuthException(ApplicationError):
     provider: str
 
     code: str = "NOT_EXIST_PROVIDER_OAUTH"

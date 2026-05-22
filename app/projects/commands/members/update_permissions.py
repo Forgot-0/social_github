@@ -36,7 +36,8 @@ class UpdateMemberPermissionsCommandHandler(BaseCommandHandler[UpdateMemberPermi
             user_jwt_data=command.user_jwt_data,
             project=project,
             must_permissions={"member:update", "permission:update"}
-        ): raise AccessDeniedException(need_permissions={"member:update", "permission:update"})
+        ):
+            raise AccessDeniedException(need_permissions={"member:update", "permission:update"})
 
         member = project.get_memeber_by_user_id(command.target_user_id)
         if member is None:

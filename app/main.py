@@ -1,6 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, AsyncGenerator
 
 import redis.asyncio as redis
 from aiojobs import Scheduler
@@ -22,7 +22,7 @@ from app.core.api.builder import create_response
 from app.core.api.schemas import ErrorDetail, ErrorResponse, ORJSONResponse
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
-from app.core.exceptions import ApplicationException, ValidationException
+from app.core.exceptions import ApplicationError, ValidationException
 from app.core.log.init import configure_logging
 from app.core.message_brokers.base import BaseMessageBroker
 from app.core.middlewares.context import ContextMiddleware
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) :
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting FastAPI")
     async with app.state.dishka_container() as request_container:
         session = await request_container.get(AsyncSession)
@@ -89,7 +89,7 @@ def setup_router(app: FastAPI) -> None:
     app.include_router(notification_router_v1, prefix=app_config.API_V1_STR)
 
 
-def handle_application_exception(request: Request, exc: ApplicationException) -> ORJSONResponse:
+def handle_application_exception(request: Request, exc: ApplicationError) -> ORJSONResponse:
     logger.error(
         "Application exception",
         exc_info=exc,
@@ -202,8 +202,8 @@ def custom_openapi(app: FastAPI) -> dict[str, Any]:
             app_json = content.setdefault("application/json", {})
             app_json["schema"] = schema_ref
 
-    for path, path_item in openapi_schema.get("paths", {}).items():
-        for method, operation in path_item.items():
+    for path_item in openapi_schema.get("paths", {}).values():
+        for operation in path_item.values():
             if not isinstance(operation, dict):
                 continue
             responses_obj = operation.get("responses", {})
@@ -241,7 +241,7 @@ def init_app() -> FastAPI:
     setup_router(app)
 
     app.add_exception_handler(Exception, handle_unknown_exception)
-    app.add_exception_handler(ApplicationException, handle_application_exception) # type: ignore
+    app.add_exception_handler(ApplicationError, handle_application_exception) # type: ignore
     app.add_exception_handler(RequestValidationError, handle_validation_exception) # type: ignore
     app.openapi = lambda: custom_openapi(app)
     return app
@@ -263,7 +263,7 @@ def test_app() -> FastAPI:
     setup_router(app)
 
     app.add_exception_handler(Exception, handle_unknown_exception)
-    app.add_exception_handler(ApplicationException, handle_application_exception) # type: ignore
+    app.add_exception_handler(ApplicationError, handle_application_exception) # type: ignore
     app.add_exception_handler(RequestValidationError, handle_validation_exception) # type: ignore
     app.openapi = lambda: custom_openapi(app)
     return app

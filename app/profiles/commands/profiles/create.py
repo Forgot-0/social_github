@@ -31,7 +31,7 @@ class CreateProfileCommandHanler(BaseCommandHandler[CreateProfileCommand, None])
     async def handle(self, command: CreateProfileCommand) -> None:
         profile = await self.profile_repository.get_by_id(command.user_id)
         if profile:
-            raise AlreadeExistProfileException()
+            raise AlreadeExistProfileException
 
         profile = Profile.create(
             username=command.username,

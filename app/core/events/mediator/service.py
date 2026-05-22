@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from dishka import AsyncContainer
 
-from app.core.configs.app import app_config
 from app.core.events.event import BaseEvent
 from app.core.events.service import BaseEventBus
 from app.core.message_brokers.base import BaseMessageBroker
@@ -25,8 +24,3 @@ class MediatorEventBus(BaseEventBus):
                     handler = await requests_container.get(type_handler)
                     await handler(event)
 
-            # await self.message_broker.send_event(
-            #     key=event.get_partition_key(),
-            #     topic=app_config.ANALYTICS_KAFKA_TOPIC,
-            #     event=event
-            # )

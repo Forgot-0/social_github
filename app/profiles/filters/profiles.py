@@ -10,7 +10,7 @@ class ProfileFilter(BaseFilter):
     display_name: str | None = None
     skills: list[str] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._build_conditions()
 
     def _build_conditions(self) -> None:

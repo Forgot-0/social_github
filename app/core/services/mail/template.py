@@ -10,11 +10,11 @@ class BaseTemplate(ABC):
 
     @property
     def env(self) -> Environment:
-        if self.__class__._env is None:
-            self.__class__._env = Environment(
+        if self._env is None:
+            self._env = Environment(
                 loader=FileSystemLoader(self._get_dir()), autoescape=True
             )
-        return self.__class__._env
+        return self._env
 
     @abstractmethod
     def _get_dir(self) -> Path: ...
@@ -29,4 +29,4 @@ class BaseTemplate(ABC):
         try:
             return self.env.get_template(self._get_name()).render(self._get_data())
         except Exception as exc:
-            raise exc
+            raise

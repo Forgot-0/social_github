@@ -19,7 +19,7 @@ class BaseEvent(ABC):
     def get_name(cls) -> str:
         name = getattr(cls, "__event_name__", None)
         if name is None:
-            raise FieldRequiredException()
+            raise FieldRequiredException
         return name
 
     @abstractmethod

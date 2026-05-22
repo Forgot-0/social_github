@@ -56,7 +56,7 @@ class DecideApplicationCommandHandler(BaseCommandHandler[DecideApplicationComman
 
             existing_member = project.get_memeber_by_user_id(application.candidate_id)
             if existing_member is not None:
-                raise AlreadyMemberException()
+                raise AlreadyMemberException
 
             project.invite_memeber(
                 user_id=application.candidate_id,

@@ -63,7 +63,7 @@ class AvatarPreSignUrlRequest(BaseModel):
 
     @field_validator("content_type")
     @classmethod
-    def validate_content_type(cls, v):
+    def validate_content_type(cls, v: str) -> str:
         if v.split("/")[0] != "image":
             raise AvatarNotImageType(type_avatar="")
         return v

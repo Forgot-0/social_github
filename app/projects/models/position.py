@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Self
-from uuid import UUID as PyUUID, uuid4 # noqa: N811
+from typing import TYPE_CHECKING, Any, Self
+from uuid import UUID as PyUUID, uuid4
 
 from sqlalchemy import UUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -106,7 +106,7 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
         self.is_open = False
 
     @validates("required_skills")
-    def validate_skills(self, key, value):
+    def validate_skills(self, key: Any, value: list[str]) -> list[str]:
 
         if len(value) != len(set(value)):
             raise ValueError("Duplicate skills are not allowed")

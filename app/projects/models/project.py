@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Optional, Self
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, Index, String, Text
+from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, Index, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 

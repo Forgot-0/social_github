@@ -32,7 +32,7 @@ class DeletePositionCommandHandler(BaseCommandHandler[DeletePositionCommand, Non
         if not position:
             raise NotFoundProjectException(project_id=0)
 
-        project = await self.project_repository.get_by_id(position.project_id, True, False)
+        project = await self.project_repository.get_by_id(position.project_id, with_member=True, with_positon=False)
         if not project:
             raise NotFoundProjectException(project_id=position.project_id)
 

@@ -1,3 +1,4 @@
+from typing import Annotated
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
@@ -21,7 +22,7 @@ router = APIRouter(route_class=DishkaRoute)
 async def list_applications(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-    filters: GetApplicationsRequest = Query(...),
+    filters: Annotated[GetApplicationsRequest, Query(...)]
 ) -> PageResult[ApplicationDTO]:
     return await mediator.handle_query(
         GetApplicationsQuery(
@@ -38,7 +39,7 @@ async def list_applications(
 async def me_applications(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-    filters: GetMeApplicationsRequest = Query(...),
+    filters: Annotated[GetMeApplicationsRequest, Query(...)],
 ) -> PageResult[ApplicationDTO]:
     return await mediator.handle_query(
         GetApplicationsQuery(

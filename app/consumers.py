@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
 from dishka.integrations.faststream import FastStreamProvider, setup_dishka
 from faststream import ContextRepo
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(context: ContextRepo) :
+async def lifespan(context: ContextRepo) -> AsyncGenerator[None, None]:
     logger.info("Starting FastStream")
     container = context.get("container__")
     message_broker = await container.get(BaseMessageBroker)
@@ -51,6 +52,7 @@ def init_app() -> AsgiFastStream:
     )
     app = AsgiFastStream(
         broker,
+        lifespan=lifespan,
         asgi_routes=[
             ("/metrics", make_asgi_app(registry)),
         ],

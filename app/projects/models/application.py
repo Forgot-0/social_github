@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
+from app.projects.exceptions import NotPendingStatusApplicationError
 
 if TYPE_CHECKING:
     from app.projects.models.position import Position
@@ -72,7 +73,7 @@ class Application(BaseModel, DateMixin):
 
     def accept(self, decided_by: int) -> None:
         if self.status != ApplicationStatus.pending:
-            raise
+            raise NotPendingStatusApplicationError
 
         self.status = ApplicationStatus.accepted
         self.decided_by = decided_by
@@ -81,7 +82,7 @@ class Application(BaseModel, DateMixin):
 
     def reject(self, decided_by: int) -> None:
         if self.status != ApplicationStatus.pending:
-            raise
+            raise NotPendingStatusApplicationError
 
         self.status = ApplicationStatus.rejected
         self.decided_by = decided_by

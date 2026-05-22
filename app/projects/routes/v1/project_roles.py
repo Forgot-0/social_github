@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Query, status
 
@@ -18,7 +20,7 @@ router = APIRouter(route_class=DishkaRoute)
 )
 async def get_project_roles(
     mediator: FromDishka[BaseMediator],
-    role_filter: GetProjectRolesRequest = Query(...)
+    role_filter: Annotated[GetProjectRolesRequest, Query(...)]
 ) -> PageResult[ProjectRoleDTO]:
     return await mediator.handle_query(
         GetProjectRolesQuery(

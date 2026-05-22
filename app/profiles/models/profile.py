@@ -1,5 +1,6 @@
 from datetime import date
 from enum import Enum
+from typing import Any
 
 from sqlalchemy import BigInteger, Date, Index, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -35,7 +36,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str] = mapped_column(String, unique=True)
 
-    avatars: Mapped[AvatarMap] = mapped_column(JSONB, default=dict())
+    avatars: Mapped[AvatarMap] = mapped_column(JSONB, default="{}")
     display_name: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_DISPLAY_NAME), nullable=True)
     bio: Mapped[str | None] = mapped_column(String(profile_config.MAX_LEN_BIO), nullable=True)
     specialization: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -122,11 +123,11 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
             )
         )
 
-    def remove_contact(self, provider: str):
+    def remove_contact(self, provider: str) -> None:
         self.contacts = [c for c in self.contacts if c.provider != provider]
 
     @validates("skills")
-    def validate_skills(self, key, value):
+    def validate_skills(self, key: Any, value: list[str]) -> list[str]:
 
         if len(value) != len(set(value)):
             raise ValueError("Duplicate skills are not allowed")

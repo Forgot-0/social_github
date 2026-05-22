@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 from typing import Any
 
-from app.core.exceptions import ApplicationException
-
-
+from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundNotificationException(ApplicationException):
+class NotFoundNotificationException(ApplicationError):
     notification_id: int
 
     status: int = 404
@@ -23,7 +21,7 @@ class NotFoundNotificationException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotificationAccessDeniedException(ApplicationException):
+class NotificationAccessDeniedException(ApplicationError):
     notification_id: int
 
     status: int = 403

@@ -58,8 +58,8 @@ class SQLAlchemyFilterConverter:
     ) -> ColumnElement[bool]:
         try:
             attr = SQLAlchemyFilterConverter.get_model_attribute(model, condition.field)
-        except AttributeError:
-            raise AttributeNotExistException(field=condition.field)
+        except AttributeError as err:
+            raise AttributeNotExistException(field=condition.field) from err
 
         return operators_map[condition.operator](attr, condition.value)
 
@@ -100,8 +100,8 @@ class SQLAlchemyFilterConverter:
 
         try:
             relationship_attr = getattr(model, loading.relationship_name)
-        except AttributeError:
-            raise AttributeNotExistException(field=loading.relationship_name)
+        except AttributeError as err:
+            raise AttributeNotExistException(field=loading.relationship_name) from err
 
         loader = strategy_map[loading.strategy](relationship_attr)
 

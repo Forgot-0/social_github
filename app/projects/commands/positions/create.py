@@ -41,7 +41,7 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
     event_bus: BaseEventBus
 
     async def handle(self, command: CreatePositionCommand) -> None:
-        project = await self.project_repository.get_by_id(command.project_id, True, True)
+        project = await self.project_repository.get_by_id(command.project_id, with_member=True, with_positon=True)
 
         if not project:
             raise NotFoundProjectException(project_id=command.project_id)
@@ -50,7 +50,8 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
             user_jwt_data=command.user_jwt_data,
             project=project,
             must_permissions={"position:create" }
-        ): raise AccessDeniedException(need_permissions={"position:create" })
+        ):
+            raise AccessDeniedException(need_permissions={"position:create" })
 
         project.new_position(
             title=command.title,

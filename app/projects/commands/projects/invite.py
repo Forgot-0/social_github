@@ -46,7 +46,8 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
             user_jwt_data=command.user_jwt_data,
             project=project,
             role=role
-        ): raise AccessDeniedException(need_permissions={"member:invite" })
+        ):
+            raise AccessDeniedException(need_permissions={"member:invite" })
 
         project.invite_memeber(
             user_id=command.user_id,

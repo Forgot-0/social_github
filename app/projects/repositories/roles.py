@@ -9,9 +9,9 @@ from app.projects.models.role import ProjectRole
 
 @dataclass
 class ProjectRoleRepository(IRepository[ProjectRole]):
-    async def get_by_id(self, id: int) -> ProjectRole | None:
+    async def get_by_id(self, project_id: int) -> ProjectRole | None:
         result = await self.session.execute(
-            select(ProjectRole).where(ProjectRole.id==id)
+            select(ProjectRole).where(ProjectRole.id==project_id)
         )
         return result.scalar()
 

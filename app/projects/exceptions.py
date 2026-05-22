@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
-from app.core.exceptions import ApplicationException
+from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundProjectException(ApplicationException):
+class NotFoundProjectException(ApplicationError):
     project_id: int
 
     code: str = "NOT_FOUND_PROJECT"
@@ -20,7 +20,7 @@ class NotFoundProjectException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotFoundPositionException(ApplicationException):
+class NotFoundPositionException(ApplicationError):
     position_id: str
 
     code: str = "NOT_FOUND_POSTION"
@@ -36,7 +36,7 @@ class NotFoundPositionException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotFoundMemberException(ApplicationException):
+class NotFoundMemberException(ApplicationError):
     member_id: int
 
     code: str = "NOT_FOUND_MEMBER"
@@ -52,7 +52,7 @@ class NotFoundMemberException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class AlreadyMemberException(ApplicationException):
+class AlreadyMemberException(ApplicationError):
     code: str = "ALREADY_MEMBER"
     status: int = 409
 
@@ -64,9 +64,22 @@ class AlreadyMemberException(ApplicationException):
     def detail(self) -> dict:
         return {}
 
+@dataclass
+class NotPendingStatusApplicationError(ApplicationError):
+    code: str = "NOT_PENDING_APPLICATION"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return ""
+
+    @property
+    def detail(self) -> dict:
+        return {}
+
 
 @dataclass(kw_only=True)
-class TooLongTagNameException(ApplicationException):
+class TooLongTagNameException(ApplicationError):
     name: str
     code: str = "TOO_LONG_TAG_NAME"
     status: int = 400
@@ -83,7 +96,7 @@ class TooLongTagNameException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class TooLongNameException(ApplicationException):
+class TooLongNameException(ApplicationError):
     name: str
     code: str = "TOO_LONG_NAME"
     status: int = 400
@@ -100,7 +113,7 @@ class TooLongNameException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotValidMemberStatusException(ApplicationException):
+class NotValidMemberStatusException(ApplicationError):
     member_status: str
     action: str
 
@@ -117,7 +130,7 @@ class NotValidMemberStatusException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotFoundProjectRoleException(ApplicationException):
+class NotFoundProjectRoleException(ApplicationError):
     role_id: int
 
     code: str = "NOT_FOUND_PROJECT_ROLE"
@@ -133,7 +146,7 @@ class NotFoundProjectRoleException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class RoleAlreadyExsistsException(ApplicationException):
+class RoleAlreadyExsistsException(ApplicationError):
     role_name: str
 
     code: str = "ROLE_ALREADY_EXISTS"
@@ -149,7 +162,7 @@ class RoleAlreadyExsistsException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class MaxProjectsLimitExceededException(ApplicationException):
+class MaxProjectsLimitExceededException(ApplicationError):
     owner_id: int
     limit: int
 
@@ -169,7 +182,7 @@ class MaxProjectsLimitExceededException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class MaxPositionsPerProjectLimitExceededException(ApplicationException):
+class MaxPositionsPerProjectLimitExceededException(ApplicationError):
     project_id: int
     limit: int
 
@@ -188,7 +201,7 @@ class MaxPositionsPerProjectLimitExceededException(ApplicationException):
         }
 
 @dataclass(kw_only=True)
-class AlreadySlugProjectExistsException(ApplicationException):
+class AlreadySlugProjectExistsException(ApplicationError):
     slug: str
     code: str = "ALREADY_EXISTS"
     status: int = 409

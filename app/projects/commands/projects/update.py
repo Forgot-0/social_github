@@ -43,7 +43,8 @@ class UpdateProjectCommandHandler(BaseCommandHandler[UpdateProjectCommand, None]
             user_jwt_data=command.user_jwt_data,
             project=project,
             must_permissions={"project:update"}
-        ): raise AccessDeniedException(need_permissions={"project:update" })
+        ):
+            raise AccessDeniedException(need_permissions={"project:update" })
 
         if command.name is not None:
             project.update_name(command.name)

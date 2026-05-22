@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.chats.config import chat_config
-from app.core.exceptions import ApplicationException
+from app.core.exceptions import ApplicationError
 
 
 @dataclass(kw_only=True)
-class NotFoundChatException(ApplicationException):
+class NotFoundChatException(ApplicationError):
     chat_id: str
     code: str = "NOT_FOUND_CHAT"
     status: int = 404
@@ -21,7 +21,7 @@ class NotFoundChatException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotChatMemberException(ApplicationException):
+class NotChatMemberException(ApplicationError):
     chat_id: str
     user_id: int
     code: str = "NOT_CHAT_MEMBER"
@@ -37,7 +37,7 @@ class NotChatMemberException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NotFoundMessageException(ApplicationException):
+class NotFoundMessageException(ApplicationError):
     message_id: str
     code: str = "NOT_FOUND_MESSAGE"
     status: int = 404
@@ -52,7 +52,7 @@ class NotFoundMessageException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class AccessDeniedChatException(ApplicationException):
+class AccessDeniedChatException(ApplicationError):
     chat_id: str
     requester_id: int
 
@@ -69,7 +69,7 @@ class AccessDeniedChatException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class SlowModeOutOfRangeException(ApplicationException):
+class SlowModeOutOfRangeException(ApplicationError):
     seconds: int
     code: str = "SLOW_MODE_OUT_OF_RANGE"
     status: int = 400
@@ -84,7 +84,7 @@ class SlowModeOutOfRangeException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class SlowModeLimitException(ApplicationException):
+class SlowModeLimitException(ApplicationError):
     chat_id: str
     retry_after: int
     code: str = "SLOW_MODE_LIMIT"
@@ -100,7 +100,7 @@ class SlowModeLimitException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class AlreadyMemberException(ApplicationException):
+class AlreadyMemberException(ApplicationError):
     user_id: int
     chat_id: str
     code: str = "ALREADY_CHAT_MEMBER"
@@ -116,7 +116,7 @@ class AlreadyMemberException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class TooLongChatRoleNameException(ApplicationException):
+class TooLongChatRoleNameException(ApplicationError):
     role_name: str
     code: str = "TOO_LONG_CHAT_ROLE_NAME"
     status: int = 400
@@ -131,7 +131,7 @@ class TooLongChatRoleNameException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class DirectChatAlreadyExistsException(ApplicationException):
+class DirectChatAlreadyExistsException(ApplicationError):
     chat_id: str
     code: str = "DIRECT_CHAT_EXISTS"
     status: int = 409
@@ -146,7 +146,7 @@ class DirectChatAlreadyExistsException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class MemberLimitExceededException(ApplicationException):
+class MemberLimitExceededException(ApplicationError):
     limit: int
     code: str = "MEMBER_LIMIT_EXCEEDED"
     status: int = 400
@@ -161,7 +161,7 @@ class MemberLimitExceededException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class MessageTooLongException(ApplicationException):
+class MessageTooLongException(ApplicationError):
     length: int
     max_length: int
     code: str = "MESSAGE_TOO_LONG"
@@ -177,7 +177,7 @@ class MessageTooLongException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class LiveKitServiceException(ApplicationException):
+class LiveKitServiceException(ApplicationError):
     reason: str
     code: str = "LIVEKIT_ERROR"
     status: int = 502
@@ -192,7 +192,7 @@ class LiveKitServiceException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class LiveKitUnauthorizedException(ApplicationException):
+class LiveKitUnauthorizedException(ApplicationError):
     code: str = "LIVEKIT_UNAUTHORIZED"
     status: int = 502
 
@@ -206,7 +206,7 @@ class LiveKitUnauthorizedException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class NoActiveCallException(ApplicationException):
+class NoActiveCallException(ApplicationError):
     chat_id: str
     code: str = "NO_ACTIVE_CALL"
     status: int = 404
@@ -221,7 +221,7 @@ class NoActiveCallException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class ActiveCallExistsException(ApplicationException):
+class ActiveCallExistsException(ApplicationError):
     chat_id: str
     code: str = "ACTIVE_CALL_EXISTS"
     status: int = 409
@@ -236,7 +236,7 @@ class ActiveCallExistsException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class AttachmentValidationException(ApplicationException):
+class AttachmentValidationException(ApplicationError):
     mime_type: str
     code: str = "ATTACHMENT_VALIDATION"
     status: int = 400
@@ -251,7 +251,7 @@ class AttachmentValidationException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class InvalidUploadTokenException(ApplicationException):
+class InvalidUploadTokenException(ApplicationError):
     token: str
     code: str = "INVALID_UPLOAD_TOKEN"
     status: int = 400
@@ -266,7 +266,7 @@ class InvalidUploadTokenException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class AttachmentLimitExceededException(ApplicationException):
+class AttachmentLimitExceededException(ApplicationError):
     count: int
     code: str = "ATTACHMENT_LIMIT_EXCEEDED"
     status: int = 400
@@ -281,7 +281,7 @@ class AttachmentLimitExceededException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class AttachmentNotFoundException(ApplicationException):
+class AttachmentNotFoundException(ApplicationError):
     attachment_id: str
     code: str = "ATTACHMENT_NOT_FOUND"
     status: int = 404
@@ -296,7 +296,7 @@ class AttachmentNotFoundException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class IdempotencyConflictException(ApplicationException):
+class IdempotencyConflictException(ApplicationError):
     key: str
     code: str = "IDEMPOTENCY_CONFLICT"
     status: int = 409
@@ -311,7 +311,7 @@ class IdempotencyConflictException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class InvalidMessageException(ApplicationException):
+class InvalidMessageException(ApplicationError):
     reason: str
     code: str = "INVALID_MESSAGE"
     status: int = 400
@@ -326,7 +326,7 @@ class InvalidMessageException(ApplicationException):
 
 
 @dataclass(kw_only=True)
-class EmptyAttachmentUploadRequestException(ApplicationException):
+class EmptyAttachmentUploadRequestException(ApplicationError):
     code: str = "EMPTY_ATTACHMENT_UPLOAD_REQUEST"
     status: int = 400
 
