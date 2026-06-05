@@ -21,6 +21,7 @@ from app.auth.services.jwt import AuthJWTManager
 from app.auth.services.oauth_manager import OAuthManager
 from app.auth.services.session import SessionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class ProcessOAuthCallbackCommandHandler(BaseCommandHandler[ProcessOAuthCallback
     session_manager: SessionManager
     oauth_repository: OauthAccountRepository
     oauth_code_repository: OAuthCodeRepository
+    event_bus: BaseEventBus
 
     async def handle(self, command: ProcessOAuthCallbackCommand) -> TokenGroup:
             oauth_data = await self.oauth_manager.process_callback(command.provider, command.code)
@@ -113,6 +115,8 @@ class ProcessOAuthCallbackCommandHandler(BaseCommandHandler[ProcessOAuthCallback
             )
             await self.oauth_code_repository.delete(command.state)
             await self.session.commit()
+            await self.event_bus.publish(session.pull_events())
+
             token_group = self.jwt_manager.create_token_pair(
                 AuthUserJWTData.create_from_user(user, device_id=session.device_id)
             )

@@ -6,8 +6,6 @@ from app.chats.config import chat_config
 from app.chats.keys import ChatKeys
 from app.core.utils import now_utc
 
-PRESENCE_TTL = chat_config.WS_HEARTBEAT_INTERVAL
-
 
 @dataclass
 class PresenceService:
@@ -16,7 +14,7 @@ class PresenceService:
     def _is_fresh_score(self, score: float | None, now_ts: float) -> bool:
         if score is None:
             return False
-        return (now_ts - score) <= PRESENCE_TTL
+        return (now_ts - score) <= chat_config.WS_HEARTBEAT_INTERVAL
 
     async def set_online(self, user_id: int) -> None:
         ts = now_utc().timestamp()

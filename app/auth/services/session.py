@@ -19,12 +19,11 @@ class SessionManager:
             existing_session.online()
             return existing_session
 
-        session = Session(
+        session = Session.create(
             user_id=user_id,
             device_id=device_data.device_id,
             device_info=device_data.device_info,
             user_agent=device_data.user_agent,
-            is_active=True
         )
         session.online()
 
@@ -41,7 +40,7 @@ class SessionManager:
         )
 
         if active_session:
-            active_session.last_activity = now_utc()
+            active_session.online()
             return active_session
 
         return active_session

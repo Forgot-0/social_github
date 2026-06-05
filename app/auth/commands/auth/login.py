@@ -11,6 +11,7 @@ from app.auth.services.hash import HashService
 from app.auth.services.jwt import AuthJWTManager
 from app.auth.services.session import SessionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class LoginCommandHandler(BaseCommandHandler[LoginCommand, TokenGroup]):
     session_manager: SessionManager
     jwt_manager: AuthJWTManager
     hash_service: HashService
+    event_bus: BaseEventBus
 
     async def handle(self, command: LoginCommand) -> TokenGroup:
         if "@" in command.username:
@@ -47,6 +49,7 @@ class LoginCommandHandler(BaseCommandHandler[LoginCommand, TokenGroup]):
         )
 
         await self.session.commit()
+        await self.event_bus.publish(session.pull_events())
 
         token_group = self.jwt_manager.create_token_pair(
             AuthUserJWTData.create_from_user(user, device_id=session.device_id)

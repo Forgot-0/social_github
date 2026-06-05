@@ -113,7 +113,7 @@ class AuthModuleProvider(Provider):
             CryptContext(schemes=["argon2"], deprecated="auto")
         )
 
-    jwt_manager = provide(AuthJWTManager, scope=Scope.REQUEST)
+    jwt_manager = provide(AuthJWTManager, scope=Scope.APP)
 
     @provide(scope=Scope.APP)
     def oauth_factory(self) -> OAuthProviderFactory:

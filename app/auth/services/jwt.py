@@ -3,23 +3,18 @@ from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.auth.config import auth_config
 from app.auth.dtos.tokens import TokenGroup, TokenType
 from app.auth.dtos.user import AuthUserJWTData
-from app.auth.exceptions import NotFoundOrInactiveSessionError
-from app.auth.repositories.session import SessionRepository, TokenBlacklistRepository
-from app.core.services.auth.dto import JwtTokenType, Token
-from app.core.services.auth.exceptions import ExpiredTokenError
+from app.auth.exceptions import NotFoundOrInactiveSessionError, TokenInBlacklistError
+from app.auth.repositories.session import TokenBlacklistRepository
+from app.core.services.auth.dto import Token
 from app.core.services.auth.jwt_manager import JWTManager
 from app.core.utils import fromtimestamp, now_utc
 
 
 @dataclass
 class AuthJWTManager(JWTManager):
-    session: AsyncSession
-    session_repository: SessionRepository
     token_blacklist: TokenBlacklistRepository
 
     def generate_payload(self, user_data: AuthUserJWTData, token_type: TokenType) -> dict[str, Any]:
@@ -63,28 +58,16 @@ class AuthJWTManager(JWTManager):
     async def refresh_tokens(self, refresh_token: Token, security_user: AuthUserJWTData) -> TokenGroup:
         token_iat_dt = fromtimestamp(refresh_token.iat)
 
-        session = await self.session_repository.get_active_by_device(
-                int(refresh_token.sub), device_id=refresh_token.did
-            )
-        if session is None:
-            raise NotFoundOrInactiveSessionError
-
         blacklisted_token_date = await self.token_blacklist.get_token_backlist(refresh_token.jti)
         if blacklisted_token_date and blacklisted_token_date > token_iat_dt:
-
-            session.deactivate()
-            await self.session.commit()
-
-            raise ExpiredTokenError(token=None)
+            raise TokenInBlacklistError
 
         blacklisted_user_date = await self.token_blacklist.get_user_backlist(int(refresh_token.sub))
         if blacklisted_user_date and blacklisted_user_date > token_iat_dt:
-            raise ExpiredTokenError(token=None)
+            raise TokenInBlacklistError
 
         await self.revoke_token(refresh_token)
 
-        session.online()
-        await self.session.commit()
         return self.create_token_pair(security_user=security_user)
 
     async def revoke_token(self, token: Token) -> None:

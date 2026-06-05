@@ -240,3 +240,12 @@ class NotExistProviderOAuthError(ApplicationError):
     def detail(self) -> dict[str, Any]:
         return {"provider": self.provider}
 
+
+@dataclass
+class TokenInBlacklistError(ApplicationError):
+    code: str = "TOKEN_IN_BLACKLIST"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return ""
