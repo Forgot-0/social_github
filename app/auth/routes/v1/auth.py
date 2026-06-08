@@ -54,7 +54,8 @@ router = APIRouter(route_class=DishkaRoute)
     status_code=status.HTTP_200_OK,
     responses={
         400: create_response(WrongLoginDataError(username="aboba"))
-    }
+    },
+    dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def login(
     mediator: FromDishka[BaseMediator],
@@ -208,7 +209,8 @@ async def reset_password(
     status_code=status.HTTP_200_OK,
     responses={
         400: create_response(NotExistProviderOAuthError(provider="test"))
-    }
+    },
+    dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def oauth_authorize(
     mediator: FromDishka[BaseMediator],
@@ -228,7 +230,8 @@ async def oauth_authorize(
     status_code=status.HTTP_200_OK,
     responses={
         400: create_response(NotExistProviderOAuthError(provider="test"))
-    }
+    },
+    dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def oauth_authorize_connect(
     mediator: FromDishka[BaseMediator],
