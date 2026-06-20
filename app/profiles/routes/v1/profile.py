@@ -10,7 +10,6 @@ from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand
-from app.profiles.commands.profiles.create import CreateProfileCommand
 from app.profiles.commands.profiles.remove_contact import RemoveContactToProfileCommand
 from app.profiles.commands.profiles.update import UpdateProfileCommand
 from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatarCommand
@@ -24,31 +23,11 @@ from app.profiles.schemas.profiles.requests import (
     AvatarPreSignUrlRequest,
     AvatarUploadCompleteRequest,
     GetProfilesRequest,
-    ProfileCreateRequest,
     ProfileUpdateRequest,
 )
 
 router = APIRouter(route_class=DishkaRoute)
 
-@router.post(
-    "",
-    status_code=status.HTTP_201_CREATED
-)
-async def create_profile(
-    profile_request: ProfileCreateRequest,
-    mediator: FromDishka[BaseMediator],
-    user_jwt_data: CurrentUserJWTData
-) -> None:
-    await mediator.handle_command(
-        CreateProfileCommand(
-            user_id=int(user_jwt_data.id),
-            username=user_jwt_data.username,
-            display_name=profile_request.display_name,
-            bio=profile_request.bio,
-            skills=profile_request.skills,
-            date_birthday=profile_request.date_birthday,
-        )
-    )
 
 @router.get(
     "",
