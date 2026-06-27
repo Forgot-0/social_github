@@ -25,6 +25,20 @@ class NewSessionEvent(BaseEvent):
         return str(self.user_id)
 
 
+@dataclass(frozen=True)
+class SuspiciousSessionEvent(BaseEvent):
+    user_id: int
+    session_id: int
+    reason: str
+    old_value: str | None
+    new_value: str | None
+
+    __event_name__: str = "auth.session.suspicious"
+
+    def get_partition_key(self) -> str:
+        return str(self.user_id)
+
+
 class Session(BaseModel):
     __tablename__ = "sessions"
     __table_args__ = (

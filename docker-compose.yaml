@@ -88,7 +88,7 @@ services:
       MINIO_COMPRESSION_MIME_TYPES: "text/*,application/json,application/xml"
       MINIO_MAX_CONNECTIONS: "1000"
       MINIO_CACHE_DRIVES: ""
-      MINIO_CACHE_EXCLUDE: ""
+      MINIO_CACHE_EXCLUDE: "" 
       MINIO_CACHE_QUOTA: "80"
       MINIO_CACHE_AFTER: "3"
       MINIO_CACHE_WATERMARK_LOW: "70"
