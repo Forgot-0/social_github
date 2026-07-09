@@ -13,10 +13,7 @@ class MemebrFilter(BaseFilter):
     status: MembershipStatus = MembershipStatus.active
     project_id: int | None = None
 
-    def __post_init__(self) -> None:
-        self._build_conditions()
-
-    def _build_conditions(self) -> None:
+    def build_condition(self) -> None:
         self.add_condition("user_id", FilterOperator.EQ, self.member_id)
         self.add_condition("invited_by", FilterOperator.EQ, self.invited_by)
         self.add_condition("project_id", FilterOperator.EQ, self.project_id)

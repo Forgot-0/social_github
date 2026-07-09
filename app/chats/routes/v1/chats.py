@@ -48,7 +48,7 @@ async def create_chat(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> ChatDTO:
-    chat, *_ = await mediator.handle_command(
+    chat = await mediator.handle_command(
         CreateChatCommand(
             name=payload.name,
             description=payload.description,
@@ -83,7 +83,7 @@ async def update_chat(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> ChatDTO:
-    chat, *_ = await mediator.handle_command(
+    chat = await mediator.handle_command(
         UpdateChatCommand(
             chat_id=chat_id,
             name=payload.name,

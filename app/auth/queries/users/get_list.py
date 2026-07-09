@@ -22,22 +22,22 @@ class GetListUserQueryHandler(BaseQueryHandler[GetListUserQuery, PageResult[User
     rbac_manager: AuthRBACManager
 
     async def handle(self, query: GetListUserQuery) -> PageResult[UserDTO]:
-        if not self.rbac_manager.check_permission(query.user_jwt_data, {"user:view" }):
+        if not self.rbac_manager.check_permission(query.user_jwt_data, {"user:view"}):
             raise AccessDeniedError(need_permissions={"user:view"} - set(query.user_jwt_data.permissions))
 
         return await self.user_repository.cache_paginated(
             UserDTO, self._handle, ttl=200,
-            query=query
+            user_filter=query.user_filter,
         )
 
-    async def _handle(self, query: GetListUserQuery) -> PageResult[UserDTO]:
+    async def _handle(self, user_filter: UserFilter) -> PageResult[UserDTO]:
         pagination_users = await self.user_repository.find_by_filter(
             User,
-            filters=query.user_filter
+            filters=user_filter
         )
 
         return PageResult(
-            items=[UserDTO.model_validate(user.to_dict()) for user in pagination_users.items],
+            items=[UserDTO.model_validate(user) for user in pagination_users.items],
             total=pagination_users.total,
             page=pagination_users.page,
             page_size=pagination_users.page_size

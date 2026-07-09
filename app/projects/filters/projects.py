@@ -11,10 +11,7 @@ class ProjectFilter(BaseFilter):
     slug: str | None = None
     tags: list[str] | None = None
 
-    def __post_init__(self) -> None:
-        self._build_conditions()
-
-    def _build_conditions(self) -> None:
+    def build_condition(self) -> None:
         self.add_condition("name", FilterOperator.CONTAINS, self.name)
 
 

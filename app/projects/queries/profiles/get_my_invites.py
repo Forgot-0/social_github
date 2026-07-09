@@ -31,7 +31,7 @@ class GetProfileInvitesQueryHandler(BaseQueryHandler[GetProfileInvitesQuery, Pag
         )
         page = await self.memebr_repository.find_by_filter(ProjectMembership, filters=filters)
         return PageResult(
-            items=[MemberDTO.model_validate(project.to_dict()) for project in page.items],
+            items=[MemberDTO.model_validate(project) for project in page.items],
             total=page.total,
             page=page.page,
             page_size=page.page_size

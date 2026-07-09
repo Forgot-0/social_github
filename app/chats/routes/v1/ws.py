@@ -17,7 +17,7 @@ from app.chats.config import chat_config
 from app.chats.dtos.websocket import WSConnection
 from app.chats.schemas.ws import WSClientCommand, WSClientOp
 from app.chats.services.ws import ChatConnectionManager
-from app.core.api.websocket import get_ws_access_token
+from app.core.api.utils import get_ws_access_token
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager

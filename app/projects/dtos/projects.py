@@ -1,9 +1,24 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.projects.dtos.members import MemberDTO
+from app.projects.dtos.roles import ProjectRoleDTO
+
+
+class ProjectMemberDTO(BaseModel):
+    id: int
+    project_id: int
+    user_id: int
+    role_id: int | None
+    status: str
+    invited_by: int | None
+    joined_at: datetime | None
+    permissions_overrides: dict
+
+    role: ProjectRoleDTO | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectDTO(BaseModel):
@@ -18,5 +33,7 @@ class ProjectDTO(BaseModel):
     tags: list[str]
     created_at: datetime | None
     updated_at: datetime | None
-    memberships: list[MemberDTO] = Field(default_factory=list)
+    memberships: list[ProjectMemberDTO] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
 

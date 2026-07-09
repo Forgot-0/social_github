@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class PositionDTO(BaseModel):
@@ -17,3 +17,4 @@ class PositionDTO(BaseModel):
     location_type: str
     expected_load: str
 
+    model_config = ConfigDict(from_attributes=True)

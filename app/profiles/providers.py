@@ -35,19 +35,19 @@ class ProfileModuleProvider(Provider):
     def register_profile_command_handlers(self, command_registry: CommandRegisty) -> CommandRegisty:
 
         command_registry.register_command(
-            CreateProfileCommand, [CreateProfileCommandHanler]
+            CreateProfileCommand, CreateProfileCommandHanler
         )
         command_registry.register_command(
-            UpdateProfileCommand, [UpdateProfileCommandHandler]
+            UpdateProfileCommand, UpdateProfileCommandHandler
         )
         command_registry.register_command(
-            UpdateProfileAvatarCommand, [UpdateProfileAvatarCommandHandler]
+            UpdateProfileAvatarCommand, UpdateProfileAvatarCommandHandler
         )
         command_registry.register_command(
-            AddContactToProfileCommand, [AddContactToProfileCommandHandler]
+            AddContactToProfileCommand, AddContactToProfileCommandHandler
         )
         command_registry.register_command(
-            RemoveContactToProfileCommand, [RemoveContactToProfileCommandHandler]
+            RemoveContactToProfileCommand, RemoveContactToProfileCommandHandler
         )
 
         return command_registry

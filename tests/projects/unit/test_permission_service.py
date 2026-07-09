@@ -1,9 +1,9 @@
 from typing import Callable
 
+from dishka import AsyncContainer
 import pytest
 
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.rbac import RBACManager
 from app.projects.models.member import MembershipStatus, ProjectMembership
 from app.projects.models.project import Project, ProjectVisibility
 from app.projects.models.role import ProjectRole
@@ -70,8 +70,8 @@ def make_jwt(user_id: str = "2", roles: list[str] | None = None, permissions: li
 
 
 @pytest.fixture
-def service() -> ProjectPermissionService:
-    return ProjectPermissionService(rbac_manager=RBACManager())
+async def service(di_container: AsyncContainer) -> ProjectPermissionService:
+    return await di_container.get(ProjectPermissionService)
 
 
 @pytest.mark.unit

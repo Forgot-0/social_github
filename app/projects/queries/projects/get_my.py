@@ -31,7 +31,7 @@ class GetMyProjectsQueryHandler(BaseQueryHandler[GetMyProjectsQuery, PageResult[
             page_size=query.page_size,
         )
         return PageResult(
-            items=[ProjectDTO.model_validate(project.to_dict()) for project in page.items],
+            items=[ProjectDTO.model_validate(project) for project in page.items],
             total=page.total,
             page=page.page,
             page_size=page.page_size,

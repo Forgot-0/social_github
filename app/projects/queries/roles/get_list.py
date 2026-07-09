@@ -20,7 +20,7 @@ class GetProjectRolesQueryHandler(BaseQueryHandler[GetProjectRolesQuery, PageRes
     async def handle(self, query: GetProjectRolesQuery) -> PageResult[ProjectRoleDTO]:
         page = await self.project_role_repository.find_by_filter(ProjectRole, query.filter)
         return PageResult(
-            items=[ProjectRoleDTO.model_validate(r.to_dict()) for r in page.items],
+            items=[ProjectRoleDTO.model_validate(r) for r in page.items],
             total=page.total,
             page=page.page,
             page_size=page.page_size

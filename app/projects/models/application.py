@@ -49,8 +49,8 @@ class Application(BaseModel, DateMixin):
     decided_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    project: Mapped["Project"] = relationship("Project", back_populates="applications")
-    position: Mapped["Position"] = relationship("Position", back_populates="applications")
+    project: Mapped["Project"] = relationship("Project", lazy="selectin", back_populates="applications")
+    position: Mapped["Position"] = relationship("Position", lazy="selectin", back_populates="applications")
 
     @classmethod
     def create(

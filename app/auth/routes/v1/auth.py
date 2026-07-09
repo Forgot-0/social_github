@@ -41,6 +41,7 @@ from app.auth.schemas.auth.responses import (
 from app.auth.services.cookie_manager import RefreshTokenCookieManager
 from app.core.api.builder import create_response
 from app.core.api.rate_limiter import ConfigurableRateLimiter
+from app.core.api.utils import get_ip_from_request
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.exceptions import ExpiredTokenError, InvalidTokenError
 
@@ -64,12 +65,12 @@ async def login(
     request: Request,
     response: Response
 ) -> AccessTokenResponse:
-    token_group: TokenGroup
-    token_group, *_ = await mediator.handle_command(
+    token_group: TokenGroup = await mediator.handle_command(
         LoginCommand(
             username=login_request.username,
             password=login_request.password,
-            user_agent=request.headers.get("user-agent", "")
+            user_agent=request.headers.get("user-agent", ""),
+            ip_adress=get_ip_from_request(request)
         )
     )
     refresh_cookie_manager.set_refresh_token(response, token_group.refresh_token)
@@ -92,12 +93,13 @@ async def refresh(
     mediator: FromDishka[BaseMediator],
     refresh_cookie_manager: FromDishka[RefreshTokenCookieManager],
     response: Response,
+    request: Request,
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> AccessTokenResponse:
-    token_group: TokenGroup
-    token_group, *_ = await mediator.handle_command(
+    token_group: TokenGroup = await mediator.handle_command(
         RefreshTokenCommand(
             refresh_token=refresh_token,
+            ip_adress=get_ip_from_request(request)
         )
     )
     refresh_cookie_manager.set_refresh_token(response, token_group.refresh_token)
@@ -216,8 +218,7 @@ async def oauth_authorize(
     mediator: FromDishka[BaseMediator],
     provider: str,
 ) -> OAuthUrlResponse:
-    url: str
-    url, *_ = await mediator.handle_command(
+    url: str = await mediator.handle_command(
         CreateOAuthAuthorizeUrlCommand(provider=provider, user_id=None)
     )
 
@@ -238,8 +239,7 @@ async def oauth_authorize_connect(
     provider: str,
     current_user: CurrentUserModel,
 ) -> OAuthUrlResponse:
-    url: str
-    url, *_ = await mediator.handle_command(
+    url: str = await mediator.handle_command(
         CreateOAuthAuthorizeUrlCommand(provider=provider, user_id=current_user.id)
     )
     return OAuthUrlResponse(url=url)
@@ -268,13 +268,13 @@ async def oauth_callback(
     response: Response,
     oauth_callback_query: Annotated[OAuthCallbackQuery, Query()],
 ) -> AccessTokenResponse:
-    token_group: TokenGroup
-    token_group, *_ = await mediator.handle_command(
+    token_group: TokenGroup = await mediator.handle_command(
         ProcessOAuthCallbackCommand(
             provider=provider,
             code=oauth_callback_query.code,
             state=oauth_callback_query.state,
             user_agent=request.headers.get("user-agent", ""),
+            ip_adress=get_ip_from_request(request)
         )
     )
     refresh_cookie_manager.set_refresh_token(response, token_group.refresh_token)

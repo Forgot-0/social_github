@@ -27,7 +27,7 @@ async def request_attachment_upload(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> list[UploadSlotDTO]:
-    slotts, *_ = await mediator.handle_command(
+    slotts = await mediator.handle_command(
         RequestAttachmentUploadCommand(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,

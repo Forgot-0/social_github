@@ -30,7 +30,7 @@ class GetApplicationsQueryHandler(BaseQueryHandler[GetApplicationsQuery, PageRes
 
         return PageResult(
             items=[
-                ApplicationDTO.model_validate(application.to_dict())
+                ApplicationDTO.model_validate(application)
                 for application in page.items
             ],
             total=page.total,

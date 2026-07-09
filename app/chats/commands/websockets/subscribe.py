@@ -71,7 +71,7 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
                         "messages": [
                             message.model_dump(mode="json")
                             for message in await self.message_service.attach_download_urls([
-                                MessageDTO.model_validate(item.to_dict()) for item in batch
+                                MessageDTO.model_validate(item) for item in batch
                             ])
                         ],
                         "has_more": len(messages) > limit,

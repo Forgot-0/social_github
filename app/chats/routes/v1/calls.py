@@ -24,7 +24,7 @@ async def join_call(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> JoinTokenDTO:
-    token_dto, *_ = await mediator.handle_command(JoinCallCommand(user_jwt_data=user_jwt_data, chat_id=chat_id))
+    token_dto = await mediator.handle_command(JoinCallCommand(user_jwt_data=user_jwt_data, chat_id=chat_id))
     return token_dto
 
 

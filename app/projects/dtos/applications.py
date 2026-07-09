@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ApplicationDTO(BaseModel):
@@ -14,3 +14,4 @@ class ApplicationDTO(BaseModel):
     decided_by: int | None
     decided_at: datetime | None
 
+    model_config = ConfigDict(from_attributes=True)

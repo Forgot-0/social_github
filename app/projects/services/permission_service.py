@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.rbac import RBACManager
+from app.core.services.auth.rbac import RBACManagerInterface
 from app.projects.models.member import MembershipStatus
 from app.projects.models.project import Project, ProjectVisibility
 from app.projects.models.role import ProjectRole
@@ -9,7 +9,7 @@ from app.projects.models.role import ProjectRole
 
 @dataclass
 class ProjectPermissionService:
-    rbac_manager: RBACManager
+    rbac_manager: RBACManagerInterface
 
     def can_update(
         self,

@@ -28,7 +28,7 @@ class GetProjectsQueryHandler(BaseQueryHandler[GetProjectsQuery, PageResult[Proj
     async def _handle(self, query: GetProjectsQuery) -> PageResult[ProjectDTO]:
         page = await self.project_repository.find_by_filter(Project, query.filter)
         return PageResult(
-            items=[ProjectDTO.model_validate(project.to_dict()) for project in page.items],
+            items=[ProjectDTO.model_validate(project) for project in page.items],
             total=page.total,
             page=page.page,
             page_size=page.page_size

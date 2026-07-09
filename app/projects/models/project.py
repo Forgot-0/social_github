@@ -73,18 +73,21 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
     memberships: Mapped[list["ProjectMembership"]] = relationship(
         "ProjectMembership",
+        lazy="selectin",
         back_populates="project",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     positions: Mapped[list["Position"]] = relationship(
         "Position",
+        lazy="selectin",
         back_populates="project",
         cascade="all, delete"
     )
 
     applications: Mapped[list[Application]] = relationship(
         "Application",
+        lazy="selectin",
         back_populates="project",
         cascade="all, delete"
     )

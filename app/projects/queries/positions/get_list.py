@@ -26,7 +26,7 @@ class GetProjectPositionsQueryHandler(BaseQueryHandler[GetProjectPositionsQuery,
         page = await self.position_repository.find_by_filter(Position, query.filter)
         return PageResult(
             items=[
-                PositionDTO.model_validate(position.to_dict())
+                PositionDTO.model_validate(position)
                 for position in page.items
             ],
             total=page.total,

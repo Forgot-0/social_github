@@ -21,5 +21,5 @@ class GetPositionByIdQueryHandler(BaseQueryHandler[GetPositionByIdQuery, Positio
         if position is None:
             raise NotFoundProjectError(project_id=0)
 
-        return PositionDTO.model_validate(position.to_dict())
+        return PositionDTO.model_validate(position)
 

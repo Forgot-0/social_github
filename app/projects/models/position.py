@@ -60,8 +60,8 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
         SAEnum(PositionLoad), nullable=False, server_default=PositionLoad.medium.name
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="positions")
-    applications: Mapped[list["Application"]] = relationship("Application", back_populates="position", lazy="noload")
+    project: Mapped["Project"] = relationship("Project", lazy="selectin", back_populates="positions")
+    applications: Mapped[list["Application"]] = relationship("Application", lazy="selectin", back_populates="position")
 
     @classmethod
     def create(

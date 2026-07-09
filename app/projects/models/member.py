@@ -48,10 +48,11 @@ class ProjectMembership(BaseModel, DateMixin):
 
     project: Mapped["Project"] = relationship(
         "Project",
+        lazy="selectin",
         back_populates="memberships",
     )
 
-    role: Mapped["ProjectRole"] = relationship("ProjectRole")
+    role: Mapped["ProjectRole"] = relationship("ProjectRole", lazy="selectin")
 
     __table_args__ = (UniqueConstraint("project_id", "user_id", name="uq_project_user"),)
 

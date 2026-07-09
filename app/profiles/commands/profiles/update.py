@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedError
-from app.core.services.auth.rbac import RBACManager
+from app.core.services.auth.rbac import RBACManagerInterface
 from app.profiles.exceptions import NotFoundProfileError
 from app.profiles.repositories.profiles import ProfileRepository
 
@@ -31,7 +31,7 @@ class UpdateProfileCommand(BaseCommand):
 class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]):
     session: AsyncSession
     profile_repository: ProfileRepository
-    rbac_manager: RBACManager
+    rbac_manager: RBACManagerInterface
 
     async def handle(self, command: UpdateProfileCommand) -> None:
         profile = await self.profile_repository.get_by_id(command.profile_id)

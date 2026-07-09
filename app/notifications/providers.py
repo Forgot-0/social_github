@@ -31,10 +31,10 @@ class NotificationModuleProvider(Provider):
 
     @decorate
     def register_notification_commands(self, command_registry: CommandRegisty) -> CommandRegisty:
-        command_registry.register_command(MarkNotificationAsReadCommand, [MarkNotificationAsReadCommandHandler])
+        command_registry.register_command(MarkNotificationAsReadCommand, MarkNotificationAsReadCommandHandler)
         command_registry.register_command(
             MarkAllNotificationsAsReadCommand,
-            [MarkAllNotificationsAsReadCommandHandler],
+            MarkAllNotificationsAsReadCommandHandler,
         )
         return command_registry
 

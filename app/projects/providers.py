@@ -136,23 +136,23 @@ class ProjectModuleProvider(Provider):
     @decorate
     def register_project_command_handlers(self, command_registry: CommandRegisty) -> CommandRegisty:
 
-        command_registry.register_command(CreateProjectCommand, [CreateProjectCommandHandler])
-        command_registry.register_command(DeleteProjectCommand, [DeleteProjectCommandHandler])
-        command_registry.register_command(UpdateProjectCommand, [UpdateProjectCommandHandler])
-        command_registry.register_command(InviteMemberCommand, [InviteMemberCommandHandler])
-        command_registry.register_command(AcceptInviteCommand, [AcceptInviteCommandHandler])
-        command_registry.register_command(UpdateMemberPermissionsCommand, [UpdateMemberPermissionsCommandHandler])
-        command_registry.register_command(ChangeRoleMemberCommand, [ChangeRoleMemberCommandHandler])
+        command_registry.register_command(CreateProjectCommand, CreateProjectCommandHandler)
+        command_registry.register_command(DeleteProjectCommand, DeleteProjectCommandHandler)
+        command_registry.register_command(UpdateProjectCommand, UpdateProjectCommandHandler)
+        command_registry.register_command(InviteMemberCommand, InviteMemberCommandHandler)
+        command_registry.register_command(AcceptInviteCommand, AcceptInviteCommandHandler)
+        command_registry.register_command(UpdateMemberPermissionsCommand, UpdateMemberPermissionsCommandHandler)
+        command_registry.register_command(ChangeRoleMemberCommand, ChangeRoleMemberCommandHandler)
 
-        command_registry.register_command(CreatePositionCommand, [CreatePositionCommandHandler])
-        command_registry.register_command(UpdatePositionCommand, [UpdatePositionCommandHandler])
-        command_registry.register_command(DeletePositionCommand, [DeletePositionCommandHandler])
+        command_registry.register_command(CreatePositionCommand, CreatePositionCommandHandler)
+        command_registry.register_command(UpdatePositionCommand, UpdatePositionCommandHandler)
+        command_registry.register_command(DeletePositionCommand, DeletePositionCommandHandler)
 
-        command_registry.register_command(CreateProjectRoleCommand, [CreateProjectRoleCommandHandler])
-        command_registry.register_command(UpdateProjectRoleCommand, [UpdateProjectRoleCommandHandler])
+        command_registry.register_command(CreateProjectRoleCommand, CreateProjectRoleCommandHandler)
+        command_registry.register_command(UpdateProjectRoleCommand, UpdateProjectRoleCommandHandler)
 
-        command_registry.register_command(CreateApplicationCommand, [CreateApplicationCommandHandler])
-        command_registry.register_command(DecideApplicationCommand, [DecideApplicationCommandHandler])
+        command_registry.register_command(CreateApplicationCommand, CreateApplicationCommandHandler)
+        command_registry.register_command(DecideApplicationCommand, DecideApplicationCommandHandler)
 
         return command_registry
 

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.projects.dtos.roles import ProjectRoleDTO
 
@@ -21,3 +21,5 @@ class MemberDTO(BaseModel):
 
     role: ProjectRoleDTO | None = None
     project: Optional["ProjectDTO"] = Field(default=None, repr=False)
+
+    model_config = ConfigDict(from_attributes=True)

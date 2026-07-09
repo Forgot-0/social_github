@@ -1,5 +1,4 @@
 import pytest
-from jose import jwt
 
 from app.auth.dtos.tokens import TokenType
 from app.auth.dtos.user import AuthUserJWTData

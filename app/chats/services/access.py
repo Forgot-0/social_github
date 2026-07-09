@@ -3,12 +3,12 @@ from dataclasses import dataclass
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.auth.rbac import RBACManager
+from app.core.services.auth.rbac import RBACManagerInterface
 
 
 @dataclass
 class ChatAccessService:
-    rbac_manager: RBACManager
+    rbac_manager: RBACManagerInterface
 
     def _has_global_chat_admin(self, user_jwt_data: UserJWTData) -> bool:
         return self.rbac_manager.check_permission(user_jwt_data, {"chat:update"})

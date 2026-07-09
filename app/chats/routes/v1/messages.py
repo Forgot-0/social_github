@@ -87,7 +87,7 @@ async def send_message(
             raise IdempotencyConflictError(key=idempotency_key)
 
     try:
-        result, *_ = await mediator.handle_command(
+        result = await mediator.handle_command(
             SendMessageCommand(
                 chat_id=chat_id,
                 content=payload.content,
@@ -129,7 +129,7 @@ async def edit_message(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> MessageDTO:
-    msg, *_ = await mediator.handle_command(
+    msg = await mediator.handle_command(
         EditMessageCommand(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
@@ -163,7 +163,7 @@ async def forward_message(
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> MessageDTO:
-    msg, *_ = await mediator.handle_command(
+    msg = await mediator.handle_command(
         ForwardMessageCommand(
             user_jwt_data=user_jwt_data,
             source_chat_id=payload.source_chat_id,

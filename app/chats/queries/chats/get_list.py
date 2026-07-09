@@ -34,7 +34,7 @@ class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListCha
 
         chats = []
         for chat, member, read in page:
-            read_dto = ReadDetail.model_validate(read.to_dict()) if read is not None else None
+            read_dto = ReadDetail.model_validate(read) if read is not None else None
             chats.append(ChatDTO(
                 id=chat.id,
                 seq_counter=chat.seq_counter,

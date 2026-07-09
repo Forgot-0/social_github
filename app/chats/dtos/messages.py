@@ -34,9 +34,12 @@ class ReadDetail(BaseModel):
     last_read_message_seq: int
     last_read_at: datetime
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class MessagesDTO(BaseModel):
     messages: list[MessageDTO]
     next_cursor: int | None
     has_next: bool
 
+    model_config = ConfigDict(from_attributes=True)

@@ -31,4 +31,4 @@ class GetProjectByIdQueryHandler(BaseQueryHandler[GetProjectByIdQuery, ProjectDT
         ):
             raise AccessDeniedError(need_permissions={"project:view" })
 
-        return ProjectDTO.model_validate(project.to_dict())
+        return ProjectDTO.model_validate(project)
