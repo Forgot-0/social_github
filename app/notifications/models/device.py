@@ -1,6 +1,9 @@
+from enum import StrEnum
+
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    Enum,
     Index,
     String,
     UniqueConstraint,
@@ -8,6 +11,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base_model import BaseModel, DateMixin
+
+
+class PlatformEnum(StrEnum):
+    ios = "IOS"
+    web = "WEB"
+    android = "ANDROID"
 
 
 class UserDeviceToken(BaseModel, DateMixin):
@@ -19,8 +28,8 @@ class UserDeviceToken(BaseModel, DateMixin):
         String(512), nullable=False,
         comment="FCM registration token или APNs device token",
     )
-    platform: Mapped[str] = mapped_column(
-        String(16), nullable=False,
+    platform: Mapped[PlatformEnum] = mapped_column(
+        Enum(PlatformEnum), nullable=False,
         comment="android | ios | web",
     )
     device_name: Mapped[str | None] = mapped_column(
@@ -33,3 +42,17 @@ class UserDeviceToken(BaseModel, DateMixin):
         UniqueConstraint("user_id", "token", name="uq_device_token"),
         Index("ix_device_tokens_user_active", "user_id", "is_active"),
     )
+
+    @classmethod
+    def create(
+        cls, user_id: int, token: str, platform: PlatformEnum,
+        device_name: str,
+    ) -> UserDeviceToken:
+        instance = cls(
+            user_id=user_id,
+            token=token,
+            platform=platform,
+            device_name=device_name
+        )
+        return instance
+

@@ -1,6 +1,7 @@
 from dishka import Provider, Scope, decorate, provide, provide_all
 from redis.asyncio import Redis
 
+from app.chats.commands.attachments.proccess import ProccessAttachmentsCommand, ProccessAttachmentsCommandHandler
 from app.chats.commands.attachments.request_upload import (
     RequestAttachmentUploadCommand,
     RequestAttachmentUploadCommandHandler,
@@ -145,6 +146,7 @@ class ChatModuleProvider(Provider):
     def register_auth_command_handlers(self, command_registry: CommandRegisty) -> CommandRegisty:
         command_registry.register_command(RequestAttachmentUploadCommand, RequestAttachmentUploadCommandHandler)
         command_registry.register_command(SuccessUploadAttachmentsCommand, SuccessUploadAttachmentsCommandHandler)
+        command_registry.register_command(ProccessAttachmentsCommand, ProccessAttachmentsCommandHandler)
         command_registry.register_command(JoinCallCommand, JoinCallCommandHandler)
         command_registry.register_command(MuteParticipantCommand, MuteParticipantCommandHandler)
         command_registry.register_command(AddMemberCommand, AddMemberCommandHandler)
