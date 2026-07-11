@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, decorate, provide
 
-from app.core.events.event import EventRegisty
-from app.core.mediators.base import CommandRegisty, QueryRegistry
+from app.core.events.event import EventRegistry
+from app.core.mediators.base import CommandRegistry, QueryRegistry
 from app.core.services.storage.aminio.policy import Policy
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand, AddContactToProfileCommandHandler
 from app.profiles.commands.profiles.create import CreateProfileCommand, CreateProfileCommandHanler
@@ -32,7 +32,7 @@ class ProfileModuleProvider(Provider):
     remove_contact_profile_handler = provide(RemoveContactToProfileCommandHandler)
 
     @decorate
-    def register_profile_command_handlers(self, command_registry: CommandRegisty) -> CommandRegisty:
+    def register_profile_command_handlers(self, command_registry: CommandRegistry) -> CommandRegistry:
 
         command_registry.register_command(
             CreateProfileCommand, CreateProfileCommandHanler
@@ -55,7 +55,7 @@ class ProfileModuleProvider(Provider):
     uploaded_avatars_event = provide(UploadedAvatarsEventHandler)
 
     @decorate
-    def register_profile_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
+    def register_profile_event_handlers(self, event_registry: EventRegistry) -> EventRegistry:
 
         event_registry.subscribe(
             UploadedAvatarsEvent, [UploadedAvatarsEventHandler]

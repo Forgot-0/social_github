@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any
 from uuid import UUID, uuid4
 
 from app.core.exceptions import FieldRequiredError
@@ -26,19 +26,15 @@ class BaseEvent(ABC):
     def get_partition_key(self) -> str:
         ...
 
-ET = TypeVar("ET", bound=BaseEvent)
-ER = TypeVar("ER", bound=Any)
-
-
 @dataclass(frozen=True)
-class BaseEventHandler(ABC, Generic[ET, ER]):
+class BaseEventHandler[ET: BaseEvent, ER: Any](ABC):
 
     @abstractmethod
     async def __call__(self, event: ET) -> ER: ...
 
 
 @dataclass
-class EventRegisty:
+class EventRegistry:
     events_map: dict[type[BaseEvent], list[type[BaseEventHandler]]] = field(
         default_factory=lambda: defaultdict(list),
         kw_only=True,

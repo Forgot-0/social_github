@@ -2,7 +2,7 @@ import hashlib
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Generic, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 import orjson
 from pydantic import BaseModel
@@ -14,11 +14,10 @@ from app.core.db.base_model import SoftDeleteMixin
 from app.core.db.convertor import SQLAlchemyFilterConverter
 from app.core.filters.base import BaseFilter
 
-T = TypeVar("T")
 P = ParamSpec("P")
 
 @dataclass(frozen=True)
-class PageResult(Generic[T]):
+class PageResult[T]:
     items: list[T]
     total: int
     page: int
@@ -48,11 +47,11 @@ class PageResult(Generic[T]):
 
 
 @dataclass
-class IRepository(ABC, Generic[T]):
+class IRepository[T](ABC):
     session: AsyncSession
 
     async def find_by_filter(self, model: type[T], filters: BaseFilter) -> PageResult[T]:
-        if isinstance(model, SoftDeleteMixin):
+        if issubclass(model, SoftDeleteMixin):
             stmt = model.select_not_deleted()
         else:
             stmt = select(model)
@@ -89,7 +88,10 @@ class IRepository(ABC, Generic[T]):
         )
 
     async def count_by_filter(self, model: type[T], filters: BaseFilter) -> int:
-        stmt = select(func.count()).select_from(model)
+        if issubclass(model, SoftDeleteMixin):
+            stmt = select(func.count()).select_from(model.select_not_deleted().subquery())
+        else:
+            stmt = select(func.count()).select_from(model)
 
         conditions = SQLAlchemyFilterConverter.filter_to_sqlalchemy_conditions(model, filters)
         stmt = self.apply_relationship_filters(stmt, filters)
@@ -162,8 +164,7 @@ class CacheRepository:
     ) -> B:
         key = await self._build_key(type_model, func, args, kwargs)
         return await self.cache_with_key(
-            key=key, type_model=type_model, func=func, ttl=ttl,
-            *args, **kwargs
+            key, type_model, func, ttl, *args, **kwargs
         )
 
     async def cache_with_key_paginated(
@@ -202,8 +203,7 @@ class CacheRepository:
     ) -> PageResult[B]:
         key = await self._build_key(type_model, func, args, kwargs)
         return await self.cache_with_key_paginated(
-            key=key, type_model=type_model, func=func,
-            ttl=ttl, *args, **kwargs
+            key, type_model, func, ttl, *args, **kwargs
         )
 
     async def invalidate_cache(self, *keys: str) -> None:

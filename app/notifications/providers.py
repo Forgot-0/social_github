@@ -1,6 +1,6 @@
 from dishka import Provider, Scope, decorate, provide, provide_all
 
-from app.core.mediators.base import CommandRegisty, QueryRegistry
+from app.core.mediators.base import CommandRegistry, QueryRegistry
 from app.notifications.commands.notifications.mark_all_read import (
     MarkAllNotificationsAsReadCommand,
     MarkAllNotificationsAsReadCommandHandler,
@@ -30,7 +30,7 @@ class NotificationModuleProvider(Provider):
     )
 
     @decorate
-    def register_notification_commands(self, command_registry: CommandRegisty) -> CommandRegisty:
+    def register_notification_commands(self, command_registry: CommandRegistry) -> CommandRegistry:
         command_registry.register_command(MarkNotificationAsReadCommand, MarkNotificationAsReadCommandHandler)
         command_registry.register_command(
             MarkAllNotificationsAsReadCommand,

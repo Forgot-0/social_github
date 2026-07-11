@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, decorate, provide, provide_all
 
-from app.core.events.event import EventRegisty
-from app.core.mediators.base import CommandRegisty, QueryRegistry
+from app.core.events.event import EventRegistry
+from app.core.mediators.base import CommandRegistry, QueryRegistry
 from app.projects.commands.applications.create import (
     CreateApplicationCommand,
     CreateApplicationCommandHandler,
@@ -134,7 +134,7 @@ class ProjectModuleProvider(Provider):
     )
 
     @decorate
-    def register_project_command_handlers(self, command_registry: CommandRegisty) -> CommandRegisty:
+    def register_project_command_handlers(self, command_registry: CommandRegistry) -> CommandRegistry:
 
         command_registry.register_command(CreateProjectCommand, CreateProjectCommandHandler)
         command_registry.register_command(DeleteProjectCommand, DeleteProjectCommandHandler)
@@ -172,5 +172,5 @@ class ProjectModuleProvider(Provider):
         return query_registry
 
     @decorate
-    def register_project_event_handlers(self, event_registry: EventRegisty) -> EventRegisty:
+    def register_project_event_handlers(self, event_registry: EventRegistry) -> EventRegistry:
         return event_registry

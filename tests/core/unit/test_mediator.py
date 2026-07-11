@@ -1,8 +1,9 @@
-import pytest
 from dataclasses import dataclass
 
+import pytest
+
 from app.core.commands import BaseCommand, BaseCommandHandler
-from app.core.mediators.base import CommandRegisty, QueryRegistry
+from app.core.mediators.base import CommandRegistry, QueryRegistry
 from app.core.queries import BaseQuery, BaseQueryHandler
 
 
@@ -30,11 +31,12 @@ class MockMediatorQueryHandler(BaseQueryHandler[MockMediatorQuery, dict]):
         return {"id": query.id, "name": "test"}
 
 
+@pytest.mark.core
 @pytest.mark.unit
 class TestCommandRegistry:
 
     def test_register_command(self):
-        registry = CommandRegisty()
+        registry = CommandRegistry()
 
         registry.register_command(MockMediatorCommand, MockMediatorCommandHandler)
 
@@ -42,7 +44,7 @@ class TestCommandRegistry:
         assert registry.commands_map[MockMediatorCommand] == MockMediatorCommandHandler
 
     def test_get_handler_types_unregistered(self):
-        registry = CommandRegisty()
+        registry = CommandRegistry()
 
         command = MockMediatorCommand(value="test")
         handler_types = registry.get_handler_types(command)
@@ -50,6 +52,7 @@ class TestCommandRegistry:
         assert handler_types is None
 
 
+@pytest.mark.core
 @pytest.mark.unit
 class TestQueryRegistry:
 
@@ -91,13 +94,14 @@ class TestQueryRegistry:
         assert registry.queries_map[MockMediatorQuery] == Handler2
 
 
+@pytest.mark.core
 @pytest.mark.unit
 class TestMediatorIntegration:
 
     @pytest.mark.asyncio
     async def test_mediator_executes_command(self):
 
-        registry = CommandRegisty()
+        registry = CommandRegistry()
         registry.register_command(MockMediatorCommand, MockMediatorCommandHandler)
 
         command = MockMediatorCommand(value="test")

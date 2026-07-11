@@ -1,7 +1,7 @@
 import asyncio
 
-from dishka import AsyncContainer
 import pytest
+from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.auth.login import LoginCommand, LoginCommandHandler
@@ -49,7 +49,7 @@ class TestRefreshTokenCommand:
 
         refresh_command = RefreshTokenCommand(
             refresh_token=old_tokens.refresh_token,
-            ip_adress="1277.0.0.1"
+            ip_address="1277.0.0.1"
         )
         new_tokens = await refresh_handler.handle(refresh_command)
 
@@ -65,7 +65,7 @@ class TestRefreshTokenCommand:
     ) -> None:
         refresh_command = RefreshTokenCommand(
             refresh_token="invalid_token",
-            ip_adress="1277.0.0.1"
+            ip_address="1277.0.0.1"
         )
 
         with pytest.raises(InvalidTokenError):
@@ -96,7 +96,7 @@ class TestRefreshTokenCommand:
 
         refresh_command = RefreshTokenCommand(
             refresh_token=tokens.refresh_token,
-            ip_adress="1277.0.0.1"
+            ip_address="1277.0.0.1"
         )
 
         with pytest.raises(NotFoundOrInactiveSessionError):
@@ -130,7 +130,7 @@ class TestRefreshTokenCommand:
 
         refresh_command = RefreshTokenCommand(
             refresh_token=tokens.refresh_token,
-            ip_adress="1277.0.0.1"
+            ip_address="1277.0.0.1"
         )
         await refresh_handler.handle(refresh_command)
 

@@ -19,7 +19,6 @@ def create_container(*app_providers: Provider) -> AsyncContainer:
         ChatModuleProvider(),
         ProjectModuleProvider(),
         NotificationModuleProvider(),
-        *app_providers
     ]
 
     return make_async_container(*providers, *app_providers)

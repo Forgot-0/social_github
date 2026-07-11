@@ -1,5 +1,6 @@
-import pytest
 from dataclasses import dataclass
+
+import pytest
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 
@@ -27,6 +28,7 @@ class MockCommandHandler(BaseCommandHandler[MockCommand, MockCommandResult]):
         )
 
 
+@pytest.mark.core
 @pytest.mark.unit
 class TestCommands:
     
@@ -96,6 +98,7 @@ class FailingCommandHandler(BaseCommandHandler[FailingCommand, None]):
             raise ValueError("Command failed intentionally")
 
 
+@pytest.mark.core
 @pytest.mark.unit
 class TestCommandErrorHandling:
 

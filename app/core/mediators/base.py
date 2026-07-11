@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -8,7 +7,7 @@ from app.core.queries import BaseQuery, BaseQueryHandler
 
 
 @dataclass
-class CommandRegisty:
+class CommandRegistry:
     commands_map: dict[type[BaseCommand], type[BaseCommandHandler]] = field(
         default_factory=dict,
         kw_only=True,
@@ -38,8 +37,8 @@ class QueryRegistry:
 
 @dataclass(eq=False)
 class BaseMediator(ABC):
-    command_registy: CommandRegisty
-    query_registy: QueryRegistry
+    command_registry: CommandRegistry
+    query_registry: QueryRegistry
 
     @abstractmethod
     async def handle_query(self, query: BaseQuery) -> Any:
