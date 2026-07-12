@@ -19,7 +19,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.delete(
-    "/{session_id}",
+    "/{session_id}/",
     summary="Log out of session",
     description="Log out of session",
     status_code=status.HTTP_204_NO_CONTENT,

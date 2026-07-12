@@ -1,5 +1,5 @@
 from dishka.integrations.taskiq import TaskiqProvider, setup_dishka
-from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
+from taskiq import ScheduleSource, TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq.schedule_sources import LabelScheduleSource
 from taskiq_redis import RedisScheduleSource
 
@@ -31,10 +31,10 @@ else:
     redis_schedule_source = RedisScheduleSource(
         url=app_config.QUEUE_REDIS_BROKER_URL,
     )
-    sources = [redis_schedule_source, LabelScheduleSource(broker=broker)]
+    sources: list[ScheduleSource] = [redis_schedule_source, LabelScheduleSource(broker=broker)]
 
 
 scheduler = TaskiqScheduler(
     broker=broker,
-    sources=sources, # type: ignore
+    sources=sources,
 )

@@ -55,7 +55,7 @@ async def get_json_user(websocket: WebSocket) -> dict[str, Any]:
     return data
 
 
-@router.websocket("/ws")
+@router.websocket("/ws/")
 @inject
 async def websocket_gateway(
     websocket: WebSocket,

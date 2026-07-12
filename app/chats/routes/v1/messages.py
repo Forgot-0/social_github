@@ -29,7 +29,10 @@ message_write_limiter = ConfigurableRateLimiter(
 )
 
 
-@router.get("")
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK
+)
 async def list_messages(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
@@ -47,7 +50,10 @@ async def list_messages(
     )
 
 
-@router.get("/context")
+@router.get(
+    "/context/",
+    status_code=status.HTTP_200_OK
+)
 async def get_message_context(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
@@ -65,7 +71,11 @@ async def get_message_context(
     )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(message_write_limiter)])
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(message_write_limiter)]
+)
 async def send_message(
     chat_id: UUID,
     payload: SendMessageRequest,
@@ -105,7 +115,10 @@ async def send_message(
             await redis.delete(lock_key)
 
 
-@router.get("/{message_id}")
+@router.get(
+    "/{message_id}/",
+    status_code=status.HTTP_200_OK
+)
 async def get_message_detail(
     chat_id: UUID,
     message_id: UUID,
@@ -121,7 +134,10 @@ async def get_message_detail(
     )
 
 
-@router.patch("/{message_id}")
+@router.patch(
+    "/{message_id}/",
+    status_code=status.HTTP_200_OK
+)
 async def edit_message(
     chat_id: UUID,
     message_id: UUID,
@@ -140,7 +156,10 @@ async def edit_message(
     return msg
 
 
-@router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{message_id}/",
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_message(
     chat_id: UUID,
     message_id: UUID,
@@ -156,7 +175,11 @@ async def delete_message(
     )
 
 
-@router.post("/forward", status_code=status.HTTP_201_CREATED, dependencies=[Depends(message_write_limiter)])
+@router.post(
+    "/forward/",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(message_write_limiter)]
+)
 async def forward_message(
     chat_id: UUID,
     payload: ForwardMessageRequest,
@@ -175,7 +198,10 @@ async def forward_message(
     return msg
 
 
-@router.post("/read", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/read/",
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def mark_read(
     chat_id: UUID,
     payload: MarkReadRequest,

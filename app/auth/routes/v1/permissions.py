@@ -46,7 +46,7 @@ async def create_permission(
 
 
 @router.delete(
-    "/{name}",
+    "/{name}/",
     summary="Removing permission",
     description="Removes permission",
     response_model=None,

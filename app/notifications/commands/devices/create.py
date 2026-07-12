@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class CreateUserDeviceCommand(BaseCommand):
-    platform: str
+    platform: PlatformEnum
     token: str
     device_name: str
 
@@ -30,7 +30,7 @@ class CreateUserDeviceCommandHandler(BaseCommandHandler[CreateUserDeviceCommand,
         device = UserDeviceToken.create(
             user_id=int(command.user_jwt_data.id),
             token=command.token,
-            platform=PlatformEnum(command.platform),
+            platform=command.platform,
             device_name=command.device_name
         )
         await self.device_repository.create(device)

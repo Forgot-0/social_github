@@ -21,7 +21,8 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.get(
-    "",
+    "/",
+    status_code=status.HTTP_200_OK
 )
 async def list_my_chats(
     user_jwt_data: CurrentUserJWTData,
@@ -39,7 +40,7 @@ async def list_my_chats(
 
 
 @router.post(
-    "",
+    "/",
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
@@ -64,7 +65,10 @@ async def create_chat(
     return chat
 
 
-@router.get("/{chat_id}")
+@router.get(
+    "/{chat_id}/",
+    status_code=status.HTTP_200_OK
+)
 async def get_chat_detail(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
@@ -74,7 +78,8 @@ async def get_chat_detail(
 
 
 @router.patch(
-    "/{chat_id}",
+    "/{chat_id}/",
+    status_code=status.HTTP_200_OK,
     dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
 async def update_chat(
@@ -99,7 +104,7 @@ async def update_chat(
 
 
 @router.delete(
-    "/{chat_id}",
+    "/{chat_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
@@ -112,7 +117,7 @@ async def delete_chat(
 
 
 @router.post(
-    "/{chat_id}/join",
+    "/{chat_id}/join/",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(ConfigurableRateLimiter(times=10, seconds=5*60))]
 )
@@ -125,7 +130,7 @@ async def join_public_chat(
 
 
 @router.post(
-    "/{chat_id}/leave",
+    "/{chat_id}/leave/",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )

@@ -18,7 +18,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/attachments/upload-requests",
+    "/attachments/upload-requests/",
     status_code=status.HTTP_201_CREATED
 )
 async def request_attachment_upload(
@@ -41,7 +41,7 @@ async def request_attachment_upload(
     return slotts
 
 @router.post(
-    "/attachments/upload-requests:confirm",
+    "/attachments/upload-requests/confirm/",
     status_code=status.HTTP_202_ACCEPTED
 )
 async def confirm_attachment_upload(
@@ -60,7 +60,8 @@ async def confirm_attachment_upload(
 
 
 @router.get(
-    "/messages/{message_id}/attachments/{attachment_id}/download-url",
+    "/messages/{message_id}/attachments/{attachment_id}/download-url/",
+    status_code=status.HTTP_200_OK
 )
 async def get_attachment_download_url(
     chat_id: UUID,

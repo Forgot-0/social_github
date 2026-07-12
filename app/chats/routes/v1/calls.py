@@ -15,7 +15,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/join",
+    "/join/",
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(ConfigurableRateLimiter(times=10, seconds=5*60))],
 )
@@ -29,7 +29,7 @@ async def join_call(
 
 
 @router.post(
-    "/participants/{user_id}/mute",
+    "/participants/{user_id}/mute/",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )

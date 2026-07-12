@@ -33,7 +33,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/register",
+    "/register/",
     summary="",
     description="",
     status_code=status.HTTP_201_CREATED,
@@ -61,7 +61,7 @@ async def register_user(
     )
 
 @router.get(
-    "/me",
+    "/me/",
     summary="",
     description="",
     status_code=status.HTTP_200_OK,
@@ -79,7 +79,7 @@ async def me(user: ActiveUserModel) -> UserResponse:
     )
 
 @router.post(
-    "/{user_id}/roles",
+    "/{user_id}/roles/",
     summary="Adding a role to a user",
     description="Adding a role to a user",
     status_code=status.HTTP_200_OK,
@@ -106,7 +106,7 @@ async def assign_role(
     )
 
 @router.delete(
-    "/{user_id}/roles/{role_name}",
+    "/{user_id}/roles/{role_name}/",
     summary="Removing a role from a user",
     description="Removing a role from a user",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -133,7 +133,7 @@ async def remove_role(
     )
 
 @router.post(
-    "/{user_id}/permissions",
+    "/{user_id}/permissions/",
     summary="Adding permissions to a user",
     description="Adding permissions to a user",
     status_code=status.HTTP_200_OK,
@@ -163,7 +163,7 @@ async def add_permissions_to_user(
     )
 
 @router.delete(
-    "/{user_id}/permissions",
+    "/{user_id}/permissions/",
     summary="Removing user permissions",
     description="Removing user permissions",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -218,7 +218,7 @@ async def get_list_user(
 
 
 @router.get(
-    "/sessions",
+    "/sessions/",
     summary="Get active user sessions",
     description="Get active user sessions",
     status_code=status.HTTP_200_OK,

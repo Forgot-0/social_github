@@ -16,7 +16,7 @@ from app.notifications.schemas.notifications.requests import GetNotificationList
 router = APIRouter(route_class=DishkaRoute)
 
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("/", status_code=status.HTTP_200_OK)
 async def get_notifications(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
@@ -28,14 +28,14 @@ async def get_notifications(
         )
     )
 
-@router.get("/unread_count", status_code=status.HTTP_200_OK)
+@router.get("/unread_count/", status_code=status.HTTP_200_OK)
 async def get_unread_notifications_count(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
 ) -> NotificationUnreadCountDTO:
     return await mediator.handle_query(GetUnreadNotificationsCountQuery(user_id=int(user_jwt_data.id)))
 
-@router.patch("/{notification_id}/read", status_code=status.HTTP_200_OK)
+@router.patch("/{notification_id}/read/", status_code=status.HTTP_200_OK)
 async def mark_notification_as_read(
     notification_id: int,
     payload: MarkNotificationAsReadRequest,
@@ -50,7 +50,7 @@ async def mark_notification_as_read(
         )
     )
 
-@router.patch("/read_all", status_code=status.HTTP_200_OK)
+@router.patch("/read_all/", status_code=status.HTTP_200_OK)
 async def mark_all_notifications_as_read(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,

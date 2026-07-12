@@ -5,6 +5,7 @@ from app.core.mediators.base import CommandRegistry, QueryRegistry
 from app.core.services.storage.aminio.policy import Policy
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand, AddContactToProfileCommandHandler
 from app.profiles.commands.profiles.create import CreateProfileCommand, CreateProfileCommandHanler
+from app.profiles.commands.profiles.proccess_avatar import ProccessAvatarCommand, ProccessAvatarCommandHandler
 from app.profiles.commands.profiles.remove_contact import (
     RemoveContactToProfileCommand,
     RemoveContactToProfileCommandHandler,
@@ -12,7 +13,6 @@ from app.profiles.commands.profiles.remove_contact import (
 from app.profiles.commands.profiles.update import UpdateProfileCommand, UpdateProfileCommandHandler
 from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatarCommand, UpdateProfileAvatarCommandHandler
 from app.profiles.config import profile_config
-from app.profiles.events.avatars.uploaded import UploadedAvatarsEvent, UploadedAvatarsEventHandler
 from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery, GetProfileByIdQueryHandler
 from app.profiles.queries.profiles.get_list import GetProfilesQuery, GetProfilesQueryHandler
 from app.profiles.queries.profiles.get_url import GetAvatrProfileUrlQuery, GetAvatrProfileUrlQueryHandler
@@ -28,6 +28,7 @@ class ProfileModuleProvider(Provider):
     create_profile_handler = provide(CreateProfileCommandHanler)
     update_profile_handler = provide(UpdateProfileCommandHandler)
     update_avatar_profile_handler = provide(UpdateProfileAvatarCommandHandler)
+    process_avatar_handler = provide(ProccessAvatarCommandHandler)
     add_contact_profile_handler = provide(AddContactToProfileCommandHandler)
     remove_contact_profile_handler = provide(RemoveContactToProfileCommandHandler)
 
@@ -44,6 +45,9 @@ class ProfileModuleProvider(Provider):
             UpdateProfileAvatarCommand, UpdateProfileAvatarCommandHandler
         )
         command_registry.register_command(
+            ProccessAvatarCommand, ProccessAvatarCommandHandler
+        )
+        command_registry.register_command(
             AddContactToProfileCommand, AddContactToProfileCommandHandler
         )
         command_registry.register_command(
@@ -52,15 +56,9 @@ class ProfileModuleProvider(Provider):
 
         return command_registry
 
-    uploaded_avatars_event = provide(UploadedAvatarsEventHandler)
 
     @decorate
     def register_profile_event_handlers(self, event_registry: EventRegistry) -> EventRegistry:
-
-        event_registry.subscribe(
-            UploadedAvatarsEvent, [UploadedAvatarsEventHandler]
-        )
-
         return event_registry
 
     get_by_id_profile_handler = provide(GetProfileByIdQueryHandler)

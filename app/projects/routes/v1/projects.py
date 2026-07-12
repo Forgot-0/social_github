@@ -35,7 +35,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "",
+    "/",
     status_code=status.HTTP_201_CREATED
 )
 async def create_project(
@@ -57,7 +57,7 @@ async def create_project(
     )
 
 @router.get(
-    "",
+    "/",
     status_code=status.HTTP_200_OK
 )
 async def get_projects(
@@ -73,7 +73,7 @@ async def get_projects(
     )
 
 @router.get(
-    "/my",
+    "/my/",
     status_code=status.HTTP_200_OK
 )
 async def get_my_projects(
@@ -91,7 +91,7 @@ async def get_my_projects(
 
 
 @router.get(
-    "/{project_id}", status_code=status.HTTP_200_OK,
+    "/{project_id}/", status_code=status.HTTP_200_OK,
     responses={404: create_response(NotFoundProjectError(project_id=123))}
 )
 async def get_project(
@@ -104,7 +104,7 @@ async def get_project(
     )
 
 
-@router.put("/{project_id}", status_code=status.HTTP_200_OK)
+@router.put("/{project_id}/", status_code=status.HTTP_200_OK)
 async def update_project(
     project_id: int,
     request: ProjectUpdateRequest,
@@ -124,7 +124,7 @@ async def update_project(
     )
 
 @router.delete(
-    "/{project_id}",
+    "/{project_id}/",
     summary="Delete project",
     description="Delete project if you owner or admin",
     status_code=status.HTTP_204_NO_CONTENT
@@ -142,7 +142,7 @@ async def delete_project(
     )
 
 @router.get(
-    "/{project_id}/positions",
+    "/{project_id}/positions/",
     summary="Get project positions",
     status_code=status.HTTP_200_OK
 )
@@ -157,7 +157,7 @@ async def get_project_positions(
         )
     )
 
-@router.post("/{project_id}/invite", status_code=status.HTTP_200_OK)
+@router.post("/{project_id}/invite/", status_code=status.HTTP_200_OK)
 async def invite_member(
     project_id: int,
     invite_request: InviteMemberRequest,
@@ -175,7 +175,7 @@ async def invite_member(
     )
 
 
-@router.post("/{project_id}/members/accept", status_code=status.HTTP_200_OK)
+@router.post("/{project_id}/members/accept/", status_code=status.HTTP_200_OK)
 async def accept_invite(
     project_id: int,
     mediator: FromDishka[BaseMediator],
@@ -189,7 +189,7 @@ async def accept_invite(
     )
 
 
-@router.put("/{project_id}/members/{user_id}/permissions", status_code=status.HTTP_200_OK)
+@router.put("/{project_id}/members/{user_id}/permissions/", status_code=status.HTTP_200_OK)
 async def update_member_permissions(
     project_id: int,
     user_id: int,
@@ -206,7 +206,7 @@ async def update_member_permissions(
         )
     )
 
-@router.post("/{project_id}/members/{user_id}/role", status_code=status.HTTP_200_OK)
+@router.post("/{project_id}/members/{user_id}/role/", status_code=status.HTTP_200_OK)
 async def change_role_member(
     project_id: int,
     user_id: int,
@@ -224,7 +224,7 @@ async def change_role_member(
     )
 
 @router.post(
-    "/{project_id}/positions",
+    "/{project_id}/positions/",
     status_code=status.HTTP_201_CREATED,
 )
 async def create_position(

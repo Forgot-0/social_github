@@ -1,10 +1,9 @@
 from fastapi import APIRouter
 
-from app.chats.routes.v1 import attachments, calls, chats, members, messages, realtime, ws
+from app.chats.routes.v1 import attachments, calls, chats, members, messages, ws
 
 router_v1 = APIRouter()
 
-router_v1.include_router(realtime.router, prefix="/chats/realtime", tags=["chats-realtime"])
 router_v1.include_router(chats.router, prefix="/chats", tags=["chats"])
 router_v1.include_router(members.router, prefix="/chats/{chat_id}/members", tags=["chat-members"])
 router_v1.include_router(messages.router, prefix="/chats/{chat_id}/messages", tags=["chat-messages"])

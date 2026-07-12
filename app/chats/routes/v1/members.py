@@ -18,7 +18,10 @@ from app.core.services.auth.depends import CurrentUserJWTData
 router = APIRouter(route_class=DishkaRoute)
 
 
-@router.get("")
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK
+)
 async def list_chat_members(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
@@ -38,7 +41,7 @@ async def list_chat_members(
     )
 
 @router.post(
-    "",
+    "/",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(ConfigurableRateLimiter(times=30, seconds=5*60))]
 )
@@ -58,7 +61,10 @@ async def add_member(
     )
 
 
-@router.patch("/{user_id}/role", status_code=status.HTTP_204_NO_CONTENT)
+@router.patch(
+    "/{user_id}/role/",
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def change_member_role(
     chat_id: UUID,
     user_id: int,
@@ -76,7 +82,10 @@ async def change_member_role(
     )
 
 
-@router.patch("/{user_id}/ban", status_code=status.HTTP_204_NO_CONTENT)
+@router.patch(
+    "/{user_id}/ban/",
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def ban_member(
     chat_id: UUID,
     user_id: int,
@@ -96,7 +105,7 @@ async def ban_member(
 
 
 @router.delete(
-    "/{user_id}",
+    "/{user_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def kick_member(

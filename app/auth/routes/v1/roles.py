@@ -79,7 +79,7 @@ async def get_list_news(
 
 
 @router.post(
-    "/{role_name}/permissions",
+    "/{role_name}/permissions/",
     summary="Adding role permissions",
     description="Adding role permissions",
     response_model=None,
@@ -107,7 +107,7 @@ async def add_permission_role(
 
 
 @router.delete(
-    "/{role_name}/permissions",
+    "/{role_name}/permissions/",
     summary="Removes permissions from a role",
     description="Removes permissions from a role",
     response_model=None,

@@ -24,7 +24,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.get(
-    "",
+    "/",
     status_code=status.HTTP_200_OK,
 )
 async def list_positions(
@@ -39,7 +39,7 @@ async def list_positions(
 
 
 @router.get(
-    "/{position_id}",
+    "/{position_id}/",
     status_code=status.HTTP_200_OK,
 )
 async def get_position(
@@ -54,7 +54,7 @@ async def get_position(
 
 
 @router.put(
-    "/{position_id}",
+    "/{position_id}/",
     status_code=status.HTTP_200_OK,
 )
 async def update_position(
@@ -77,7 +77,7 @@ async def update_position(
     )
 
 @router.delete(
-    "/{position_id}",
+    "/{position_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_position(
@@ -94,7 +94,7 @@ async def delete_position(
 
 
 @router.get(
-    "/{position_id}/applications",
+    "/{position_id}/applications/",
     status_code=status.HTTP_200_OK,
 )
 async def get_applications_position(
@@ -112,7 +112,7 @@ async def get_applications_position(
 
 
 @router.post(
-    "/{position_id}/applications",
+    "/{position_id}/applications/",
     status_code=status.HTTP_201_CREATED,
 )
 async def apply_to_position(

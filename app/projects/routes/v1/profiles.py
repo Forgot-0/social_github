@@ -11,7 +11,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.get(
-    "/invites/my",
+    "/invites/my/",
     summary="Get invites in project",
     status_code=status.HTTP_200_OK
 )

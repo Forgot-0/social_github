@@ -30,7 +30,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.get(
-    "",
+    "/",
     status_code=status.HTTP_200_OK
 )
 async def get_profiles(
@@ -42,7 +42,7 @@ async def get_profiles(
     )
 
 @router.put(
-    "/{profile_id}",
+    "/{profile_id}/",
     status_code=status.HTTP_200_OK,
     responses={
         404: create_response(NotFoundProfileError(profile_id=123))
@@ -67,7 +67,7 @@ async def update_profile(
     )
 
 @router.get(
-    "/{profile_id}",
+    "/{profile_id}/",
     status_code=status.HTTP_200_OK,
     responses={
         404: create_response(NotFoundProfileError(profile_id=123))
@@ -81,7 +81,7 @@ async def get_profile(
 
 # Avatar
 @router.post(
-    "/avatar/presign",
+    "/avatar/presign/",
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
@@ -101,7 +101,7 @@ async def get_avatar_presign_url(
     )
 
 @router.post(
-    "/avatar/upload_complete",
+    "/avatar/upload_complete/",
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(ConfigurableRateLimiter(times=4, seconds=5*60))]
 )
@@ -120,7 +120,7 @@ async def upload_avatar_complete(
 
 # Contacts
 @router.post(
-    "/{profile_id}/contacts",
+    "/{profile_id}/contacts/",
     status_code=status.HTTP_200_OK,
 )
 async def add_contact_profile(
@@ -139,7 +139,7 @@ async def add_contact_profile(
     )
 
 @router.delete(
-    "/{profile_id}/{provide_contact}/delete",
+    "/{profile_id}/{provide_contact}/delete/",
     status_code=status.HTTP_200_OK,
 )
 async def remove_contact_profile(

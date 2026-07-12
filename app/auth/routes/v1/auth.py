@@ -49,7 +49,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/login",
+    "/login/",
     summary="User login",
     description="Authenticates the user and returns a pair of tokens: access and refresh.",
     status_code=status.HTTP_200_OK,
@@ -79,7 +79,7 @@ async def login(
     )
 
 @router.post(
-    "/refresh",
+    "/refresh/",
     summary="Refreshing the access token",
     description="Refreshes the access token using the refresh token.",
     status_code=status.HTTP_200_OK,
@@ -109,7 +109,7 @@ async def refresh(
     )
 
 @router.post(
-    "/logout",
+    "/logout/",
     summary="User logout",
     description="Invalidates the user's refresh token to log out.",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -127,7 +127,7 @@ async def logout(
     refresh_cookie_manager.delete_refresh_token(response)
 
 @router.post(
-    "/verifications/email",
+    "/verifications/email/",
     summary="Sending a verification code",
     description="Sends an email verification code. Limit: 3 requests per hour.",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -145,7 +145,7 @@ async def send_verify_code(
     )
 
 @router.post(
-    "/password-resets",
+    "/password-resets/",
     summary="Sending a password reset code",
     description="Sends a password reset code. Limit: 3 requests per hour.",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -164,7 +164,7 @@ async def send_reset_password_code(
 
 
 @router.post(
-    "/verifications/email/verify",
+    "/verifications/email/verify/",
     summary="Email confirmation",
     description="Confirms the email using the passed token.",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -182,7 +182,7 @@ async def verify_email(
 
 
 @router.post(
-    "/password-resets/confirm",
+    "/password-resets/confirm/",
     summary="Reset password",
     description="Resets the password using the token and new password data.",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -206,7 +206,7 @@ async def reset_password(
 
 
 @router.get(
-    "/oauth/{provider}/authorize",
+    "/oauth/{provider}/authorize/",
     summary="Get URL for OAuth authorization",
     status_code=status.HTTP_200_OK,
     responses={
@@ -226,7 +226,7 @@ async def oauth_authorize(
 
 
 @router.get(
-    "/oauth/{provider}/authorize/connect",
+    "/oauth/{provider}/authorize/connect/",
     summary="Get the OAuth connection URL for an existing user",
     status_code=status.HTTP_200_OK,
     responses={
@@ -246,7 +246,7 @@ async def oauth_authorize_connect(
 
 
 @router.get(
-    "/oauth/{provider}/callback",
+    "/oauth/{provider}/callback/",
     summary="Callback for OAuth provider",
     status_code=status.HTTP_200_OK,
     responses={

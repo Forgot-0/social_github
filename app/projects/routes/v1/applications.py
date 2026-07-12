@@ -16,7 +16,7 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.get(
-    "",
+    "/",
     status_code=status.HTTP_200_OK,
 )
 async def list_applications(
@@ -33,7 +33,7 @@ async def list_applications(
 
 
 @router.get(
-    "/me",
+    "/me/",
     status_code=status.HTTP_200_OK,
 )
 async def me_applications(
@@ -52,7 +52,7 @@ async def me_applications(
 
 
 @router.post(
-    "/{application_id}/approve",
+    "/{application_id}/approve/",
     status_code=status.HTTP_200_OK,
 )
 async def approve_application(
@@ -70,7 +70,7 @@ async def approve_application(
 
 
 @router.post(
-    "/{application_id}/reject",
+    "/{application_id}/reject/",
     status_code=status.HTTP_200_OK,
 )
 async def reject_application(
