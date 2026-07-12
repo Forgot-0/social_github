@@ -28,3 +28,18 @@ class Notification(BaseModel, DateMixin):
         Index("ix_notifications_user_created", "user_id", "created_at"),
         Index("ix_notifications_user_unread", "user_id", "is_read"),
     )
+
+    @classmethod
+    def create(
+        cls, user_id: int, type: NotificationType,
+        title: str, message: str | None, payload: dict
+    ) -> Notification:
+        instance = cls(
+            user_id=user_id,
+            type=type,
+            title=title,
+            message=message,
+            payload=payload,
+        )
+        return instance
+

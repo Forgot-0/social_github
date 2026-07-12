@@ -86,7 +86,7 @@ class MessageAttachment(BaseModel, DateMixin):
         self.height = height
 
     def set_duration(self, duration_seconds: int) -> None:
-        self.duration_seconds =duration_seconds
+        self.duration_seconds = duration_seconds
 
     def mark_proccesed(self) -> None:
         self.attachment_status = AttachmentStatus.SUCCESS
