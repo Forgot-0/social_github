@@ -1,10 +1,10 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class WSEventType(str, Enum):
+class WSEventType(StrEnum):
     NEW_MESSAGE = "new_message"
     MESSAGE_DELETED = "message_deleted"
     MESSAGE_EDITED = "message_edited"
@@ -28,7 +28,7 @@ class WSEventType(str, Enum):
     CALL_LEFT = "call_left"
 
 
-class WSClientOp(str, Enum):
+class WSClientOp(StrEnum):
     PING = "ping"
     PONG = "pong"
     SUBSCRIBE = "subscribe"

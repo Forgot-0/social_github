@@ -1,5 +1,5 @@
 from datetime import date
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from sqlalchemy import BigInteger, Date, Index, String
@@ -19,7 +19,7 @@ class SizeAvatar(int, Enum):
     LARGE = 512
 
 
-class TypeImageAvatar(str, Enum):
+class TypeImageAvatar(StrEnum):
     JPG = "jpg"
     WEBP = "webp"
     AVIF = "avif"
