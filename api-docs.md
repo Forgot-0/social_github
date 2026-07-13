@@ -363,7 +363,7 @@ password: string   (обязательно)
 
 ---
 
-### POST `/auth/refresh`
+### POST `/auth/refresh/`
 
 **Лимит:** 4 запроса за 5 минут.  
 Берёт refresh token из cookie `refresh_token`.
@@ -376,7 +376,7 @@ password: string   (обязательно)
 
 ---
 
-### POST `/auth/logout`
+### POST `/auth/logout/`
 
 Инвалидирует текущий refresh token из cookie.
 
@@ -386,7 +386,7 @@ password: string   (обязательно)
 
 ---
 
-### POST `/auth/verifications/email`
+### POST `/auth/verifications/email/`
 
 **Лимит:** 3 запроса в час.
 
@@ -401,7 +401,7 @@ password: string   (обязательно)
 
 ---
 
-### POST `/auth/verifications/email/verify`
+### POST `/auth/verifications/email/verify/`
 
 **Лимит:** 3 запроса в час.
 
@@ -416,7 +416,7 @@ password: string   (обязательно)
 
 ---
 
-### POST `/auth/password-resets`
+### POST `/auth/password-resets/`
 
 **Лимит:** 3 запроса в час.
 
@@ -431,7 +431,7 @@ password: string   (обязательно)
 
 ---
 
-### POST `/auth/password-resets/confirm`
+### POST `/auth/password-resets/confirm/`
 
 **Лимит:** 3 запроса в час.
 
@@ -458,7 +458,7 @@ password: string   (обязательно)
 
 ---
 
-### GET `/auth/oauth/{provider}/authorize`
+### GET `/auth/oauth/{provider}/authorize/`
 
 **Response 200 → `OAuthUrlResponse`:**
 ```json
@@ -471,7 +471,7 @@ password: string   (обязательно)
 
 ---
 
-### GET `/auth/oauth/{provider}/authorize/connect` 🔒
+### GET `/auth/oauth/{provider}/authorize/connect/` 🔒
 
 Привязать OAuth к существующему аккаунту.
 
@@ -486,7 +486,7 @@ password: string   (обязательно)
 
 ---
 
-### GET `/auth/oauth/{provider}/callback`
+### GET `/auth/oauth/{provider}/callback/`
 
 **Query params:**
 ```
@@ -504,7 +504,7 @@ state: string  (обязательно)
 
 ## 4. Пользователи
 
-### POST `/users/register`
+### POST `/users/register/`
 
 **Request:**
 ```json
@@ -536,7 +536,7 @@ state: string  (обязательно)
 
 ---
 
-### GET `/users/me` 🔒
+### GET `/users/me/` 🔒
 
 **Response 200 → `UserResponse`** (только `id`, `username`, `email`):
 ```json
@@ -613,7 +613,7 @@ sort:               string   (default: created_at:desc)
 
 ---
 
-### GET `/users/sessions` 🔒
+### GET `/users/sessions/` 🔒
 
 **Response 200 → `SessionDTO[]`:**
 ```json
@@ -631,7 +631,7 @@ sort:               string   (default: created_at:desc)
 
 ---
 
-### POST `/users/{user_id}/roles` 🔒
+### POST `/users/{user_id}/roles/` 🔒
 
 **Request:**
 ```json
@@ -644,7 +644,7 @@ sort:               string   (default: created_at:desc)
 
 ---
 
-### DELETE `/users/{user_id}/roles/{role_name}` 🔒
+### DELETE `/users/{user_id}/roles/{role_name}/` 🔒
 
 **Response 204** (no content)
 
@@ -652,7 +652,7 @@ sort:               string   (default: created_at:desc)
 
 ---
 
-### POST `/users/{user_id}/permissions` 🔒
+### POST `/users/{user_id}/permissions/` 🔒
 
 **Request:**
 ```json
@@ -663,7 +663,7 @@ sort:               string   (default: created_at:desc)
 
 ---
 
-### DELETE `/users/{user_id}/permissions` 🔒
+### DELETE `/users/{user_id}/permissions/` 🔒
 
 **Request:**
 ```json
@@ -739,7 +739,7 @@ sort:         string
 
 ---
 
-### GET `/profiles/{profile_id}`
+### GET `/profiles/{profile_id}/`
 
 **Response 200 → `ProfileDTO`**
 
@@ -747,7 +747,7 @@ sort:         string
 
 ---
 
-### PUT `/profiles/{profile_id}` 🔒
+### PUT `/profiles/{profile_id}/` 🔒
 
 **Request:**
 ```json
@@ -768,7 +768,7 @@ sort:         string
 
 ---
 
-### POST `/profiles/avatar/presign` 🔒
+### POST `/profiles/avatar/presign/` 🔒
 
 **Лимит:** 4 запроса за 5 минут.
 
@@ -811,7 +811,7 @@ file=<binary>
 
 ---
 
-### POST `/profiles/avatar/upload_complete` 🔒
+### POST `/profiles/avatar/upload_complete/` 🔒
 
 **Лимит:** 4 запроса за 5 минут.
 
@@ -830,7 +830,7 @@ file=<binary>
 
 ---
 
-### POST `/profiles/{profile_id}/contacts` 🔒
+### POST `/profiles/{profile_id}/contacts/` 🔒
 
 **Request:**
 ```json
@@ -844,7 +844,7 @@ file=<binary>
 
 ---
 
-### DELETE `/profiles/{profile_id}/{provide_contact}/delete` 🔒
+### DELETE `/profiles/{profile_id}/{provide_contact}/delete/` 🔒
 
 **Path param:** `provide_contact` — имя провайдера (`github`, `telegram`, …)
 
@@ -922,7 +922,7 @@ sort:      string
 
 ---
 
-### GET `/projects/my` 🔒
+### GET `/projects/my/` 🔒
 
 Проекты, в которых текущий пользователь участник.
 
@@ -936,7 +936,7 @@ page_size: number (default: 20, max: 100)
 
 ---
 
-### GET `/projects/{project_id}` 🔒
+### GET `/projects/{project_id}/` 🔒
 
 **Response 200 → `ProjectDTO`**
 
@@ -944,7 +944,7 @@ page_size: number (default: 20, max: 100)
 
 ---
 
-### PUT `/projects/{project_id}` 🔒
+### PUT `/projects/{project_id}/` 🔒
 
 **Request:**
 ```json
@@ -965,7 +965,7 @@ page_size: number (default: 20, max: 100)
 
 ---
 
-### DELETE `/projects/{project_id}` 🔒
+### DELETE `/projects/{project_id}/` 🔒
 
 **Response 204** (no content)
 
@@ -973,7 +973,7 @@ page_size: number (default: 20, max: 100)
 
 ---
 
-### GET `/projects/{project_id}/positions`
+### GET `/projects/{project_id}/positions/`
 
 **Query params:**
 ```
@@ -991,7 +991,7 @@ sort:            string
 
 ---
 
-### POST `/projects/{project_id}/positions` 🔒
+### POST `/projects/{project_id}/positions/` 🔒
 
 **Request:**
 ```json
@@ -1018,7 +1018,7 @@ sort:            string
 
 ---
 
-### POST `/projects/{project_id}/invite` 🔒
+### POST `/projects/{project_id}/invite/` 🔒
 
 **Request:**
 ```json
@@ -1035,7 +1035,7 @@ sort:            string
 
 ---
 
-### POST `/projects/{project_id}/members/accept` 🔒
+### POST `/projects/{project_id}/members/accept/` 🔒
 
 Принять приглашение (текущий пользователь).
 
@@ -1043,7 +1043,7 @@ sort:            string
 
 ---
 
-### PUT `/projects/{project_id}/members/{user_id}/permissions` 🔒
+### PUT `/projects/{project_id}/members/{user_id}/permissions/` 🔒
 
 **Request:**
 ```json
@@ -1056,7 +1056,7 @@ sort:            string
 
 ---
 
-### GET `/projects/invites/my` 🔒
+### GET `/projects/invites/my/` 🔒
 
 Приглашения в проекты для текущего пользователя.
 
@@ -1130,13 +1130,13 @@ sort:            string
 
 ---
 
-### GET `/positions/{position_id}`
+### GET `/positions/{position_id}/`
 
 **Response 200 → `PositionDTO`**
 
 ---
 
-### PUT `/positions/{position_id}` 🔒
+### PUT `/positions/{position_id}/` 🔒
 
 **Request:**
 ```json
@@ -1156,13 +1156,13 @@ sort:            string
 
 ---
 
-### DELETE `/positions/{position_id}` 🔒
+### DELETE `/positions/{position_id}/` 🔒
 
 **Response 204** (no content)
 
 ---
 
-### GET `/positions/{position_id}/applications`
+### GET `/positions/{position_id}/applications/`
 
 **Query params:**
 ```
@@ -1178,7 +1178,7 @@ sort:         string
 
 ---
 
-### POST `/positions/{position_id}/applications` 🔒
+### POST `/positions/{position_id}/applications/` 🔒
 
 **Request:**
 ```json
@@ -1229,7 +1229,7 @@ sort:         string
 
 ---
 
-### GET `/applications/me` 🔒
+### GET `/applications/me/` 🔒
 
 **Query params:**
 ```
@@ -1245,13 +1245,13 @@ sort:        string
 
 ---
 
-### POST `/applications/{application_id}/approve` 🔒
+### POST `/applications/{application_id}/approve/` 🔒
 
 **Response 200:** `{}`
 
 ---
 
-### POST `/applications/{application_id}/reject` 🔒
+### POST `/applications/{application_id}/reject/` 🔒
 
 **Response 200:** `{}`
 
@@ -1321,7 +1321,7 @@ sort:               string
 
 ---
 
-### POST `/roles/{role_name}/permissions` 🔒
+### POST `/roles/{role_name}/permissions/` 🔒
 
 **Request:**
 ```json
@@ -1334,7 +1334,7 @@ sort:               string
 
 ---
 
-### DELETE `/roles/{role_name}/permissions` 🔒
+### DELETE `/roles/{role_name}/permissions/` 🔒
 
 **Request:**
 ```json
@@ -1408,7 +1408,7 @@ sort:      string
 
 ---
 
-### DELETE `/permissions/{name}` 🔒
+### DELETE `/permissions/{name}/` 🔒
 
 **Response 204** (no content)
 
@@ -1453,7 +1453,7 @@ sort:                  string
 
 ---
 
-### DELETE `/sessions/{session_id}` 🔒
+### DELETE `/sessions/{session_id}/` 🔒
 
 **Response 204** (no content)
 
@@ -1463,7 +1463,7 @@ sort:                  string
 
 ## 11. Чаты
 
-Базовый префикс: `/api/v1/chats`
+Базовый префикс: `/api/v1/chats/`
 
 ### GET `/chats` 🔒
 
@@ -1482,7 +1482,7 @@ sort:                  string
 }
 ```
 
-### POST `/chats` 🔒
+### POST `/chats/` 🔒
 
 **Request (`CreateChatRequest`):**
 ```json
@@ -1500,11 +1500,11 @@ sort:                  string
 
 **Response 201 → `ChatDTO`**
 
-### GET `/chats/{chat_id}` 🔒
+### GET `/chats/{chat_id}/` 🔒
 
 **Response 200 → `ChatDetaiDTO`**
 
-### PATCH `/chats/{chat_id}` 🔒
+### PATCH `/chats/{chat_id}/` 🔒
 
 **Request (`UpdateChatRequest`):**
 ```json
@@ -1520,19 +1520,19 @@ sort:                  string
 
 **Response 200 → `ChatDTO`**
 
-### DELETE `/chats/{chat_id}` 🔒
+### DELETE `/chats/{chat_id}/` 🔒
 
 **Response 204** (no content)
 
-### POST `/chats/{chat_id}/join` 🔒
+### POST `/chats/{chat_id}/join/` 🔒
 
 **Response 204** (no content)
 
-### POST `/chats/{chat_id}/leave` 🔒
+### POST `/chats/{chat_id}/leave/` 🔒
 
 **Response 204** (no content)
 
-### GET `/chats/{chat_id}/members` 🔒
+### GET `/chats/{chat_id}/members/` 🔒
 
 **Query params:**
 - `limit`: `number` (default `100`, min `1`, max `500`)
@@ -1541,7 +1541,7 @@ sort:                  string
 
 **Response 200 → `ListMembers`**
 
-### POST `/chats/{chat_id}/members` 🔒
+### POST `/chats/{chat_id}/members/` 🔒
 
 **Request (`AddMemberRequest`):**
 ```json
@@ -1550,7 +1550,7 @@ sort:                  string
 
 **Response 204** (no content)
 
-### PATCH `/chats/{chat_id}/members/{user_id}/role` 🔒
+### PATCH `/chats/{chat_id}/members/{user_id}/role/` 🔒
 
 **Request (`ChangeMemberRoleRequest`):**
 ```json
@@ -1559,7 +1559,7 @@ sort:                  string
 
 **Response 204** (no content)
 
-### PATCH `/chats/{chat_id}/members/{user_id}/ban` 🔒
+### PATCH `/chats/{chat_id}/members/{user_id}/ban/` 🔒
 
 **Request (`BanMemberRequest`):**
 ```json
@@ -1568,11 +1568,11 @@ sort:                  string
 
 **Response 204** (no content)
 
-### DELETE `/chats/{chat_id}/members/{user_id}` 🔒
+### DELETE `/chats/{chat_id}/members/{user_id}/` 🔒
 
 **Response 204** (no content)
 
-### POST `/chats/{chat_id}/calls/join` 🔒
+### POST `/chats/{chat_id}/calls/join/` 🔒
 
 **Response 200 → `JoinTokenDTO`:**
 ```json
@@ -1583,7 +1583,7 @@ sort:                  string
 }
 ```
 
-### POST `/chats/{chat_id}/calls/participants/{user_id}/mute` 🔒
+### POST `/chats/{chat_id}/calls/participants/{user_id}/mute/` 🔒
 
 **Request (`MuteParticipantRequest`):**
 ```json
@@ -1592,7 +1592,7 @@ sort:                  string
 
 **Response 204** (no content)
 
-### POST `/chats/realtime/presence` 🔒
+### POST `/chats/realtime/presence/` 🔒
 
 **Request (`PresenceBatchRequest`):**
 ```json
@@ -1601,7 +1601,7 @@ sort:                  string
 
 **Response 200 → `MemberPresenceDTO[]`**
 
-### GET `/chats/realtime/ws/status` 🔒
+### GET `/chats/realtime/ws/status/` 🔒
 
 **Response 200:**
 ```json
@@ -1620,7 +1620,7 @@ sort:                  string
 
 Базовый префикс: `/api/v1/chats/{chat_id}/messages`
 
-### GET `/chats/{chat_id}/messages` 🔒
+### GET `/chats/{chat_id}/messages/` 🔒
 
 **Query params:**
 - `limit`: `number` (default `30`, min `1`, max `100`)
@@ -1628,7 +1628,7 @@ sort:                  string
 
 **Response 200 → `MessagesDTO`**
 
-### GET `/chats/{chat_id}/messages/context` 🔒
+### GET `/chats/{chat_id}/messages/context/` 🔒
 
 **Query params:**
 - `target_seq`: `number` (>= `0`)
@@ -1636,7 +1636,7 @@ sort:                  string
 
 **Response 200 → `MessagesDTO`**
 
-### POST `/chats/{chat_id}/messages` 🔒
+### POST `/chats/{chat_id}/messages/` 🔒
 
 Поддерживает заголовок `Idempotency-Key`.
 
@@ -1652,11 +1652,11 @@ sort:                  string
 
 **Response 201 → `MessageDTO`**
 
-### GET `/chats/{chat_id}/messages/{message_id}` 🔒
+### GET `/chats/{chat_id}/messages/{message_id}/` 🔒
 
 **Response 200 → `MessageDTO`**
 
-### PATCH `/chats/{chat_id}/messages/{message_id}` 🔒
+### PATCH `/chats/{chat_id}/messages/{message_id}/` 🔒
 
 **Request (`EditMessageRequest`):**
 ```json
@@ -1665,11 +1665,11 @@ sort:                  string
 
 **Response 200 → `MessageDTO`**
 
-### DELETE `/chats/{chat_id}/messages/{message_id}` 🔒
+### DELETE `/chats/{chat_id}/messages/{message_id}/` 🔒
 
 **Response 204** (no content)
 
-### POST `/chats/{chat_id}/messages/forward` 🔒
+### POST `/chats/{chat_id}/messages/forward/` 🔒
 
 **Request (`ForwardMessageRequest`):**
 ```json
@@ -1682,7 +1682,7 @@ sort:                  string
 
 **Response 201 → `MessageDTO`**
 
-### POST `/chats/{chat_id}/messages/read` 🔒
+### POST `/chats/{chat_id}/messages/read/` 🔒
 
 **Request (`MarkReadRequest`):**
 ```json
@@ -1691,7 +1691,7 @@ sort:                  string
 
 **Response 204** (no content)
 
-### POST `/chats/{chat_id}/attachments/upload-requests` 🔒
+### POST `/chats/{chat_id}/attachments/upload-requests/` 🔒
 
 **Request (`RequestAttachmentUploadRequest`):**
 ```json
@@ -1708,7 +1708,7 @@ sort:                  string
 
 **Response 201 → `UploadSlotDTO[]`**
 
-### POST `/chats/{chat_id}/attachments/upload-requests:confirm` 🔒
+### POST `/chats/{chat_id}/attachments/upload-requests/confirm/` 🔒
 
 **Request (`ConfirmAttachmentUploadRequest`):**
 ```json
@@ -1719,7 +1719,7 @@ sort:                  string
 
 **Response 202** (no content)
 
-### GET `/chats/{chat_id}/messages/{message_id}/attachments/{attachment_id}/download-url` 🔒
+### GET `/chats/{chat_id}/messages/{message_id}/attachments/{attachment_id}/download-url/` 🔒
 
 **Response 200 → `AttachmentDownloadUrlDTO`**
 
@@ -1730,7 +1730,7 @@ sort:                  string
 ### Подключение
 
 ```
-WS /api/v1/chats/ws?token=<access_token>
+WS /api/v1/chats/ws/?token=<access_token>
 ```
 
 Поддерживается subprotocol `chat.v1`.
@@ -1800,11 +1800,11 @@ interface PageResult<T> {
 
 ### Cursor-пагинация
 
-| Эндпоинт                                         | Параметры                   | Тип cursor           |
-|--------------------------------------------------|-----------------------------|----------------------|
-| `GET /chats/my`                                  | `limit`, `cursor`           | `string` (base64)    |
-| `GET /chats/{id}/messages`                       | `limit`, `before_id`        | `number` (message ID)|
-| `GET /chats/{id}/messages/read-details`          | `limit`, `after_user_id`    | `number` (user ID)   |
+| Эндпоинт                                          | Параметры                   | Тип cursor           |
+|---------------------------------------------------|-----------------------------|----------------------|
+| `GET /chats/my/`                                  | `limit`, `cursor`           | `string` (base64)    |
+| `GET /chats/{id}/messages/`                       | `limit`, `before_id`        | `number` (message ID)|
+| `GET /chats/{id}/messages/read-details/`          | `limit`, `after_user_id`    | `number` (user ID)   |
 
 ---
 
@@ -1937,9 +1937,3 @@ async function apiRequest(config: RequestConfig) {
 | Редактировать чат             | —      | —      | ✓     | ✓     |
 | Удалить чат                   | —      | —      | —     | ✓     |
 | Менять роли участников        | —      | —      | —     | ✓     |
-
-## Приложение B: Нереализованные функции ⚠️
-
-| Функция             | Статус            |
-|---------------------|-------------------|
-| `ChatType.channel`  | ⚠️ не реализовано |
