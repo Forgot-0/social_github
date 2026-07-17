@@ -1,4 +1,4 @@
-# API Documentation — Full Frontend Reference
+﻿# API Documentation — Full Frontend Reference
 > **Версия:** синхронизирована с кодом. Предназначена для AI-генерации frontend.  
 > Все типы взяты из реальных Pydantic DTO/Schema файлов.
 
