@@ -50,7 +50,7 @@
 
 7. Создай core/network/interceptors/auth_interceptor.dart — QueuedInterceptor:
    - Перед каждым запросом (кроме /auth/login/, /auth/refresh/, /auth/register/... — публичных путей) добавляет заголовок Authorization: Bearer <access_token> из secure storage, если он есть.
-   - На onError: если статус 401 (NOT_AUTHNTICATED) или 400 с error.code == "EXPIRED_TOKEN" — поставить запрос в очередь, вызвать POST /auth/refresh/ (без тела, cookie уйдёт сама благодаря cookie_jar), получить новый access_token, сохранить его в secure storage, повторить исходный запрос с новым токеном. Использовать lock (пакет synchronized, он уже есть в pubspec) чтобы параллельные 401 не наплодили несколько refresh одновременно — второй и последующие ждут результата первого.
+   - На onError: если статус 401 (NOT_AUTHENTICATED) или 400 с error.code == "EXPIRED_TOKEN" — поставить запрос в очередь, вызвать POST /auth/refresh/ (без тела, cookie уйдёт сама благодаря cookie_jar), получить новый access_token, сохранить его в secure storage, повторить исходный запрос с новым токеном. Использовать lock (пакет synchronized, он уже есть в pubspec) чтобы параллельные 401 не наплодили несколько refresh одновременно — второй и последующие ждут результата первого.
    - Если refresh тоже упал (400 INVALID_TOKEN/EXPIRED_TOKEN или 404 NOT_FOUND_OR_INACTIVE_SESSION) — почисти secure storage и прокинь оригинальную ошибку дальше (сессия просрочена, дальше это обработает authProvider/router-redirect в промте 1 и 7).
    - 403 INVALID_TOKEN не ретраить через refresh (это невалидный, а не истёкший токен) — сразу считать сессию невалидной.
 
