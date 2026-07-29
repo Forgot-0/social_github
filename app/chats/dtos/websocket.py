@@ -85,7 +85,6 @@ class WSConnection:
                     {
                         "type": "ws.ping",
                         "connection_id": self.connection_id,
-                        "ts": now_utc().isoformat(),
                     }
                 ):
                     return
@@ -101,6 +100,7 @@ class WSConnection:
         if self.closed:
             return False
         try:
+            event['ts'] = now_utc().isoformat()
             self.send_queue.put_nowait(orjson.dumps(event))
         except asyncio.QueueFull:
             return False

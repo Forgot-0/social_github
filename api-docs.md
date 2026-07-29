@@ -1023,10 +1023,7 @@ interface WSEvent {
 | `ws.history` | `{ type, chat_id: string, payload: { after_seq: number; messages: MessageDTO[]; has_more: boolean; next_last_seq: number }, ts }` | Досылается после `ws.subscribed`, только если был передан `last_seq`/курсор. `messages` — полные `MessageDTO` (раздел 6.4), с уже прикреплёнными download-ссылками для вложений. |
 | `ws.pong` | `{ type: "ws.pong", payload: {} }` | Ответ на клиентский `{"op": "ping"}` |
 | `ws.ping` | `{ type: "ws.ping", connection_id: string, ts }` ⚠️ без обёртки `payload` | Проактивный heartbeat-пинг от сервера, раз в `heartbeat_interval` сек |
-| `ws.error` (вариант A) | `{ type: "ws.error", code: "BAD_COMMAND" \| "BAD_FRAME", detail: string }` ⚠️ без `ts`, без `payload` | Нераспарсенная/невалидная команда от клиента |
-| `ws.error` (вариант B) | `{ type: "ws.error", code: "NOT_CHAT_MEMBER", ts: string }` ⚠️ без `detail`, без `payload` | `subscribe`/`resume` на чат, где отправитель не состоит (или забанен) |
-
-**У `ws.error` две разные формы в зависимости от кода ошибки** — обрабатывать по `code`, не полагаться на наличие `detail`/`ts`/`payload` одновременно.
+| `ws.error` | { type: "ws.error", code: "BAD_COMMAND" \| "BAD_FRAME" \| "NOT_CHAT_MEMBER", detail: string, ts: string } ⚠️ без payload | `subscribe`/`resume` на чат, где отправитель не состоит (или забанен) или Нераспарсенная/невалидная команда от клиента |
 
 ### 7.5 Практическая схема работы для Flutter-клиента
 
