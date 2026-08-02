@@ -10,6 +10,7 @@ from app.core.db.repository import PageResult
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand
+from app.profiles.commands.profiles.get_or_create import GetOrCreateProfileCommand
 from app.profiles.commands.profiles.remove_contact import RemoveContactToProfileCommand
 from app.profiles.commands.profiles.update import UpdateProfileCommand
 from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatarCommand
@@ -39,6 +40,18 @@ async def get_profiles(
 ) -> PageResult[ProfileDTO]:
     return await mediator.handle_query(
         GetProfilesQuery(params.to_profile_filter())
+    )
+
+@router.get(
+    "/my/",
+    status_code=status.HTTP_200_OK
+)
+async def get_or_create(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: CurrentUserJWTData,
+) -> ProfileDTO:
+    return await mediator.handle_command(
+        GetOrCreateProfileCommand(user_jwt_data=user_jwt_data)
     )
 
 @router.put(
@@ -75,9 +88,10 @@ async def update_profile(
 )
 async def get_profile(
     profile_id: int,
+    user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
 ) -> ProfileDTO:
-    return await mediator.handle_query(GetProfileByIdQuery(profile_id))
+    return await mediator.handle_query(GetProfileByIdQuery(profile_id, user_jwt_data=user_jwt_data))
 
 # Avatar
 @router.post(

@@ -29,7 +29,7 @@ class GetProfilesQueryHandler(BaseQueryHandler[GetProfilesQuery, PageResult[Prof
         )
 
         return PageResult(
-            items=[ProfileDTO.model_validate(profile.to_dict()) for profile in profiles.items],
+            items=[ProfileDTO.model_validate(profile) for profile in profiles.items],
             total=profiles.total,
             page=profiles.page,
             page_size=profiles.page_size

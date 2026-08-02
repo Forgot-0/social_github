@@ -28,7 +28,7 @@ class GetNotificationsQueryHandler(BaseQueryHandler[GetNotificationsQuery, PageR
     async def _handle(self, query: GetNotificationsQuery) -> PageResult[NotificationDTO]:
         page = await self.notification_repository.find_by_filter(Notification, query.notification_filter)
         return PageResult(
-            items=[NotificationDTO.model_validate(item.to_dict()) for item in page.items],
+            items=[NotificationDTO.model_validate(item) for item in page.items],
             total=page.total,
             page=page.page,
             page_size=page.page_size,

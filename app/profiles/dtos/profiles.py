@@ -1,6 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.profiles.dtos.contacts import ContactDTO
 
@@ -14,6 +14,8 @@ class ProfileDTO(BaseModel):
     date_birthday: date | None
     skills: set[str]
     contacts: list[ContactDTO]
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AvatarPresignResponse(BaseModel):

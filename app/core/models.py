@@ -24,3 +24,6 @@ from app.chats.models.message import Message
 from app.chats.models.chat_roles import ChatRole
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.read_receipts import ReadReceipt
+
+from app.notifications.models.device import UserDeviceToken
+from app.notifications.models.notification import Notification

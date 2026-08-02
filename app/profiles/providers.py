@@ -5,6 +5,7 @@ from app.core.mediators.base import CommandRegistry, QueryRegistry
 from app.core.services.storage.aminio.policy import Policy
 from app.profiles.commands.profiles.add_contact import AddContactToProfileCommand, AddContactToProfileCommandHandler
 from app.profiles.commands.profiles.create import CreateProfileCommand, CreateProfileCommandHanler
+from app.profiles.commands.profiles.get_or_create import GetOrCreateProfileCommand, GetOrCreateProfileCommandHanler
 from app.profiles.commands.profiles.proccess_avatar import ProccessAvatarCommand, ProccessAvatarCommandHandler
 from app.profiles.commands.profiles.remove_contact import (
     RemoveContactToProfileCommand,
@@ -37,6 +38,9 @@ class ProfileModuleProvider(Provider):
 
         command_registry.register_command(
             CreateProfileCommand, CreateProfileCommandHanler
+        )
+        command_registry.register_command(
+            GetOrCreateProfileCommand, GetOrCreateProfileCommandHanler
         )
         command_registry.register_command(
             UpdateProfileCommand, UpdateProfileCommandHandler
