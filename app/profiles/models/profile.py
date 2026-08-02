@@ -63,7 +63,8 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
             id=user_id,
             username=username,
             date_birthday=date_birthday,
-            specialization=specialization
+            specialization=specialization,
+            avatars={}
         )
         instance.change_display_name(display_name)
         instance.change_bio(bio)

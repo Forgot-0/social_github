@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: e1c2a3cd9be1
+Revision ID: de2b046c79f3
 Revises: 
-Create Date: 2026-08-02 20:43:12.193292
+Create Date: 2026-08-02 21:48:22.136693
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'e1c2a3cd9be1'
+revision: str = 'de2b046c79f3'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -58,6 +58,21 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('event_id')
     )
+    op.create_table('notifications',
+    sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.BigInteger(), nullable=False),
+    sa.Column('type', sa.Enum('SYSTEM', 'PROJECT', 'CHAT', name='notificationtype'), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('message', sa.Text(), nullable=True),
+    sa.Column('payload', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('is_read', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('ix_notifications_user_created', 'notifications', ['user_id', 'created_at'], unique=False)
+    op.create_index(op.f('ix_notifications_user_id'), 'notifications', ['user_id'], unique=False)
+    op.create_index('ix_notifications_user_unread', 'notifications', ['user_id', 'is_read'], unique=False)
     op.create_table('permissions',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -120,6 +135,20 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_roles_name'), 'roles', ['name'], unique=True)
+    op.create_table('user_device_tokens',
+    sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.BigInteger(), nullable=False),
+    sa.Column('token', sa.String(length=512), nullable=False, comment='FCM registration token или APNs device token'),
+    sa.Column('platform', sa.Enum('ios', 'web', 'android', name='platformenum'), nullable=False, comment='android | ios | web'),
+    sa.Column('device_name', sa.String(length=128), nullable=True, comment="Читаемое имя: 'iPhone 15 Pro', 'Chrome on Windows'"),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'token', name='uq_device_token')
+    )
+    op.create_index('ix_device_tokens_user_active', 'user_device_tokens', ['user_id', 'is_active'], unique=False)
+    op.create_index(op.f('ix_user_device_tokens_user_id'), 'user_device_tokens', ['user_id'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('email', sa.String(), nullable=False),
@@ -393,6 +422,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_user_device_tokens_user_id'), table_name='user_device_tokens')
+    op.drop_index('ix_device_tokens_user_active', table_name='user_device_tokens')
+    op.drop_table('user_device_tokens')
     op.drop_index(op.f('ix_roles_name'), table_name='roles')
     op.drop_table('roles')
     op.drop_index(op.f('ix_projects_slug'), table_name='projects')
@@ -405,6 +437,10 @@ def downgrade() -> None:
     op.drop_table('profiles')
     op.drop_index(op.f('ix_permissions_name'), table_name='permissions')
     op.drop_table('permissions')
+    op.drop_index('ix_notifications_user_unread', table_name='notifications')
+    op.drop_index(op.f('ix_notifications_user_id'), table_name='notifications')
+    op.drop_index('ix_notifications_user_created', table_name='notifications')
+    op.drop_table('notifications')
     op.drop_table('events_log')
     op.drop_index('ix_chats_type_public', table_name='chats')
     op.drop_index('ix_chats_type_member_count', table_name='chats')

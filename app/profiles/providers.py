@@ -32,6 +32,7 @@ class ProfileModuleProvider(Provider):
     process_avatar_handler = provide(ProccessAvatarCommandHandler)
     add_contact_profile_handler = provide(AddContactToProfileCommandHandler)
     remove_contact_profile_handler = provide(RemoveContactToProfileCommandHandler)
+    get_or_create_provider = provide(GetOrCreateProfileCommandHanler)
 
     @decorate
     def register_profile_command_handlers(self, command_registry: CommandRegistry) -> CommandRegistry:
