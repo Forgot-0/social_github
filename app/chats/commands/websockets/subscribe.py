@@ -36,7 +36,7 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
             event = {
                 "type": "ws.error",
                 "code": "NOT_CHAT_MEMBER",
-                "ts": now_utc().isoformat()
+                "detail": "You are not a member of this chat"
             }
             command.conn.try_send(event)
             return
@@ -46,7 +46,6 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
             "type": "ws.subscribed",
             "chat_id": str(chat_id),
             "payload": {"last_seq": command.last_seq},
-            "ts": now_utc().isoformat()
         }
         command.conn.try_send(event)
 
@@ -77,6 +76,5 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
                         "has_more": len(messages) > limit,
                         "next_last_seq": next_last_seq,
                     },
-                    "ts": now_utc().isoformat()
                 },
             )

@@ -42,7 +42,7 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                 event = {
                     "type": "ws.error",
                     "code": "NOT_CHAT_MEMBER",
-                    "ts": now_utc().isoformat()
+                    "detail": "You are not a member of this chat"
                 }
                 command.conn.try_send(event)
                 return
@@ -52,7 +52,6 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                 "type": "ws.subscribed",
                 "chat_id": chat_id,
                 "payload": {"last_seq": cursor_seq},
-                "ts": now_utc().isoformat()
             }
             command.conn.try_send(event)
             limit = chat_config.WS_REPLAY_BATCH_SIZE
@@ -81,6 +80,5 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                         "has_more": len(messages) > limit,
                         "next_last_seq": next_last_seq,
                     },
-                    "ts": now_utc().isoformat()
                 },
             )

@@ -24,7 +24,6 @@ class UnsubscribeCommandHandler(BaseCommandHandler[UnsubscribeCommand, None]):
             "type": "ws.unsubscribed",
             "chat_id": command.chat_id,
             "payload": {},
-            "ts": now_utc().isoformat()
         }
         command.conn.try_send(event)
 
