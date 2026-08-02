@@ -44,7 +44,7 @@
 | 8 | **`POST /profiles/`** | Был описан как способ создать профиль | Такого эндпоинта **не существует**. Профиль создаётся автоматически бэкендом через Kafka-consumer сразу после `POST /users/register/` (слушает топик `users`). Между регистрацией и появлением профиля возможна небольшая задержка (eventual consistency) — `GET /profiles/{id}/` может на короткое время вернуть 404 сразу после регистрации. |
 | 9 | **Аватар профиля** | `avatars: { "128": {"url": "..."}, "256": {"url": "..."} }` | Реальная структура: `avatars: { "32"\|"64"\|"256"\|"512": { "jpg": url, "webp": url, "avif": url } }` — 4 размера (не 128!) × 3 формата на размер. См. раздел 4.5. |
 | 10 | **Раздел "realtime" (`/chats/realtime/presence/`, `/chats/realtime/ws/status/`)** | Описан как отдельный REST-раздел | Таких путей **нет нигде в коде** (проверено `grep -r "realtime"` по всему репозиторию — ноль совпадений). Presence отдаётся через `GET /chats/{chat_id}/members/?include_presence=true` и через WS. |
-| 11 | **WebSocket-протокол** | Описаны только `ws.ready` и `ws.error` | На самом деле это полноценный протокол с 4 командами клиента (`subscribe`, `unsubscribe`, `resume`, `ping`/`pong`) и **~13 типами server-push событий** (`new_message`, `message_edited`, `message_deleted`, `messages_read`, `member_joined`, `member_left`, `member_kick`, `member_banned`, `chat_created`, `chat_updated`, `attachment_success`, плюс служебные `ws.ready/subscribed/unsubscribed/history/pong/ping/error`). Полностью расписан в разделе 7 — это самая важная часть для чат-функциональности. |
+| 11 | **WebSocket-протокол** | Описаны только `ws.ready` и `ws.error` | На самом деле это полноценный протокол с 4 командами клиента (`subscribe`, `unsubscribe`, `resume`, `ping`/`pong`) и **~13 типами server-push событий** (`new_message`, `message_edited`, `message_deleted`, `messages_read`, `member_joined`, `member_left`, `member_kick`, `member_banned`, `chat_created`, `chat_updated`, `attachment_success`, `chat_deleted`, плюс служебные `ws.ready/subscribed/unsubscribed/history/pong/ping/error`). Полностью расписан в разделе 7 — это самая важная часть для чат-функциональности. |
 | 12 | **Уведомления (`/devices`, `/notifications`)** | Модуль отсутствовал в документе целиком | Полностью рабочий модуль пуш-уведомлений и in-app нотификаций. См. раздел 8. |
 | 13 | **Роли проекта** | `{owner, admin, member, viewer}`, `permissions: {}` | Реальные сид-роли: `owner(id=1)`, `maintainer(id=2)`, `developer(id=4, id=3 не существует)`, `user(id=5)`, с непустой картой прав. См. раздел 9. |
 | 14 | **Загрузка вложений в чат vs аватар** | Не различались | Это **два разных механизма**. Аватар — presigned **POST** (multipart form, поля из `fields`). Вложение чата — presigned **PUT** (сырые байты файла телом PUT-запроса на `upload_url`). Перепутать — значит получить 403/подпись не сойдётся. См. разделы 4.5 и 6.5. |
@@ -176,7 +176,7 @@ interface ErrorResponse {
 
 | code | HTTP | detail | Когда возникает |
 |---|---|---|---|
-| `NOT_AUTHNTICATED` *(опечатка в самом коде, не исправлена)* | 401 | `{}` | Запрос на `🔒`-эндпоинт без заголовка `Authorization` вообще |
+| `NOT_AUTHENTICATED` | 401 | `{}` | Запрос на `🔒`-эндпоинт без заголовка `Authorization` вообще |
 | `INVALID_TOKEN` | 403 | `{}` | Токен есть, но невалиден (плохая подпись, не тот формат) |
 | `EXPIRED_TOKEN` | 400 | `{}` | Access-токен истёк (обычно каждые 5 минут — самый частый кейс, триггер для refresh) |
 | `ACCESS_DENIED` | 403 | `{ "permissions": string[] }` | Не хватает системных прав (RBAC) либо аккаунт неактивен (`is_active=false`, тогда `permissions: []`) |
@@ -788,7 +788,7 @@ interface ListChats {   // ответ GET /chats/ — курсорная паг�
 | GET | `/chats/{chat_id}/members/` | — | Query: `limit=50 (≤500), cursor_user_id?, include_presence=false` | `ListMembers` |
 | POST | `/chats/{chat_id}/members/` | 30/5мин | `AddMemberRequest {user_id: number, role_id: number = 5}` | `204` |
 | PATCH | `/chats/{chat_id}/members/{user_id}/role/` | — | `ChangeMemberRoleRequest {role_id: number}` | `204` |
-| PATCH | `/chats/{chat_id}/members/{user_id}/ban/` | — | `BanMemberRequest {reason?: string, bannet_to?: datetime}` ⚠️ поле `bannet_to`, опечатка сохранена как есть | `204` |
+| PATCH | `/chats/{chat_id}/members/{user_id}/ban/` | — | `BanMemberRequest {reason?: string, banned_to?: datetime}` | `204` |
 | DELETE | `/chats/{chat_id}/members/{user_id}/` | — | — | `204` (кик) |
 
 ```ts
@@ -1009,7 +1009,7 @@ interface WSEvent {
 | `chat_created` | Чат создан (актуально для группового добавления сразу нескольких участников — все получат событие) | `{ chat_id: string; created_by: number; name: string \| null; member_ids: number[]; chat_type: string; member_count: number }` |
 | `chat_updated` | Изменены настройки чата | `{ chat_id: string; updated_by: number; name: string \| null; description: string \| null; is_public: boolean; admin_only: boolean; slow_mode_seconds: number; permissions: Record<string, boolean> }` |
 | `attachment_success` | Вложение(я) успешно обработаны после `confirm/` (шлётся лично пользователю-загрузчику, не всей подписке чата) | `{ user_id: number; chat_id: string; tokens: string[] }` — список готовых `upload_token` |
-| `chats.chat.deleted` ⚠️ | Чат удалён | `{ chat_id: string; deleted_by: number }` — **это единственное событие, у которого `type` НЕ переведён в "красивое" имя, а приходит как есть, сырым `event_name`** (в коде нет записи `chats.chat.deleted` в таблице маппинга) |
+| `chat_deleted` | Чат удалён | `{ chat_id: string; deleted_by: number }` |
 
 **Определены, но реально нигде не публикуются** (есть в `WSEventType`, но `grep` по кодовой базе не находит ни одного места, где они реально отправляются): `typing_start`, `typing_stop`, `call_started`, `call_ended`, `call_joined`, `call_left`. Не полагайтесь на их получение — заложить обработку на будущее можно, но сейчас бэкенд их не шлёт.
 
@@ -1023,10 +1023,7 @@ interface WSEvent {
 | `ws.history` | `{ type, chat_id: string, payload: { after_seq: number; messages: MessageDTO[]; has_more: boolean; next_last_seq: number }, ts }` | Досылается после `ws.subscribed`, только если был передан `last_seq`/курсор. `messages` — полные `MessageDTO` (раздел 6.4), с уже прикреплёнными download-ссылками для вложений. |
 | `ws.pong` | `{ type: "ws.pong", payload: {} }` | Ответ на клиентский `{"op": "ping"}` |
 | `ws.ping` | `{ type: "ws.ping", connection_id: string, ts }` ⚠️ без обёртки `payload` | Проактивный heartbeat-пинг от сервера, раз в `heartbeat_interval` сек |
-| `ws.error` (вариант A) | `{ type: "ws.error", code: "BAD_COMMAND" \| "BAD_FRAME", detail: string }` ⚠️ без `ts`, без `payload` | Нераспарсенная/невалидная команда от клиента |
-| `ws.error` (вариант B) | `{ type: "ws.error", code: "NOT_CHAT_MEMBER", ts: string }` ⚠️ без `detail`, без `payload` | `subscribe`/`resume` на чат, где отправитель не состоит (или забанен) |
-
-**У `ws.error` две разные формы в зависимости от кода ошибки** — обрабатывать по `code`, не полагаться на наличие `detail`/`ts`/`payload` одновременно.
+| `ws.error` | { type: "ws.error", code: "BAD_COMMAND" \| "BAD_FRAME" \| "NOT_CHAT_MEMBER", detail: string, ts: string } ⚠️ без payload | `subscribe`/`resume` на чат, где отправитель не состоит (или забанен) или Нераспарсенная/невалидная команда от клиента |
 
 ### 7.5 Практическая схема работы для Flutter-клиента
 
@@ -1204,7 +1201,7 @@ interface NotificationDTO {
 - [ ] Реализован refresh-интерцептор на 5-минутное истечение токена
 - [ ] `has_next`/`total_pages` считаются на клиенте для обычных списков
 - [ ] Аватар грузится через presigned POST, вложения чата — через presigned PUT
-- [ ] WS обрабатывает все перечисленные в 7.4 типы событий и оба варианта `ws.error`
+- [ ] WS обрабатывает все перечисленные в 7.4 типы событий
 - [ ] `new_message`/`message_edited`/`message_deleted` не рендерятся напрямую из WS-payload
 - [ ] `resume` никогда не отправляется больше чем с 20 курсорами
 - [ ] Учтена структура `avatars` (4 размера × 3 формата), а не плоский `{url}`

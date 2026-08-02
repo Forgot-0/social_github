@@ -138,7 +138,7 @@ class TestMembersHttpEndpoints:
 
         unban = await client.patch(
             api_path(f"chats/{chat_id}/members/{target_id}/ban"),
-            json={"bannet_to": (now_utc() - timedelta(days=1)).isoformat()},
+            json={"banned_to": (now_utc() - timedelta(days=1)).isoformat()},
             headers=owner_headers,
         )
         assert unban.status_code == 204

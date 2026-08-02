@@ -46,7 +46,7 @@ class ChangeMemberRoleRequest(BaseModel):
 
 class BanMemberRequest(BaseModel):
     reason: str | None = None
-    bannet_to: datetime | None = None
+    banned_to: datetime | None = None
 
 
 class SendMessageRequest(BaseModel):

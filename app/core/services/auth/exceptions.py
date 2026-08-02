@@ -37,7 +37,7 @@ class ExpiredTokenError(ApplicationError):
 
 @dataclass
 class NotAuthenticatedError(ApplicationError):
-    code: str = "NOT_AUTHNTICATED"
+    code: str = "NOT_AUTHENTICATED"
     status: int = 401
 
     @property

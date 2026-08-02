@@ -109,7 +109,7 @@ class TestBanMemberCommand:
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                bannet_to=now_utc() - timedelta(days=1)
+                banned_to=now_utc() - timedelta(days=1)
             )
         )
 
@@ -137,7 +137,7 @@ class TestBanMemberCommand:
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                bannet_to=now_utc() - timedelta(days=1)
+                banned_to=now_utc() - timedelta(days=1)
             )
         )
         events = [e for e in mock_event_bus.published_events if isinstance(e, BannedChatMemberEvent)]
@@ -162,7 +162,7 @@ class TestBanMemberCommand:
             BanMemberCommand(
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id, target_user_id=2,
-                bannet_to=now_utc() - timedelta(days=1))
+                banned_to=now_utc() - timedelta(days=1))
         )
         member = await chat_repository.get_member_chat(group_chat.id, 2)
         assert member is not None
@@ -184,7 +184,7 @@ class TestBanMemberCommand:
                 user_jwt_data=user_jwt,
                 chat_id=group_chat.id,
                 target_user_id=2,
-                bannet_to=now_utc() - timedelta(days=1)
+                banned_to=now_utc() - timedelta(days=1)
             )
         )
 
