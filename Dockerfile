@@ -49,6 +49,8 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         curl \
+        libmagic1 \
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH

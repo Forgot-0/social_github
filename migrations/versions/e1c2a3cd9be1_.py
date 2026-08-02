@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9f63150afaf3
+Revision ID: e1c2a3cd9be1
 Revises: 
-Create Date: 2026-05-10 17:04:23.342479
+Create Date: 2026-08-02 20:43:12.193292
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '9f63150afaf3'
+revision: str = 'e1c2a3cd9be1'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -140,8 +140,8 @@ def upgrade() -> None:
     sa.Column('user_id', sa.BigInteger(), nullable=False),
     sa.Column('role_id', sa.BigInteger(), nullable=False),
     sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('is_muted', sa.Boolean(), nullable=False),
-    sa.Column('is_banned', sa.Boolean(), nullable=False),
+    sa.Column('muted_to', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('banned_to', sa.DateTime(timezone=True), nullable=True),
     sa.Column('permissions_overrides', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -150,7 +150,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('chat_id', 'user_id', name='uq_chat_member')
     )
-    op.create_index('ix_chat_members_chat_active_user', 'chat_members', ['chat_id', 'is_banned', 'user_id'], unique=False)
+    op.create_index('ix_chat_members_chat_active_user', 'chat_members', ['chat_id', 'user_id'], unique=False)
     op.create_index('ix_chat_members_chat_role_user', 'chat_members', ['chat_id', 'role_id', 'user_id'], unique=False)
     op.create_index(op.f('ix_chat_members_role_id'), 'chat_members', ['role_id'], unique=False)
     op.create_index('ix_chat_members_user_chat', 'chat_members', ['user_id', 'chat_id'], unique=False)
@@ -251,8 +251,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('chat_id', 'user_id', name='uq_read_receipt')
     )
-    op.create_index(op.f('ix_read_receipts_chat_id'), 'read_receipts', ['chat_id'], unique=False)
-    op.create_index(op.f('ix_read_receipts_last_read_message_seq'), 'read_receipts', ['last_read_message_seq'], unique=False)
     op.create_index(op.f('ix_read_receipts_user_id'), 'read_receipts', ['user_id'], unique=False)
     op.create_table('role_permissions',
     sa.Column('role_id', sa.Integer(), nullable=False),
@@ -267,6 +265,7 @@ def upgrade() -> None:
     sa.Column('device_id', sa.String(), nullable=False),
     sa.Column('device_info', sa.LargeBinary(), nullable=False),
     sa.Column('user_agent', sa.String(), nullable=False),
+    sa.Column('ip_address', sa.String(), nullable=False),
     sa.Column('last_activity', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
@@ -309,6 +308,19 @@ def upgrade() -> None:
     op.create_index(op.f('ix_applications_candidate_id'), 'applications', ['candidate_id'], unique=False)
     op.create_index(op.f('ix_applications_position_id'), 'applications', ['position_id'], unique=False)
     op.create_index(op.f('ix_applications_project_id'), 'applications', ['project_id'], unique=False)
+    op.create_table('chat_member_bans',
+    sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
+    sa.Column('member_id', sa.BigInteger(), nullable=False),
+    sa.Column('banned_by_user_id', sa.BigInteger(), nullable=False),
+    sa.Column('reason', sa.String(length=256), nullable=True),
+    sa.Column('banned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('banned_to', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['member_id'], ['chat_members.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_chat_member_bans_banned_by_user_id'), 'chat_member_bans', ['banned_by_user_id'], unique=False)
+    op.create_index('ix_chat_member_bans_member_banned_at', 'chat_member_bans', ['member_id', 'banned_at'], unique=False)
+    op.create_index(op.f('ix_chat_member_bans_member_id'), 'chat_member_bans', ['member_id'], unique=False)
     op.create_table('message_attachments',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('message_id', sa.UUID(), nullable=True),
@@ -341,6 +353,10 @@ def downgrade() -> None:
     op.drop_index('ix_msg_attachments_chat_uploader', table_name='message_attachments')
     op.drop_index(op.f('ix_message_attachments_message_id'), table_name='message_attachments')
     op.drop_table('message_attachments')
+    op.drop_index(op.f('ix_chat_member_bans_member_id'), table_name='chat_member_bans')
+    op.drop_index('ix_chat_member_bans_member_banned_at', table_name='chat_member_bans')
+    op.drop_index(op.f('ix_chat_member_bans_banned_by_user_id'), table_name='chat_member_bans')
+    op.drop_table('chat_member_bans')
     op.drop_index(op.f('ix_applications_project_id'), table_name='applications')
     op.drop_index(op.f('ix_applications_position_id'), table_name='applications')
     op.drop_index(op.f('ix_applications_candidate_id'), table_name='applications')
@@ -354,8 +370,6 @@ def downgrade() -> None:
     op.drop_table('sessions')
     op.drop_table('role_permissions')
     op.drop_index(op.f('ix_read_receipts_user_id'), table_name='read_receipts')
-    op.drop_index(op.f('ix_read_receipts_last_read_message_seq'), table_name='read_receipts')
-    op.drop_index(op.f('ix_read_receipts_chat_id'), table_name='read_receipts')
     op.drop_table('read_receipts')
     op.drop_index(op.f('ix_project_memberships_user_id'), table_name='project_memberships')
     op.drop_index(op.f('ix_project_memberships_role_id'), table_name='project_memberships')
