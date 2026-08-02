@@ -66,7 +66,7 @@ class TestRoleEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.post(
-            api_path(f"users/{standard_user.id}/roles"),
+            api_path(f"users/{standard_user.id}/roles/"),
             headers=headers,
             json={"role_name": "assignable"}
         )

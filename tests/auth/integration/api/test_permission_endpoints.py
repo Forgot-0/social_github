@@ -59,7 +59,7 @@ class TestPermissionEndpoints:
         headers = auth_headers(admin_user)
 
         response = await client.delete(
-            api_path("permissions/deletable:test"),
+            api_path("permissions/deletable:test/"),
             headers=headers,
         )
 

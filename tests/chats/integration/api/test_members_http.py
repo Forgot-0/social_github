@@ -22,14 +22,14 @@ class TestMembersHttpEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Members list", member_ids=[1, 50_100]),
             headers=headers,
         )
         assert create.status_code == 201
         chat_id = create.json()["id"]
 
-        response = await client.get(api_path(f"chats/{chat_id}/members"), headers=headers)
+        response = await client.get(api_path(f"chats/{chat_id}/members/"), headers=headers)
         assert response.status_code == 200
         payload = response.json()
         user_ids = {m["user_id"] for m in payload["members"]}
@@ -45,7 +45,7 @@ class TestMembersHttpEndpoints:
     ) -> None:
         owner_headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Kick flow"),
             headers=owner_headers,
         )
@@ -54,7 +54,7 @@ class TestMembersHttpEndpoints:
 
         target_id = 50_101
         add = await client.post(
-            api_path(f"chats/{chat_id}/members"),
+            api_path(f"chats/{chat_id}/members/"),
             json={"user_id": target_id, "role_id": 5},
             headers=owner_headers,
         )
@@ -62,15 +62,15 @@ class TestMembersHttpEndpoints:
 
         victim = make_user_jwt(id=str(target_id), username="kickvictim")
         victim_headers = create_auth_headers(victim)
-        assert (await client.get(api_path(f"chats/{chat_id}"), headers=victim_headers)).status_code == 200
+        assert (await client.get(api_path(f"chats/{chat_id}/"), headers=victim_headers)).status_code == 200
 
         kick = await client.delete(
-            api_path(f"chats/{chat_id}/members/{target_id}"),
+            api_path(f"chats/{chat_id}/members/{target_id}/"),
             headers=owner_headers,
         )
         assert kick.status_code == 204
 
-        blocked = await client.get(api_path(f"chats/{chat_id}"), headers=victim_headers)
+        blocked = await client.get(api_path(f"chats/{chat_id}/"), headers=victim_headers)
         assert blocked.status_code == 403
 
     async def test_add_member_duplicate_conflict(
@@ -81,7 +81,7 @@ class TestMembersHttpEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Dup members"),
             headers=headers,
         )
@@ -89,14 +89,14 @@ class TestMembersHttpEndpoints:
         chat_id = create.json()["id"]
 
         first = await client.post(
-            api_path(f"chats/{chat_id}/members"),
+            api_path(f"chats/{chat_id}/members/"),
             json={"user_id": 50_102, "role_id": 5},
             headers=headers,
         )
         assert first.status_code == 204
 
         second = await client.post(
-            api_path(f"chats/{chat_id}/members"),
+            api_path(f"chats/{chat_id}/members/"),
             json={"user_id": 50_102, "role_id": 5},
             headers=headers,
         )
@@ -113,7 +113,7 @@ class TestMembersHttpEndpoints:
         owner_headers = create_auth_headers(user_jwt)
         target_id = 50_103
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Ban flow", member_ids=[1, target_id]),
             headers=owner_headers,
         )
@@ -123,28 +123,28 @@ class TestMembersHttpEndpoints:
         victim_headers = create_auth_headers(make_user_jwt(id=str(target_id), username="banneduser"))
 
         ban = await client.patch(
-            api_path(f"chats/{chat_id}/members/{target_id}/ban"),
+            api_path(f"chats/{chat_id}/members/{target_id}/ban/"),
             json={},
             headers=owner_headers,
         )
         assert ban.status_code == 204
 
         denied = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json={"content": "should fail", "message_type": "text", "upload_tokens": []},
             headers=victim_headers,
         )
         assert denied.status_code == 403
 
         unban = await client.patch(
-            api_path(f"chats/{chat_id}/members/{target_id}/ban"),
+            api_path(f"chats/{chat_id}/members/{target_id}/ban/"),
             json={"banned_to": (now_utc() - timedelta(days=1)).isoformat()},
             headers=owner_headers,
         )
         assert unban.status_code == 204
 
         ok = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json={"content": "back online", "message_type": "text", "upload_tokens": []},
             headers=victim_headers,
         )
@@ -159,7 +159,7 @@ class TestMembersHttpEndpoints:
         headers = create_auth_headers(user_jwt)
         target_id = 50_104
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Role change", member_ids=[1, target_id]),
             headers=headers,
         )
@@ -167,13 +167,13 @@ class TestMembersHttpEndpoints:
         chat_id = create.json()["id"]
 
         role_change = await client.patch(
-            api_path(f"chats/{chat_id}/members/{target_id}/role"),
+            api_path(f"chats/{chat_id}/members/{target_id}/role/"),
             json={"role_id": 3},
             headers=headers,
         )
         assert role_change.status_code == 204
 
-        listed = await client.get(api_path(f"chats/{chat_id}/members"), headers=headers)
+        listed = await client.get(api_path(f"chats/{chat_id}/members/"), headers=headers)
         assert listed.status_code == 200
         by_user = {m["user_id"]: m for m in listed.json()["members"]}
         assert by_user[target_id]["role_id"] == 3
@@ -193,7 +193,7 @@ class TestMembersHttpEndpoints:
         )
 
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Presence flags", member_ids=[1, peer_id]),
             headers=headers,
         )
@@ -201,7 +201,7 @@ class TestMembersHttpEndpoints:
         chat_id = create.json()["id"]
 
         response = await client.get(
-            api_path(f"chats/{chat_id}/members"),
+            api_path(f"chats/{chat_id}/members/"),
             params={"include_presence": "true"},
             headers=headers,
         )

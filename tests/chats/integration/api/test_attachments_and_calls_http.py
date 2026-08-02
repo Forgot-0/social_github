@@ -20,7 +20,7 @@ class TestAttachmentsHttpEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Attachments"),
             headers=headers,
         )
@@ -28,7 +28,7 @@ class TestAttachmentsHttpEndpoints:
         chat_id = create.json()["id"]
 
         response = await client.post(
-            api_path(f"chats/{chat_id}/attachments/upload-requests"),
+            api_path(f"chats/{chat_id}/attachments/upload-requests/"),
             json={
                 "uploads": [
                     {"filename": "photo.jpg", "mime_type": "image/jpeg", "file_size": 1024},
@@ -50,14 +50,14 @@ class TestAttachmentsHttpEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Confirm upload"),
             headers=headers,
         )
         chat_id = create.json()["id"]
 
         slots_resp = await client.post(
-            api_path(f"chats/{chat_id}/attachments/upload-requests"),
+            api_path(f"chats/{chat_id}/attachments/upload-requests/"),
             json={
                 "uploads": [
                     {"filename": "doc.pdf", "mime_type": "application/pdf", "file_size": 2048},
@@ -68,7 +68,7 @@ class TestAttachmentsHttpEndpoints:
         token = slots_resp.json()[0]["upload_token"]
 
         confirm = await client.post(
-            api_path(f"chats/{chat_id}/attachments/upload-requests:confirm"),
+            api_path(f"chats/{chat_id}/attachments/upload-requests/confirm/"),
             json={"upload_tokens": [token]},
             headers=headers,
         )
@@ -82,14 +82,14 @@ class TestAttachmentsHttpEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Download url"),
             headers=headers,
         )
         chat_id = create.json()["id"]
 
         msg = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("with fake attachment ref"),
             headers=headers,
         )
@@ -99,7 +99,7 @@ class TestAttachmentsHttpEndpoints:
 
         response = await client.get(
             api_path(
-                f"chats/{chat_id}/messages/{message_id}/attachments/{fake_attachment}/download-url"
+                f"chats/{chat_id}/messages/{message_id}/attachments/{fake_attachment}/download-url/"
             ),
             headers=headers,
         )
@@ -119,13 +119,13 @@ class TestCallsHttpEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Calls"),
             headers=headers,
         )
         chat_id = create.json()["id"]
 
-        response = await client.post(api_path(f"chats/{chat_id}/calls/join"), headers=headers)
+        response = await client.post(api_path(f"chats/{chat_id}/calls/join/"), headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["token"] == "integration-test-livekit-jwt"
@@ -141,7 +141,7 @@ class TestCallsHttpEndpoints:
     ) -> None:
         owner_headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Calls closed"),
             headers=owner_headers,
         )
@@ -150,7 +150,7 @@ class TestCallsHttpEndpoints:
 
         stranger = make_user_jwt(id="50300", username="nocalluser")
         response = await client.post(
-            api_path(f"chats/{chat_id}/calls/join"),
+            api_path(f"chats/{chat_id}/calls/join/"),
             headers=create_auth_headers(stranger),
         )
         assert response.status_code == 403
@@ -164,14 +164,14 @@ class TestCallsHttpEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Mute call", member_ids=[1, 50_200]),
             headers=headers,
         )
         chat_id = create.json()["id"]
 
         response = await client.post(
-            api_path(f"chats/{chat_id}/calls/participants/50200/mute"),
+            api_path(f"chats/{chat_id}/calls/participants/50200/mute/"),
             json={"muted": True},
             headers=headers,
         )

@@ -22,7 +22,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.post(
-            api_path("projects"),
+            api_path("projects/"),
             json={
                 "name": "API Test Project",
                 "slug": "api-test-project",
@@ -41,7 +41,7 @@ class TestProjectEndpoints:
         client: AsyncClient,
     ) -> None:
         response = await client.post(
-            api_path("projects"),
+            api_path("projects/"),
             json={"name": "Test", "slug": "test"},
         )
 
@@ -57,7 +57,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            api_path(f"projects/{persisted_project.id}"),
+            api_path(f"projects/{persisted_project.id}/"),
             headers=headers,
         )
 
@@ -74,7 +74,7 @@ class TestProjectEndpoints:
     ) -> None:
         headers = create_auth_headers(user_jwt)
 
-        response = await client.get(api_path("projects/999999"), headers=headers)
+        response = await client.get(api_path("projects/999999/"), headers=headers)
 
         assert response.status_code == 404
         data = response.json()
@@ -90,7 +90,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.put(
-            api_path(f"projects/{persisted_project.id}"),
+            api_path(f"projects/{persisted_project.id}/"),
             json={"name": "Updated via API"},
             headers=headers,
         )
@@ -108,7 +108,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(stranger_jwt)
 
         response = await client.put(
-            api_path(f"projects/{persisted_project.id}"),
+            api_path(f"projects/{persisted_project.id}/"),
             json={"name": "Hijacked"},
             headers=headers,
         )
@@ -125,7 +125,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.post(
-            api_path(f"projects/{persisted_project.id}/invite"),
+            api_path(f"projects/{persisted_project.id}/invite/"),
             json={"user_id": 800, "role_id": 5},
             headers=headers,
         )
@@ -143,7 +143,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(stranger_jwt)
 
         response = await client.post(
-            api_path(f"projects/{persisted_project.id}/members/accept"),
+            api_path(f"projects/{persisted_project.id}/members/accept/"),
             headers=headers,
         )
 
@@ -159,7 +159,7 @@ class TestProjectEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.post(
-            api_path(f"projects/{persisted_project.id}/positions"),
+            api_path(f"projects/{persisted_project.id}/positions/"),
             json={
                 "title": "Frontend Dev",
                 "description": "We need a frontend developer",
@@ -186,7 +186,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            api_path("positions"),
+            api_path("positions/"),
             params={"project_id": persisted_position.project_id},
             headers=headers,
         )
@@ -206,7 +206,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            api_path(f"positions/{persisted_position.id}"),
+            api_path(f"positions/{persisted_position.id}/"),
             headers=headers,
         )
 
@@ -226,7 +226,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            api_path(f"positions/{uuid4()}"),
+            api_path(f"positions/{uuid4()}/"),
             headers=headers,
         )
 
@@ -242,7 +242,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.put(
-            api_path(f"positions/{persisted_position.id}"),
+            api_path(f"positions/{persisted_position.id}/"),
             json={"title": "Updated Position Title"},
             headers=headers,
         )
@@ -259,7 +259,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.delete(
-            api_path(f"positions/{persisted_position.id}"),
+            api_path(f"positions/{persisted_position.id}/"),
             headers=headers,
         )
 
@@ -276,7 +276,7 @@ class TestPositionEndpoints:
         headers = create_auth_headers(candidate_jwt)
 
         response = await client.post(
-            api_path(f"positions/{persisted_position.id}/applications"),
+            api_path(f"positions/{persisted_position.id}/applications/"),
             json={"message": "I want to join this project"},
             headers=headers,
         )
@@ -299,7 +299,7 @@ class TestApplicationEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            api_path("applications"),
+            api_path("applications/"),
             params={
                 "project_id": persisted_application.project_id,
                 "status": "pending",
@@ -323,7 +323,7 @@ class TestApplicationEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.post(
-            api_path(f"applications/{persisted_application.id}/approve"),
+            api_path(f"applications/{persisted_application.id}/approve/"),
             headers=headers,
         )
 
@@ -339,7 +339,7 @@ class TestApplicationEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.post(
-            api_path(f"applications/{persisted_application.id}/reject"),
+            api_path(f"applications/{persisted_application.id}/reject/"),
             headers=headers,
         )
 
@@ -355,7 +355,7 @@ class TestApplicationEndpoints:
         headers = create_auth_headers(user_jwt)
 
         response = await client.get(
-            api_path("applications"),
+            api_path("applications/"),
             params={
                 "candidate_id": persisted_application.candidate_id,
                 "status": "pending",

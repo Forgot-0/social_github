@@ -43,7 +43,7 @@ class TestSessionEndpoints:
         headers = auth_headers(standard_user)
 
         response = await client.delete(
-            api_path(f"sessions/{test_session.id}"),
+            api_path(f"sessions/{test_session.id}/"),
             headers=headers
         )
 

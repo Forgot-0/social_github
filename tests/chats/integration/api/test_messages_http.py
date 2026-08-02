@@ -17,7 +17,7 @@ async def _create_group_chat(
     slow_mode_seconds: int = 0,
 ) -> str:
     payload = group_chat_payload(name=name, member_ids=member_ids, slow_mode_seconds=slow_mode_seconds)
-    response = await client.post(api_path("chats"), json=payload, headers=headers)
+    response = await client.post(api_path("chats/"), json=payload, headers=headers)
     assert response.status_code == 201, response.text
     return response.json()["id"]
 
@@ -36,7 +36,7 @@ class TestMessagesHttpEndpoints:
         chat_id = await _create_group_chat(client, headers)
 
         send_resp = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("hello world"),
             headers=headers,
         )
@@ -46,7 +46,7 @@ class TestMessagesHttpEndpoints:
         assert body["content"] == "hello world"
         assert body["seq"] >= 1
 
-        list_resp = await client.get(api_path(f"chats/{chat_id}/messages"), headers=headers)
+        list_resp = await client.get(api_path(f"chats/{chat_id}/messages/"), headers=headers)
         assert list_resp.status_code == 200
         listed = list_resp.json()
         assert listed["has_next"] in (True, False)
@@ -54,14 +54,14 @@ class TestMessagesHttpEndpoints:
         assert message_id in ids
 
         one = await client.get(
-            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            api_path(f"chats/{chat_id}/messages/{message_id}/"),
             headers=headers,
         )
         assert one.status_code == 200
         assert one.json()["id"] == message_id
 
         edited = await client.patch(
-            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            api_path(f"chats/{chat_id}/messages/{message_id}/"),
             json={"content": "hello edited"},
             headers=headers,
         )
@@ -70,7 +70,7 @@ class TestMessagesHttpEndpoints:
         assert edited.json()["is_edited"] is True
 
         delete_resp = await client.delete(
-            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            api_path(f"chats/{chat_id}/messages/{message_id}/"),
             headers=headers,
         )
         assert delete_resp.status_code == 204
@@ -85,7 +85,7 @@ class TestMessagesHttpEndpoints:
         chat_id = await _create_group_chat(client, headers)
 
         first = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("parent"),
             headers=headers,
         )
@@ -93,7 +93,7 @@ class TestMessagesHttpEndpoints:
         parent_id = first.json()["id"]
 
         reply = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json={
                 "content": "child reply",
                 "reply_to_id": parent_id,
@@ -115,7 +115,7 @@ class TestMessagesHttpEndpoints:
         chat_id = await _create_group_chat(client, headers)
 
         send_resp = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("ctx anchor"),
             headers=headers,
         )
@@ -123,7 +123,7 @@ class TestMessagesHttpEndpoints:
         seq = send_resp.json()["seq"]
 
         ctx = await client.get(
-            api_path(f"chats/{chat_id}/messages/context"),
+            api_path(f"chats/{chat_id}/messages/context/"),
             params={"target_seq": seq, "limit": 10},
             headers=headers,
         )
@@ -131,7 +131,7 @@ class TestMessagesHttpEndpoints:
         assert any(m["seq"] == seq for m in ctx.json()["messages"])
 
         read_resp = await client.post(
-            api_path(f"chats/{chat_id}/messages/read"),
+            api_path(f"chats/{chat_id}/messages/read/"),
             json={"message_seq": seq},
             headers=headers,
         )
@@ -148,7 +148,7 @@ class TestMessagesHttpEndpoints:
         target_id = await _create_group_chat(client, headers, name="Target")
 
         src_msg = await client.post(
-            api_path(f"chats/{source_id}/messages"),
+            api_path(f"chats/{source_id}/messages/"),
             json=send_text_payload("forward me"),
             headers=headers,
         )
@@ -156,7 +156,7 @@ class TestMessagesHttpEndpoints:
         source_message_id = src_msg.json()["id"]
 
         fwd = await client.post(
-            api_path(f"chats/{target_id}/messages/forward"),
+            api_path(f"chats/{target_id}/messages/forward/"),
             json={
                 "source_chat_id": source_id,
                 "source_message_id": source_message_id,
@@ -178,7 +178,7 @@ class TestMessagesHttpEndpoints:
         idem_key = "idem-integration-1"
 
         first = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("idempotent body"),
             headers={**headers, "Idempotency-Key": idem_key},
         )
@@ -186,7 +186,7 @@ class TestMessagesHttpEndpoints:
         first_id = first.json()["id"]
 
         second = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("different body ignored"),
             headers={**headers, "Idempotency-Key": idem_key},
         )
@@ -213,14 +213,14 @@ class TestMessagesHttpEndpoints:
         )
 
         first = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("first"),
             headers=member_headers,
         )
         assert first.status_code == 201
 
         second = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("second too fast"),
             headers=member_headers,
         )
@@ -239,7 +239,7 @@ class TestMessagesHttpEndpoints:
 
         outsider = make_user_jwt(id="50051", username="outsider")
         response = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("nope"),
             headers=create_auth_headers(outsider),
         )
@@ -256,14 +256,14 @@ class TestMessagesHttpEndpoints:
         chat_id = await _create_group_chat(client, headers, name="Pagination chat")
         for i in range(5):
             send = await client.post(
-                api_path(f"chats/{chat_id}/messages"),
+                api_path(f"chats/{chat_id}/messages/"),
                 json=send_text_payload(f"msg-{i}"),
                 headers=headers,
             )
             assert send.status_code == 201
 
         first = await client.get(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             params={"limit": 2},
             headers=headers,
         )
@@ -273,7 +273,7 @@ class TestMessagesHttpEndpoints:
         assert page1["next_cursor"] is not None
 
         second = await client.get(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             params={"limit": 2, "cursor_message_seq": page1["next_cursor"]},
             headers=headers,
         )
@@ -292,7 +292,7 @@ class TestMessagesHttpEndpoints:
         chat_id = await _create_group_chat(client, headers)
         missing = uuid4()
         response = await client.get(
-            api_path(f"chats/{chat_id}/messages/{missing}"),
+            api_path(f"chats/{chat_id}/messages/{missing}/"),
             headers=headers,
         )
         assert response.status_code == 404
@@ -308,7 +308,7 @@ class TestMessagesHttpEndpoints:
         author_id = 50_060
         owner_headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Edit perms", member_ids=[1, author_id]),
             headers=owner_headers,
         )
@@ -318,7 +318,7 @@ class TestMessagesHttpEndpoints:
         author = make_user_jwt(id=str(author_id), username="msgauthor")
         author_headers = create_auth_headers(author)
         sent = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("by member"),
             headers=author_headers,
         )
@@ -326,7 +326,7 @@ class TestMessagesHttpEndpoints:
         message_id = sent.json()["id"]
 
         patch = await client.patch(
-            api_path(f"chats/{chat_id}/messages/{message_id}"),
+            api_path(f"chats/{chat_id}/messages/{message_id}/"),
             json={"content": "owner tries steal"},
             headers=owner_headers,
         )
@@ -344,7 +344,7 @@ class TestMessagesHttpEndpoints:
         target_id = await _create_group_chat(client, headers, name="Fwd target del")
 
         src_msg = await client.post(
-            api_path(f"chats/{source_id}/messages"),
+            api_path(f"chats/{source_id}/messages/"),
             json=send_text_payload("to be deleted"),
             headers=headers,
         )
@@ -352,13 +352,13 @@ class TestMessagesHttpEndpoints:
         source_message_id = src_msg.json()["id"]
 
         delete_resp = await client.delete(
-            api_path(f"chats/{source_id}/messages/{source_message_id}"),
+            api_path(f"chats/{source_id}/messages/{source_message_id}/"),
             headers=headers,
         )
         assert delete_resp.status_code == 204
 
         fwd = await client.post(
-            api_path(f"chats/{target_id}/messages/forward"),
+            api_path(f"chats/{target_id}/messages/forward/"),
             json={
                 "source_chat_id": source_id,
                 "source_message_id": source_message_id,

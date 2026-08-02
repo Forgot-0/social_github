@@ -26,7 +26,7 @@ class TestWebSocketSubscribeAccess:
     ) -> None:
         owner_headers = create_auth_headers(user_jwt)
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Private WS chat"),
             headers=owner_headers,
         )
@@ -37,7 +37,7 @@ class TestWebSocketSubscribeAccess:
         token = create_access_token(stranger)
 
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             assert (await ws.recv_event())["type"] == "ws.ready"
 
@@ -59,7 +59,7 @@ class TestWebSocketSubscribeAccess:
         owner_headers = create_auth_headers(user_jwt)
 
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Ban WS test", member_ids=[1, 70002]),
             headers=owner_headers,
         )
@@ -67,7 +67,7 @@ class TestWebSocketSubscribeAccess:
         chat_id = create.json()["id"]
 
         ban = await client.patch(
-            api_path(f"chats/{chat_id}/members/70002/ban"),
+            api_path(f"chats/{chat_id}/members/70002/ban/"),
             json={"ban": True},
             headers=owner_headers,
         )
@@ -77,7 +77,7 @@ class TestWebSocketSubscribeAccess:
         token = create_access_token(banned)
 
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             await ws.recv_event()
             await ws.send_json({"op": "subscribe", "chat_id": chat_id, "last_seq": 0})
@@ -101,7 +101,7 @@ class TestWebSocketResumeWithRealSeq:
         headers = create_auth_headers(user_jwt)
 
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Resume test"),
             headers=headers,
         )
@@ -111,7 +111,7 @@ class TestWebSocketResumeWithRealSeq:
         seqs = []
         for i in range(3):
             resp = await client.post(
-                api_path(f"chats/{chat_id}/messages"),
+                api_path(f"chats/{chat_id}/messages/"),
                 json=send_text_payload(f"message {i}"),
                 headers=headers,
             )
@@ -120,7 +120,7 @@ class TestWebSocketResumeWithRealSeq:
 
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             await ws.recv_event()
 
@@ -152,7 +152,7 @@ class TestWebSocketResumeWithRealSeq:
         headers = create_auth_headers(user_jwt)
 
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Resume from zero"),
             headers=headers,
         )
@@ -161,7 +161,7 @@ class TestWebSocketResumeWithRealSeq:
 
         for i in range(2):
             resp = await client.post(
-                api_path(f"chats/{chat_id}/messages"),
+                api_path(f"chats/{chat_id}/messages/"),
                 json=send_text_payload(f"msg {i}"),
                 headers=headers,
             )
@@ -169,7 +169,7 @@ class TestWebSocketResumeWithRealSeq:
 
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             await ws.recv_event()
 
@@ -190,7 +190,7 @@ class TestWebSocketResumeWithRealSeq:
         headers = create_auth_headers(user_jwt)
 
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Resume up-to-date"),
             headers=headers,
         )
@@ -198,7 +198,7 @@ class TestWebSocketResumeWithRealSeq:
         chat_id = create.json()["id"]
 
         resp = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("last message"),
             headers=headers,
         )
@@ -207,7 +207,7 @@ class TestWebSocketResumeWithRealSeq:
 
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             await ws.recv_event()
 
@@ -229,7 +229,7 @@ class TestWebSocketResumeWithRealSeq:
         headers = create_auth_headers(user_jwt)
 
         create = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="Subscribe replay"),
             headers=headers,
         )
@@ -239,7 +239,7 @@ class TestWebSocketResumeWithRealSeq:
         sent_seqs = []
         for i in range(4):
             resp = await client.post(
-                api_path(f"chats/{chat_id}/messages"),
+                api_path(f"chats/{chat_id}/messages/"),
                 json=send_text_payload(f"msg {i}"),
                 headers=headers,
             )
@@ -248,7 +248,7 @@ class TestWebSocketResumeWithRealSeq:
 
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             await ws.recv_event()
 

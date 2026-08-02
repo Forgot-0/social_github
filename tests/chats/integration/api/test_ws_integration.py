@@ -14,7 +14,7 @@ from tests.support.http import api_path
 
 
 def _ws_path() -> str:
-    return api_path("chats/ws")
+    return api_path("chats/ws/")
 
 
 @pytest.mark.integration
@@ -26,7 +26,7 @@ class TestChatsWebSocketIntegration:
         app,
         client: AsyncClient,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         with pytest.raises(WebSocketDenied) as exc:
             async with AsyncASGIWebSocketSession(app, path=_ws_path()):
                 pass
@@ -39,7 +39,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(
             app,
@@ -65,7 +65,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         headers = [(b"authorization", f"Bearer {token}".encode("latin-1"))]
         async with AsyncASGIWebSocketSession(app, path=_ws_path(), headers=headers) as ws:
@@ -82,7 +82,7 @@ class TestChatsWebSocketIntegration:
     ) -> None:
         headers = create_auth_headers(user_jwt)
         created = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="WS member flow"),
             headers=headers,
         )
@@ -112,7 +112,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(app, path=_ws_path(), query={"token": token}) as ws:
             await ws.recv_event()
@@ -128,7 +128,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(app, path=_ws_path(), query={"token": token}) as ws:
             await ws.recv_event()
@@ -144,7 +144,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(app, path=_ws_path(), query={"token": token}) as ws:
             await ws.recv_event()
@@ -160,7 +160,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(app, path=_ws_path(), query={"token": token}) as ws:
             await ws.recv_event()
@@ -178,7 +178,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(app, path=_ws_path(), query={"token": token}) as ws:
             await ws.recv_event()
@@ -194,7 +194,7 @@ class TestChatsWebSocketIntegration:
         user_jwt: UserJWTData,
         create_access_token,
     ) -> None:
-        await client.get(api_path("chats"))
+        await client.get(api_path("chats/"))
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(app, path=_ws_path(), query={"token": token}) as ws:
             await ws.recv_event()

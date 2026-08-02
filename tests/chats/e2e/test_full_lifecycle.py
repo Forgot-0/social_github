@@ -28,7 +28,7 @@ class TestFullChatLifecycleE2E:
         headers = create_auth_headers(user_jwt)
 
         create_resp = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="E2E Lifecycle"),
             headers=headers,
         )
@@ -38,7 +38,7 @@ class TestFullChatLifecycleE2E:
         token = create_access_token(user_jwt)
 
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             ready = await ws.recv_event()
             assert ready["type"] == "ws.ready"
@@ -48,7 +48,7 @@ class TestFullChatLifecycleE2E:
             assert subscribed["chat_id"] == chat_id
 
             send_resp = await client.post(
-                api_path(f"chats/{chat_id}/messages"),
+                api_path(f"chats/{chat_id}/messages/"),
                 json=send_text_payload("hello from e2e"),
                 headers=headers,
             )
@@ -70,13 +70,13 @@ class TestFullChatLifecycleE2E:
             assert pong["type"] in ("ws.pong", "ws.history", "new_message")
 
         read_resp = await client.post(
-            api_path(f"chats/{chat_id}/messages/read"),
+            api_path(f"chats/{chat_id}/messages/read/"),
             json={"message_seq": message_seq},
             headers=headers,
         )
         assert read_resp.status_code == 204
 
-        list_resp = await client.get(api_path("chats"), headers=headers)
+        list_resp = await client.get(api_path("chats/"), headers=headers)
         assert list_resp.status_code == 200
 
         chat_in_list = next(
@@ -99,7 +99,7 @@ class TestFullChatLifecycleE2E:
         reader_headers = create_auth_headers(reader)
 
         create_resp = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="E2E Unread", member_ids=[1, 80001]),
             headers=owner_headers,
         )
@@ -109,7 +109,7 @@ class TestFullChatLifecycleE2E:
         seqs = []
         for i in range(5):
             resp = await client.post(
-                api_path(f"chats/{chat_id}/messages"),
+                api_path(f"chats/{chat_id}/messages/"),
                 json=send_text_payload(f"msg {i}"),
                 headers=owner_headers,
             )
@@ -117,20 +117,19 @@ class TestFullChatLifecycleE2E:
             seqs.append(resp.json()["seq"])
 
         read_resp = await client.post(
-            api_path(f"chats/{chat_id}/messages/read"),
+            api_path(f"chats/{chat_id}/messages/read/"),
             json={"message_seq": seqs[2]},
             headers=reader_headers,
         )
         assert read_resp.status_code == 204
 
-        list_resp = await client.get(api_path("chats"), headers=reader_headers)
+        list_resp = await client.get(api_path("chats/"), headers=reader_headers)
         assert list_resp.status_code == 200
 
         chat_in_list = next(
             (c for c in list_resp.json()["chats"] if c["id"] == chat_id),
             None,
         )
-        print(chat_in_list)
         assert chat_in_list is not None
         assert chat_in_list["unread_count"] == 2
 
@@ -147,7 +146,7 @@ class TestFullChatLifecycleE2E:
         reader_headers = create_auth_headers(reader)
 
         create_resp = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="E2E Unread grow", member_ids=[1, 80002]),
             headers=owner_headers,
         )
@@ -155,29 +154,29 @@ class TestFullChatLifecycleE2E:
         chat_id = create_resp.json()["id"]
 
         resp1 = await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("first"),
             headers=owner_headers,
         )
         seq1 = resp1.json()["seq"]
 
         await client.post(
-            api_path(f"chats/{chat_id}/messages/read"),
+            api_path(f"chats/{chat_id}/messages/read/"),
             json={"message_seq": seq1},
             headers=reader_headers,
         )
 
-        list_resp = await client.get(api_path("chats"), headers=reader_headers)
+        list_resp = await client.get(api_path("chats/"), headers=reader_headers)
         chat = next(c for c in list_resp.json()["chats"] if c["id"] == chat_id)
         assert chat["unread_count"] == 0
 
         await client.post(
-            api_path(f"chats/{chat_id}/messages"),
+            api_path(f"chats/{chat_id}/messages/"),
             json=send_text_payload("second"),
             headers=owner_headers,
         )
 
-        list_resp2 = await client.get(api_path("chats"), headers=reader_headers)
+        list_resp2 = await client.get(api_path("chats/"), headers=reader_headers)
         chat2 = next(c for c in list_resp2.json()["chats"] if c["id"] == chat_id)
         assert chat2["unread_count"] == 1
 
@@ -190,7 +189,7 @@ class TestFullChatLifecycleE2E:
     ) -> None:
         token = create_access_token(user_jwt)
         async with AsyncASGIWebSocketSession(
-            app, path=api_path("chats/ws"), query={"token": token}
+            app, path=api_path("chats/ws/"), query={"token": token}
         ) as ws:
             await ws.recv_event()
 
@@ -208,7 +207,7 @@ class TestFullChatLifecycleE2E:
         headers = create_auth_headers(user_jwt)
 
         create_resp = await client.post(
-            api_path("chats"),
+            api_path("chats/"),
             json=group_chat_payload(name="E2E Seq check"),
             headers=headers,
         )
@@ -218,7 +217,7 @@ class TestFullChatLifecycleE2E:
         seqs = []
         for i in range(5):
             resp = await client.post(
-                api_path(f"chats/{chat_id}/messages"),
+                api_path(f"chats/{chat_id}/messages/"),
                 json=send_text_payload(f"msg {i}"),
                 headers=headers,
             )
