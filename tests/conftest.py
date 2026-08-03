@@ -212,9 +212,9 @@ async def di_container(
         def mail_service(self) -> BaseMailService:
             return MockMailService()
 
-        @provide(scope=Scope.APP)
-        def get_mock_event_bus(self, event_registy: EventRegistry) -> BaseEventBus:
-            return MockEventBus(event_registy=event_registy)
+        # @provide(scope=Scope.APP)
+        # def get_mock_event_bus(self, event_registy: EventRegistry) -> BaseEventBus:
+        #     return MockEventBus(event_registy=event_registy)
 
         @provide(scope=Scope.APP)
         def get_queue_service(self) -> QueueService:

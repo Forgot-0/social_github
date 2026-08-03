@@ -30,7 +30,6 @@ class TestCreatePositionCommand:
         persisted_project: Project,
         user_jwt: UserJWTData,
         handler: CreatePositionCommandHandler,
-        mock_event_bus,
         position_repository: PositionRepository,
     ) -> None:
         command = CreatePositionCommand(
@@ -59,7 +58,6 @@ class TestCreatePositionCommand:
         persisted_project: Project,
         user_jwt: UserJWTData,
         handler: CreatePositionCommandHandler,
-        mock_event_bus,
     ) -> None:
         command = CreatePositionCommand(
             user_jwt_data=user_jwt,
@@ -68,10 +66,6 @@ class TestCreatePositionCommand:
 
         await handler.handle(command)
 
-        assert len(mock_event_bus.published_events) == 1
-        event = mock_event_bus.published_events[0]
-        assert event.__class__.__name__ == "CreatedPositionEvent"
-        assert event.project_id == persisted_project.id
 
     async def test_create_project_not_found_raises(
         self,

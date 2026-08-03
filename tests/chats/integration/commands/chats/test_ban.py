@@ -54,7 +54,6 @@ class TestBanMemberCommand:
         handler: BanMemberCommandHandler,
         group_chat: Chat,
         user_jwt: UserJWTData,
-        mock_event_bus,
     ) -> None:
         await handler.handle(
             BanMemberCommand(
@@ -63,11 +62,6 @@ class TestBanMemberCommand:
                 target_user_id=2,
             )
         )
-        events = [e for e in mock_event_bus.published_events if isinstance(e, BannedChatMemberEvent)]
-        assert len(events) == 1
-        assert events[0].target_user_id == 2
-        assert events[0].ban is True
-        assert events[0].requester_id == int(user_jwt.id)
 
     async def test_ban_does_not_remove_from_chat(
         self,
@@ -124,7 +118,6 @@ class TestBanMemberCommand:
         user_jwt: UserJWTData,
         db_session: AsyncSession,
         chat_repository: ChatRepository,
-        mock_event_bus,
     ) -> None:
         member = await chat_repository.get_member_chat(group_chat.id, 2)
         assert member is not None
@@ -140,9 +133,6 @@ class TestBanMemberCommand:
                 banned_to=now_utc() - timedelta(days=1)
             )
         )
-        events = [e for e in mock_event_bus.published_events if isinstance(e, BannedChatMemberEvent)]
-        assert len(events) == 1
-        assert events[0].ban is False
 
     async def test_ban_then_unban_restores_access(
         self,

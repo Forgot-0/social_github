@@ -1,0 +1,25 @@
+{
+  "name": "outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "db",
+    "database.port": "5432",
+    "database.user": "${POSTGRES_USER}",
+    "database.password": "${POSTGRES_PASSWORD}",
+    "database.dbname": "${POSTGRES_DB}",
+    "database.server.name": "social_db",
+    "slot.name": "outbox_slot",
+    "publication.name": "social_outbox",
+    "plugin.name": "pgoutput",
+    "table.include.list": "public.outbox_messages",
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.history.kafka.topic": "dbhistory.social_db",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false"
+  }
+}

@@ -1,9 +1,9 @@
-from dishka import AsyncContainer, Provider, Scope, provide
+from dishka import Provider, Scope, provide
 
 from app.core.events.event import EventRegistry
 from app.core.events.mediator.service import MediatorEventBus
 from app.core.events.service import BaseEventBus
-from app.core.message_brokers.base import BaseMessageBroker
+from app.core.outbox.repository import OutboxRepository
 
 
 class EventProvider(Provider):
@@ -14,13 +14,12 @@ class EventProvider(Provider):
         registry = EventRegistry()
         return registry
 
-    @provide
+    @provide(scope=Scope.REQUEST)
     def event_bus(
-        self, event_registy: EventRegistry, container: AsyncContainer, broker: BaseMessageBroker
+        self, event_registy: EventRegistry, outbox_repository: OutboxRepository
     ) -> BaseEventBus:
         return MediatorEventBus(
             event_registy=event_registy,
-            container=container,
-            message_broker=broker
+            outbox_repository=outbox_repository,
         )
 

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession, async_sessionmaker
 
 from app.core.configs.app import app_config
 from app.core.db.session import create_async_marker, create_engine
+from app.core.outbox.repository import OutboxRepository
 
 
 class DBProvider(Provider):
@@ -28,6 +29,10 @@ class DBProvider(Provider):
     ) -> AsyncIterable[AsyncSession]:
         async with marker() as session:
             yield session
+
+    @provide(scope=Scope.REQUEST)
+    def outbox_repository(self, session: AsyncSession) -> OutboxRepository:
+        return OutboxRepository(session=session)
 
     @provide(scope=Scope.APP)
     async def get_redis(self) -> Redis:

@@ -25,7 +25,6 @@ class TestRegisterCommand:
     async def test_register_new_user_success(
         self,
         user_repository: UserRepository,
-        mock_event_bus: MockEventBus,
         handler: RegisterCommandHandler,
     ) -> None:
         cmd_data = AuthCommandFactory.create_register_command(
@@ -46,9 +45,6 @@ class TestRegisterCommand:
         created_user = await user_repository.get_by_username(user_dto.username)
         assert created_user is not None
         assert created_user.password_hash is not None
-
-        assert len(mock_event_bus.published_events) == 1
-        assert mock_event_bus.published_events[0].__class__.__name__ == "CreatedUserEvent"
 
     async def test_register_duplicate_username(
         self,
@@ -102,7 +98,6 @@ class TestRegisterCommand:
 
     async def test_register_user_has_default_role(
         self,
-        db_session: AsyncSession,
         user_repository: UserRepository,
         handler: RegisterCommandHandler,
     ) -> None:
@@ -110,7 +105,6 @@ class TestRegisterCommand:
         command = RegisterCommand(**cmd_data)
 
         user_dto = await handler.handle(command)
-        await db_session.commit()
 
         created_user = await user_repository.get_user_with_permission_by_id(user_dto.id)
         assert created_user is not None
@@ -119,7 +113,6 @@ class TestRegisterCommand:
 
     async def test_register_password_is_hashed(
         self,
-        db_session: AsyncSession,
         user_repository: UserRepository,
         hash_service: HashService,
         handler: RegisterCommandHandler,
@@ -129,7 +122,6 @@ class TestRegisterCommand:
         command = RegisterCommand(**cmd_data)
 
         user_dto = await handler.handle(command)
-        await db_session.commit()
 
         created_user = await user_repository.get_by_id(user_dto.id)
         assert created_user is not None

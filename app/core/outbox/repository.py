@@ -51,8 +51,10 @@ class OutboxRepository:
         )
         result = await self.session.execute(stmt)
         oldest = result.scalar_one_or_none()
+
         if oldest is None:
             return 0.0
+
         return max(0.0, (now_utc() - oldest).total_seconds())
 
     async def cleanup_published(self, retention_days: int | None = None) -> None:
@@ -69,6 +71,7 @@ class OutboxRepository:
             .scalar_subquery()
         )
         stmt = delete(OutboxMessage).where(OutboxMessage.id.in_(subquery))
+
         await self.session.execute(stmt)
         await self.session.commit()
 
@@ -82,9 +85,11 @@ class OutboxRepository:
         )
         result = await self.session.execute(stmt)
         messages = result.scalars().all()
+
         for message in messages:
             message.status = OutboxStatus.PENDING
             message.attempts = 0
             message.available_at = now_utc()
+
         await self.session.commit()
         return len(messages)
