@@ -1,7 +1,7 @@
 # ruff: noqa: F401
 # ruff: noqa: I001
 from app.core.db.base_model import BaseModel
-from app.core.db.event import EventLog
+from app.core.outbox.model import OutboxMessage
 
 from app.auth.models.oauth import OAuthAccount
 from app.auth.models.session import Session

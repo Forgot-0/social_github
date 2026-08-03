@@ -104,6 +104,23 @@ class AppConfig(BaseConfig):
     JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
 
+
+    OUTBOX_BATCH_SIZE: int = 200
+    OUTBOX_POLL_INTERVAL: float = 0.2
+    OUTBOX_IDLE_POLL_INTERVAL: float = 1.0
+
+    OUTBOX_MAX_ATTEMPTS: int = 10
+    OUTBOX_BACKOFF_BASE_SECONDS: float = 2.0
+    OUTBOX_BACKOFF_MAX_SECONDS: float = 300.0
+
+    OUTBOX_RETENTION_DAYS: int = 7
+    OUTBOX_CLEANUP_INTERVAL_SECONDS: int = 3_600
+    OUTBOX_CLEANUP_BATCH_SIZE: int = 5_000
+
+    OUTBOX_METRICS_PORT: int = 9_101
+    OUTBOX_SHUTDOWN_TIMEOUT: float = 15.0
+
+
     @model_validator(mode="after")
     def validate_production_required_settings(self) -> "AppConfig":
         if self.ENVIRONMENT != "production":

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date
 from enum import Enum, StrEnum
 from typing import Any
@@ -7,6 +8,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
+from app.core.events.event import BaseEvent
 from app.profiles.config import profile_config
 from app.profiles.exceptions import TooLongBioError, TooLongDisplayNameError, TooLongSkillNameError
 from app.profiles.models.contact import Contact
@@ -26,6 +28,43 @@ class TypeImageAvatar(StrEnum):
 
 
 AvatarMap = dict[SizeAvatar, dict[TypeImageAvatar, str]]
+
+
+@dataclass(frozen=True)
+class ProfileCreated(BaseEvent):
+    user_id: int
+    username: str
+    avatars: dict
+
+    display_name: str | None
+    bio: str | None
+    specialization: str | None
+    date_birthday: str | None
+    skills: list[str]
+
+    __event_name__: str = 'profiles.profile.created'
+
+    def get_aggregate_id(self) -> str:
+        return str(self.user_id)
+
+
+@dataclass(frozen=True)
+class ProfileUpdated(BaseEvent):
+    user_id: int
+    username: str
+    avatars: dict
+
+    display_name: str | None
+    bio: str | None
+    specialization: str | None
+    date_birthday: str | None
+    skills: list[str]
+
+    __event_name__: str = 'profiles.profile.updated'
+
+    def get_aggregate_id(self) -> str:
+        return str(self.user_id)
+
 
 class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     __tablename__ = "profiles"
@@ -73,7 +112,44 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
         if contacts:
             instance.contacts = contacts
 
+        instance.register_event(
+            ProfileCreated(
+                user_id=instance.id,
+                username=instance.username,
+                avatars=instance.avatars,
+                display_name=instance.display_name,
+                bio=instance.bio,
+                date_birthday=str(instance.date_birthday) if instance.date_birthday else None,
+                skills=instance.skills,
+                specialization=instance.specialization
+            )
+        )
+
         return instance
+
+
+    def update(
+        self, name: str | None, bio: str | None, specialization: str | None,
+        date_birthday: date | None, skills: set[str]
+    ) -> None:
+        self.change_display_name(name)
+        self.change_bio(bio)
+        self.change_specialization(specialization)
+        self.update_skills(skills or set())
+        self.change_birthday(date_birthday)
+
+        self.register_event(
+            ProfileUpdated(
+                user_id=self.id,
+                username=self.username,
+                avatars=self.avatars,
+                display_name=self.display_name,
+                bio=self.bio,
+                date_birthday=str(self.date_birthday) if self.date_birthday else None,
+                skills=self.skills,
+                specialization=self.specialization
+            )
+        )
 
     def change_display_name(self, name: str | None) -> None:
         if name and len(name) >= profile_config.MAX_LEN_DISPLAY_NAME:
@@ -94,9 +170,6 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
         self.specialization = specialization
 
     def change_birthday(self, birthday: date | None) -> None:
-        if birthday:
-            ...
-
         self.date_birthday = birthday
 
     def add_skill(self, skill: str) -> None:

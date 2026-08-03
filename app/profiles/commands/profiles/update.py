@@ -5,6 +5,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedError
 from app.core.services.auth.rbac import RBACManagerInterface
@@ -32,6 +33,7 @@ class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]
     session: AsyncSession
     profile_repository: ProfileRepository
     rbac_manager: RBACManagerInterface
+    event_bus: BaseEventBus
 
     async def handle(self, command: UpdateProfileCommand) -> None:
         profile = await self.profile_repository.get_by_id(command.profile_id)
@@ -46,12 +48,14 @@ class UpdateProfileCommandHandler(BaseCommandHandler[UpdateProfileCommand, None]
                 need_permissions={"profile:update", "user:update" } - set(command.user_jwt_data.permissions)
             )
 
-        profile.change_display_name(command.display_name)
-        profile.change_bio(command.bio)
-        profile.change_specialization(command.specialization)
-        profile.update_skills(command.skills or set())
-        profile.change_birthday(command.date_birthday)
-
+        profile.update(
+            name=command.display_name,
+            bio=command.bio,
+            specialization=command.specialization,
+            date_birthday=command.date_birthday,
+            skills=command.skills or set(),
+        )
+        await self.event_bus.publish(profile.pull_events())
         await self.session.commit()
         await self.profile_repository.invalidate_cache()
 

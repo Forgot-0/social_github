@@ -20,7 +20,7 @@ class NewSessionEvent(BaseEvent):
 
     __event_name__: str = "auth.session.created"
 
-    def get_partition_key(self) -> str:
+    def get_aggregate_id(self) -> str:
         return str(self.user_id)
 
 
@@ -34,7 +34,7 @@ class SuspiciousSessionEvent(BaseEvent):
 
     __event_name__: str = "auth.session.suspicious"
 
-    def get_partition_key(self) -> str:
+    def get_aggregate_id(self) -> str:
         return str(self.user_id)
 
 

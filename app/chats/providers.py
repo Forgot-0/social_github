@@ -32,22 +32,6 @@ from app.chats.commands.websockets.resume import ResumeCommand, ResumeCommandHan
 from app.chats.commands.websockets.subscribe import SubscribeCommand, SubscribeCommandHandler
 from app.chats.commands.websockets.unsubscribe import UnsubscribeCommand, UnsubscribeCommandHandler
 from app.chats.config import chat_config
-from app.chats.events.published import PublishChatEventHandler
-from app.chats.models.chat import (
-    AddedChatMemberEvent,
-    BannedChatMemberEvent,
-    CreatedChatEvent,
-    DeletedChatEvent,
-    KickedChatMemberEvent,
-    LeftChatMemberEvent,
-    UpdatedChatEvent,
-)
-from app.chats.models.message import (
-    DeletedMessageEvent,
-    ModifiedMessageEvent,
-    ReadedMessageEvent,
-    SendedMessageEvent,
-)
 from app.chats.queries.attachments.get_url import GetAttachmentDownloadUrlQuery, GetAttachmentDownloadUrlQueryHandler
 from app.chats.queries.chats.get_detail import GetChatDetailQuery, GetChatDetailQueryHandler
 from app.chats.queries.chats.get_list import GetListChatUserQuery, GetListChatUserQueryHandler
@@ -122,11 +106,6 @@ class ChatModuleProvider(Provider):
         scope=Scope.REQUEST,
     )
 
-    events = provide_all(
-        PublishChatEventHandler,
-        scope=Scope.REQUEST
-    )
-
     repositories = provide_all(
         ChatRepository,
         MessageRepository,
@@ -184,15 +163,4 @@ class ChatModuleProvider(Provider):
 
     @decorate
     def register_auth_event_handlers(self, event_registry: EventRegistry) -> EventRegistry:
-        event_registry.subscribe(CreatedChatEvent, [PublishChatEventHandler])
-        event_registry.subscribe(UpdatedChatEvent, [PublishChatEventHandler])
-        event_registry.subscribe(DeletedChatEvent, [PublishChatEventHandler])
-        event_registry.subscribe(AddedChatMemberEvent, [PublishChatEventHandler])
-        event_registry.subscribe(KickedChatMemberEvent, [PublishChatEventHandler])
-        event_registry.subscribe(BannedChatMemberEvent, [PublishChatEventHandler])
-        event_registry.subscribe(LeftChatMemberEvent, [PublishChatEventHandler])
-        event_registry.subscribe(SendedMessageEvent, [PublishChatEventHandler])
-        event_registry.subscribe(ModifiedMessageEvent, [PublishChatEventHandler])
-        event_registry.subscribe(DeletedMessageEvent, [PublishChatEventHandler])
-        event_registry.subscribe(ReadedMessageEvent, [PublishChatEventHandler])
         return event_registry

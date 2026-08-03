@@ -37,8 +37,7 @@ from app.auth.commands.users.send_verify import SendVerifyCommand, SendVerifyCom
 from app.auth.commands.users.verify import VerifyCommand, VerifyCommandHandler
 from app.auth.config import auth_config
 from app.auth.events.users.created import SendVerifyEventHandler
-from app.auth.events.users.verified import PublishVerifiedUserEventHandler
-from app.auth.models.user import CreatedUserEvent, VerifiedUserEvent
+from app.auth.models.user import CreatedUserEvent
 from app.auth.queries.auth.get_by_token import GetByAccessTokenQuery, GetByAccessTokenQueryHandler
 from app.auth.queries.auth.oauth import GetUserOAuthAccountsQuery, GetUserOAuthAccountsQueryHandler
 from app.auth.queries.auth.verify import VerifyTokenQuery, VerifyTokenQueryHandler
@@ -239,7 +238,6 @@ class AuthModuleProvider(Provider):
     @decorate
     def register_auth_event_handlers(self, event_registry: EventRegistry) -> EventRegistry:
         event_registry.subscribe(CreatedUserEvent, [SendVerifyEventHandler])
-        event_registry.subscribe(VerifiedUserEvent, [PublishVerifiedUserEventHandler])
         return event_registry
 
     # query

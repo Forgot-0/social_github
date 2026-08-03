@@ -23,7 +23,7 @@ class BaseEvent(ABC):
         return name
 
     @abstractmethod
-    def get_partition_key(self) -> str:
+    def get_aggregate_id(self) -> str:
         ...
 
 @dataclass(frozen=True)
