@@ -32,7 +32,7 @@ class AuthConfig(BaseConfig):
     OAUTH_GITHUB_TOKEN_URL: str = "https://github.com/login/oauth/access_token"
     OAUTH_GITHUB_USERINFO_URL: str = "https://api.github.com/user"
 
-    USER_TOPIC: str = "users"
+    USER_TOPIC: str = "auth"
 
 
 auth_config = AuthConfig()

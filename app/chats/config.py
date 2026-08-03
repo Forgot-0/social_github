@@ -30,7 +30,7 @@ class ChatConfig(BaseConfig):
     WS_MAX_CLIENT_FRAME_BYTES: int = 65_536
     RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
 
-    CHAT_TOPIC: str = "chat-events"
+    CHAT_TOPIC: str = "chats"
 
     DELIVERY_ROUTER_GROUP_ID: str = "delivery-router"
     DELIVERY_ROUTER_CLIENT_ID: str = "delivery-router"
