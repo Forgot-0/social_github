@@ -1,4 +1,3 @@
-
 class ChatKeys:
     _NAMESPACE = "chat:v1:"
 

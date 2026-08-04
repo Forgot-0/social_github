@@ -68,7 +68,23 @@ class ChatConfig(BaseConfig):
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "text/plain", "text/csv",
     })
-    ALL_ALLOWED_MIMES: frozenset[str] = ALLOWED_IMAGE_MIMES | ALLOWED_VIDEO_MIMES | ALLOWED_FILE_MIMES
+
+    ALLOWED_VOICE_MIMES: frozenset[str] = frozenset({
+        "audio/ogg", "audio/opus",
+        "audio/mpeg", "audio/mp4", "audio/aac", "audio/webm",
+        "audio/x-m4a",
+    })
+
+    ALLOWED_VIDEO_NOTE_MIMES: frozenset[str] = frozenset({
+        "video/mp4", "video/webm", "video/quicktime",
+    })
+    ALL_ALLOWED_MIMES: frozenset[str] = (
+        ALLOWED_IMAGE_MIMES
+        | ALLOWED_VIDEO_MIMES
+        | ALLOWED_FILE_MIMES
+        | ALLOWED_VOICE_MIMES
+        | ALLOWED_VIDEO_NOTE_MIMES
+    )
 
     MAX_MEDIA_PER_MESSAGE: int = 10
     MAX_FILES_PER_MESSAGE: int = 1
