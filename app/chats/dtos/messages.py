@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.chats.dtos.attachments import AttachmentDTO
+from app.chats.dtos.profiels import ChatProfileDTO
 from app.chats.models.message import MessageType
 
 
@@ -23,7 +24,9 @@ class MessageDTO(BaseModel):
     is_edited: bool
     created_at: datetime
 
+    author_profile: ChatProfileDTO | None = Field(default=None)
     attachments: list[AttachmentDTO] = Field(default_factory=list)
+
     reply_to: Optional["MessageDTO"] = Field(default=None)
     forwarded_from: Optional["MessageDTO"] = Field(default=None)
 

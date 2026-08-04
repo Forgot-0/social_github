@@ -1,5 +1,5 @@
 from datetime import datetime
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, DateTime, Enum as SAEnum, ForeignKey, UniqueConstraint
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 
-class MembershipStatus(PyEnum):
+class MembershipStatus(StrEnum):
     invited = "invited"
     pending = "pending"
     active = "active"

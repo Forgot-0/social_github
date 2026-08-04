@@ -1,4 +1,4 @@
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import Self
 
 from sqlalchemy import (
@@ -13,7 +13,7 @@ from app.core.db.base_model import BaseModel, DateMixin
 
 
 
-class TwoFactorMethod(str, PyEnum):
+class TwoFactorMethod(StrEnum):
     TOTP = "totp"
     SMS = "sms"
     EMAIL = "email"

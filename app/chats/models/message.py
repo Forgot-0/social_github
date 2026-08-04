@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum as PyEnum
+from enum import StrEnum
 from html import escape
 from typing import TYPE_CHECKING, Optional, Self
 from uuid import UUID, uuid7
@@ -15,6 +15,7 @@ from app.chats.exceptions import (
     MessageTooLongError,
 )
 from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
+from app.chats.models.profile import ChatUserProfile
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.events.event import BaseEvent
 
@@ -22,13 +23,13 @@ if TYPE_CHECKING:
     from app.chats.models.chat import Chat
 
 
-class MessageStatus(PyEnum):
+class MessageStatus(StrEnum):
     sent = "sent"
     delivered = "delivered"
     read = "read"
 
 
-class MessageType(str, PyEnum):
+class MessageType(StrEnum):
     TEXT = "text"
     IMAGE = "image"
     FILE = "file"
@@ -129,6 +130,12 @@ class Message(BaseModel, DateMixin):
     )
     attachments: Mapped[list["MessageAttachment"]] = relationship(
         lazy="noload", cascade="all, delete-orphan"
+    )
+    profile: Mapped[ChatUserProfile | None] = relationship(
+        ChatUserProfile,
+        foreign_keys=[author_id],
+        primaryjoin="Message.author_id == ChatUserProfile.user_id",
+        lazy="noload",
     )
 
     __table_args__ = (

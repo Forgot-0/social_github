@@ -1,6 +1,5 @@
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import Self
-from datetime import time
 
 from sqlalchemy import (
     BigInteger,
@@ -14,30 +13,30 @@ from app.core.db.base_model import BaseModel, DateMixin
 
 
 
-class AppTheme(str, PyEnum):
+class AppTheme(StrEnum):
     LIGHT = "light"
     DARK = "dark"
     SYSTEM = "system"
 
 
-class DateFormat(str, PyEnum):
+class DateFormat(StrEnum):
     DMY = "dmy"
     MDY = "mdy"
     YMD = "ymd"
 
 
-class TimeFormat(str, PyEnum):
+class TimeFormat(StrEnum):
     H12 = "12h"
     H24 = "24h"
 
 
-class FontSize(str, PyEnum):
+class FontSize(StrEnum):
     SMALL = "small"
     MEDIUM = "medium"
     LARGE = "large"
 
 
-class MessageDensity(str, PyEnum):
+class MessageDensity(StrEnum):
     COMPACT = "compact"
     NORMAL = "normal"
     COMFORTABLE = "comfortable"

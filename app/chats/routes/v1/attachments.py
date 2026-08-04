@@ -32,7 +32,12 @@ async def request_attachment_upload(
             user_jwt_data=user_jwt_data,
             chat_id=chat_id,
             uploads=[
-                UploadRequest(filename=item.filename, mime_type=item.mime_type, file_size=item.file_size)
+                UploadRequest(
+                    filename=item.filename,
+                    mime_type=item.mime_type,
+                    file_size=item.file_size,
+                    attachment_type=item.attachment_type
+                )
                 for item in payload.uploads
             ],
         )
@@ -58,7 +63,6 @@ async def confirm_attachment_upload(
         )
     )
 
-
 @router.get(
     "/messages/{message_id}/attachments/{attachment_id}/download-url/",
     status_code=status.HTTP_200_OK
@@ -78,4 +82,3 @@ async def get_attachment_download_url(
             attachment_id=attachment_id,
         )
     )
-

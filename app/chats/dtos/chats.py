@@ -26,6 +26,7 @@ class ChatDTO(BaseModel):
 
     member_count: int
     unread_count: int = 0
+
     me: MemberChatDTO | None = None
     last_read: ReadDetail | None = None
 

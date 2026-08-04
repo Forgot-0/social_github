@@ -26,11 +26,13 @@ from app.core.services.storage.service import StorageService
 logger = logging.getLogger(__name__)
 clean_filename = re.compile(r"[^\w.\-]")
 
+
 @dataclass(frozen=True)
 class UploadRequest:
     filename: str
     mime_type: str
     file_size: int
+    attachment_type: AttachmentType | None = None
 
 
 @dataclass(frozen=True)
@@ -41,7 +43,9 @@ class RequestAttachmentUploadCommand(BaseCommand):
 
 
 @dataclass(frozen=True)
-class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachmentUploadCommand, list[UploadSlotDTO]]):
+class RequestAttachmentUploadCommandHandler(
+    BaseCommandHandler[RequestAttachmentUploadCommand, list[UploadSlotDTO]]
+):
     session: AsyncSession
     chat_repository: ChatRepository
     chat_access_service: ChatAccessService
@@ -79,7 +83,20 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
             if req.mime_type not in chat_config.ALL_ALLOWED_MIMES:
                 raise AttachmentValidationError(mime_type=req.mime_type)
 
-            if req.mime_type in chat_config.ALLOWED_IMAGE_MIMES or req.mime_type in chat_config.ALLOWED_VIDEO_MIMES:
+            if req.attachment_type == AttachmentType.VOICE:
+                if req.mime_type not in chat_config.ALLOWED_VOICE_MIMES:
+                    raise AttachmentValidationError(mime_type=req.mime_type)
+                att_type = AttachmentType.VOICE
+
+            elif req.attachment_type == AttachmentType.VIDEO_NOTE:
+                if req.mime_type not in chat_config.ALLOWED_VIDEO_NOTE_MIMES:
+                    raise AttachmentValidationError(mime_type=req.mime_type)
+                att_type = AttachmentType.VIDEO_NOTE
+
+            elif (
+                req.mime_type in chat_config.ALLOWED_IMAGE_MIMES or
+                req.mime_type in chat_config.ALLOWED_VIDEO_MIMES
+            ):
                 att_type = (
                     AttachmentType.IMAGE
                     if req.mime_type in chat_config.ALLOWED_IMAGE_MIMES
@@ -87,7 +104,9 @@ class RequestAttachmentUploadCommandHandler(BaseCommandHandler[RequestAttachment
                 )
                 if req.file_size > chat_config.MAX_MEDIA_SIZE:
                     raise AttachmentValidationError(mime_type=req.mime_type)
+
                 media_count += 1
+
             else:
                 att_type = AttachmentType.FILE
                 if req.file_size > chat_config.MAX_FILE_SIZE:

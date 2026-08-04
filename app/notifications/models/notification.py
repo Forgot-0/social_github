@@ -1,4 +1,4 @@
-from enum import Enum as PyEnum
+from enum import StrEnum
 
 from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.db.base_model import BaseModel, DateMixin
 
 
-class NotificationType(str, PyEnum):
+class NotificationType(StrEnum):
     SYSTEM = "system"
     PROJECT = "project"
     CHAT = "chat"

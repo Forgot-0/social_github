@@ -1,4 +1,4 @@
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import Self
 from uuid import UUID, uuid7
 
@@ -8,15 +8,19 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.db.base_model import BaseModel, DateMixin
 
 
-class AttachmentType(str, PyEnum):
+class AttachmentType(StrEnum):
     IMAGE = "image"
     VIDEO = "video"
     FILE = "file"
+    VOICE = "voice"
+    VIDEO_NOTE = "video_note"
 
-class AttachmentStatus(str, PyEnum):
+
+class AttachmentStatus(StrEnum):
     PENDING = "pending"
     SUCCESS = "success"
     ERROR = "error"
+
 
 class MessageAttachment(BaseModel, DateMixin):
     __tablename__ = "message_attachments"

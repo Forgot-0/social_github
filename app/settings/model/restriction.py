@@ -1,4 +1,4 @@
-from enum import Enum as PyEnum
+from enum import StrEnum
 
 from sqlalchemy import (
     BigInteger,
@@ -12,7 +12,7 @@ from app.core.db.base_model import BaseModel, DateMixin
 
 
 
-class BlockReason(str, PyEnum):
+class BlockReason(StrEnum):
     PERSONAL = "personal"
     SPAM = "spam"
     ABUSE = "abuse"

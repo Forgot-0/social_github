@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import Self
 from uuid import UUID, uuid7
 
@@ -16,14 +16,14 @@ from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 
 
-class ChatType(str, PyEnum):
+class ChatType(StrEnum):
     DIRECT = "direct"
     GROUP = "group"
     SUPERGROUP = "supergroup"
     CHANNEL = "channel"
 
 
-class ChatFanoutStrategy(str, PyEnum):
+class ChatFanoutStrategy(StrEnum):
     FANOUT_ON_WRITE = "fanout_on_write"
     ACTIVE_SUBSCRIBERS = "active_subscribers"
     CHANNEL_SUBSCRIBERS = "channel_subscribers"

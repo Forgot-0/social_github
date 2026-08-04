@@ -1,5 +1,5 @@
 from datetime import datetime
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from app.projects.models.project import Project
 
 
-class ApplicationStatus(PyEnum):
+class ApplicationStatus(StrEnum):
     pending = "pending"
     accepted = "accepted"
     rejected = "rejected"

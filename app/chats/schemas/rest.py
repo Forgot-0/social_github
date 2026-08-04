@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.chats.config import chat_config
+from app.chats.models.attachment import AttachmentType
 from app.chats.models.chat import ChatType
 from app.chats.models.message import MessageType
 
@@ -71,6 +72,7 @@ class MarkReadRequest(BaseModel):
 
 
 class UploadRequestItem(BaseModel):
+    attachment_type: AttachmentType | None = Field(default=None)
     filename: str = Field(min_length=1, max_length=256)
     mime_type: str = Field(min_length=1, max_length=128)
     file_size: int = Field(gt=0, le=max(chat_config.MAX_FILE_SIZE, chat_config.MAX_MEDIA_SIZE))

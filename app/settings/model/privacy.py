@@ -1,4 +1,4 @@
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import Self
 
 from sqlalchemy import (
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.db.base_model import BaseModel, DateMixin
 
 
-class VisibilityLevelEnum(str, PyEnum):
+class VisibilityLevelEnum(StrEnum):
     EVERYONE = "everyone"
     CONTACTS = "contacts"
     NOBODY = "nobody"

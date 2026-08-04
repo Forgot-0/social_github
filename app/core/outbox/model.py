@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from enum import Enum as PyEnum
+from enum import StrEnum
 from typing import Any, Self
 from uuid import UUID, uuid7
 
@@ -11,7 +11,7 @@ from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
 
 
-class OutboxStatus(str, PyEnum):
+class OutboxStatus(StrEnum):
     PENDING = "pending"
     PUBLISHED = "published"
     FAILED = "failed"

@@ -31,4 +31,3 @@ async def route_profile_delivery_event(
             avatars=event.get("avatars", {})
         )
     )
-
