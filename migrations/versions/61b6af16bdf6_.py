@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: de2b046c79f3
+Revision ID: 61b6af16bdf6
 Revises: 
-Create Date: 2026-08-02 21:48:22.136693
+Create Date: 2026-08-04 22:04:35.123058
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'de2b046c79f3'
+revision: str = '61b6af16bdf6'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,6 +28,15 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_chat_roles_name'), 'chat_roles', ['name'], unique=False)
+    op.create_table('chat_user_profiles',
+    sa.Column('user_id', sa.BigInteger(), autoincrement=False, nullable=False),
+    sa.Column('username', sa.String(), nullable=False),
+    sa.Column('display_name', sa.String(), nullable=True),
+    sa.Column('avatar_s3_keys', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('user_id')
+    )
     op.create_table('chats',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('seq_counter', sa.BigInteger(), nullable=False),
@@ -50,14 +59,6 @@ def upgrade() -> None:
     op.create_index('ix_chats_last_activity', 'chats', ['last_activity_at'], unique=False)
     op.create_index('ix_chats_type_member_count', 'chats', ['type', 'member_count'], unique=False)
     op.create_index('ix_chats_type_public', 'chats', ['type', 'is_public'], unique=False)
-    op.create_table('events_log',
-    sa.Column('event_id', sa.UUID(), nullable=False),
-    sa.Column('payload', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('meta_data', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('event_id')
-    )
     op.create_table('notifications',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.BigInteger(), nullable=False),
@@ -73,6 +74,27 @@ def upgrade() -> None:
     op.create_index('ix_notifications_user_created', 'notifications', ['user_id', 'created_at'], unique=False)
     op.create_index(op.f('ix_notifications_user_id'), 'notifications', ['user_id'], unique=False)
     op.create_index('ix_notifications_user_unread', 'notifications', ['user_id', 'is_read'], unique=False)
+    op.create_table('outbox_messages',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('aggregate_type', sa.String(length=128), nullable=False),
+    sa.Column('aggregate_id', sa.String(length=128), nullable=False),
+    sa.Column('event_name', sa.String(length=128), nullable=False),
+    sa.Column('topic', sa.String(length=128), nullable=False),
+    sa.Column('payload', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('headers', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'PUBLISHED', 'FAILED', name='outbox_status'), nullable=False),
+    sa.Column('attempts', sa.Integer(), nullable=False),
+    sa.Column('available_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('published_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_error', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('ix_outbox_aggregate', 'outbox_messages', ['aggregate_type', 'aggregate_id'], unique=False)
+    op.create_index('ix_outbox_failed', 'outbox_messages', ['id'], unique=False, postgresql_where="status = 'FAILED'")
+    op.create_index('ix_outbox_pending_available', 'outbox_messages', ['available_at', 'id'], unique=False, postgresql_where="status = 'PENDING'")
+    op.create_index('ix_outbox_published_at', 'outbox_messages', ['published_at'], unique=False)
     op.create_table('permissions',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -355,7 +377,7 @@ def upgrade() -> None:
     sa.Column('message_id', sa.UUID(), nullable=True),
     sa.Column('chat_id', sa.UUID(), nullable=False),
     sa.Column('uploader_id', sa.BigInteger(), nullable=False),
-    sa.Column('attachment_type', sa.Enum('IMAGE', 'VIDEO', 'FILE', name='attachmenttype'), nullable=False),
+    sa.Column('attachment_type', sa.Enum('IMAGE', 'VIDEO', 'FILE', 'VOICE', 'VIDEO_NOTE', name='attachmenttype'), nullable=False),
     sa.Column('attachment_status', sa.Enum('PENDING', 'SUCCESS', 'ERROR', name='attachmentstatus'), nullable=False),
     sa.Column('s3_key', sa.String(length=512), nullable=False),
     sa.Column('mime_type', sa.String(length=128), nullable=False),
@@ -437,15 +459,20 @@ def downgrade() -> None:
     op.drop_table('profiles')
     op.drop_index(op.f('ix_permissions_name'), table_name='permissions')
     op.drop_table('permissions')
+    op.drop_index('ix_outbox_published_at', table_name='outbox_messages')
+    op.drop_index('ix_outbox_pending_available', table_name='outbox_messages', postgresql_where="status = 'PENDING'")
+    op.drop_index('ix_outbox_failed', table_name='outbox_messages', postgresql_where="status = 'FAILED'")
+    op.drop_index('ix_outbox_aggregate', table_name='outbox_messages')
+    op.drop_table('outbox_messages')
     op.drop_index('ix_notifications_user_unread', table_name='notifications')
     op.drop_index(op.f('ix_notifications_user_id'), table_name='notifications')
     op.drop_index('ix_notifications_user_created', table_name='notifications')
     op.drop_table('notifications')
-    op.drop_table('events_log')
     op.drop_index('ix_chats_type_public', table_name='chats')
     op.drop_index('ix_chats_type_member_count', table_name='chats')
     op.drop_index('ix_chats_last_activity', table_name='chats')
     op.drop_table('chats')
+    op.drop_table('chat_user_profiles')
     op.drop_index(op.f('ix_chat_roles_name'), table_name='chat_roles')
     op.drop_table('chat_roles')
     # ### end Alembic commands ###

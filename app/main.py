@@ -12,7 +12,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi_limiter import FastAPILimiter
 from prometheus_fastapi_instrumentator.instrumentation import PrometheusFastApiInstrumentator
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
@@ -30,9 +29,7 @@ from app.core.middlewares.context import ContextMiddleware
 from app.core.middlewares.log import LoggingMiddleware
 from app.core.routers import router as core_router
 from app.core.utils import now_utc
-from app.init_data import init_data
 from app.notifications.routers import router_v1 as notification_router_v1
-from app.pre_start import pre_start
 from app.profiles.routers import router_v1 as profile_router_v1
 from app.projects.routers import router_v1 as project_router_v1
 
@@ -42,10 +39,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting FastAPI")
-    async with app.state.dishka_container() as request_container:
-        session = await request_container.get(AsyncSession)
-        await pre_start(session)
-        await init_data(session)
 
     redis_client = await app.state.dishka_container.get(redis.Redis)
     await FastAPILimiter.init(redis_client)

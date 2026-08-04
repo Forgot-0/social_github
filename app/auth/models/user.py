@@ -1,17 +1,19 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.auth.models.oauth import OAuthAccount
+from app.auth.models.session import Session
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
 
 if TYPE_CHECKING:
-    from app.auth.models.oauth import OAuthAccount
     from app.auth.models.permission import Permission
     from app.auth.models.role import Role
-    from app.auth.models.session import Session
 
 
 @dataclass(frozen=True)
@@ -63,23 +65,23 @@ class User(BaseModel, DateMixin, SoftDeleteMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    sessions: Mapped[list["Session"]] = relationship(
+    sessions: Mapped[list[Session]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="noload"
     )
-    oauth_accounts: Mapped[list["OAuthAccount"]] = relationship(
+    oauth_accounts: Mapped[list[OAuthAccount]] = relationship(
         "OAuthAccount",
         back_populates="user",
         cascade="all, delete-orphan"
     )
 
-    roles: Mapped[set["Role"]] = relationship(
+    roles: Mapped[set[Role]] = relationship(
         secondary="user_roles",
         back_populates="users",
     )
 
-    permissions: Mapped[set["Permission"]] = relationship(
+    permissions: Mapped[set[Permission]] = relationship(
         "Permission", secondary="user_permissions", back_populates="users"
     )
 

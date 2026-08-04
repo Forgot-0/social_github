@@ -1,3 +1,5 @@
+import asyncio
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -5,6 +7,8 @@ from app.auth.models.role import Role
 from app.auth.models.role_permission import RolesEnum
 from app.chats.models.chat_roles import ChatRole
 from app.chats.models.permission import ChatRolesEnum
+from app.core.di.container import create_container
+from app.pre_start import pre_start
 from app.projects.models.role import ProjectRole
 from app.projects.models.role_permissions import ProjectRolesEnum
 
@@ -34,5 +38,13 @@ async def create_first_data(db: AsyncSession) -> None:
     await db.commit()
 
 
-async def init_data(db: AsyncSession) -> None:
-    await create_first_data(db)
+async def init_data() -> None:
+    dishka_container = create_container()
+    async with dishka_container() as request_container:
+        session = await request_container.get(AsyncSession)
+        await pre_start(session)
+        await create_first_data(session)
+
+
+if __name__ == "__main__":
+    asyncio.run(init_data())
