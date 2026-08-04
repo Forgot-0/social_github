@@ -59,8 +59,8 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
         target.ban(banned_by=requester_id, reason=command.reason, banned_to=command.banned_to)
         chat.ban_member(command.target_user_id, requester_id, target.is_banned)
 
-        await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.session.commit()
 
         action = "banned" if target.is_banned else "unbanned"
         logger.info(

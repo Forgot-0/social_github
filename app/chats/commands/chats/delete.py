@@ -45,6 +45,7 @@ class DeleteChatCommandHandler(BaseCommandHandler[DeleteChatCommand, None]):
             raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=requester_id)
 
         chat.delete(deleted_by=requester_id)
-        await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.session.commit()
+
         logger.info("Chat deleted", extra={"chat_id": command.chat_id, "deleted_by": requester_id})

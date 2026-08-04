@@ -543,8 +543,8 @@ class Post(BaseModel):
 **В команде:**
 
 ```python
-await self.session.commit()
 await self.event_bus.publish(post.pull_events())
+await self.session.commit()
 ```
 
 **Регистрация в провайдере:**

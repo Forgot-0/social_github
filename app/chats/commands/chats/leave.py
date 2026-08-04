@@ -41,8 +41,9 @@ class LeaveChatCommandHandler(BaseCommandHandler[LeaveChatCommand, None]):
         chat.leave(user_id=user_id)
         await self.chat_repository.delete_member(member)
 
-        await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.session.commit()
+
         logger.info(
             "Leave chat", extra={"chat_id": str(chat.id), "leaved_id": user_id}
         )

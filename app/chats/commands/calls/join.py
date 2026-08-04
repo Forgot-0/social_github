@@ -67,8 +67,8 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
             message_type=MessageType.SYSTEM
         )
         await self.message_repository.create(msg)
-        await self.session.commit()
         await self.event_bus.publish(msg.pull_events())
+        await self.session.commit()
         logger.info(
             "User joined call",
             extra={"chat_id": command.chat_id, "user_id": user_id, "slug": str(chat.id)},

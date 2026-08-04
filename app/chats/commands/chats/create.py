@@ -48,8 +48,8 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
             permissions=command.permissions,
         )
         await self.chat_repository.create(chat)
-        await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.session.commit()
         await self.livekit_sevice.create_room(str(chat.id))
 
         logger.info(

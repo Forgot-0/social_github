@@ -126,8 +126,9 @@ class ForwardMessageCommandHandler(BaseCommandHandler[ForwardMessageCommand, Mes
             attachments=forward_attachments
         )
         await self.message_repository.create(forwarded_msg)
-        await self.session.commit()
         await self.event_bus.publish(forwarded_msg.pull_events())
+        await self.session.commit()
+
         logger.info(
             "Message forwarded",
             extra={

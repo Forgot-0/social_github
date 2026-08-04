@@ -56,8 +56,9 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
             permissions_overrides=command.permissions_overrides
         )
 
-        await self.session.commit()
         await self.event_bus.publish(project.pull_events())
+        await self.session.commit()
+
         await self.project_repository.invalidate_cache()
 
         logger.info("Member invited", extra={

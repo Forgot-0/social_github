@@ -55,8 +55,8 @@ class KickMemberCommandHandler(BaseCommandHandler[KickMemberCommand, None]):
         chat.kick_member(command.target_user_id, requester_id=requester_id)
 
         await self.chat_repository.delete_member(target)
-        await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.session.commit()
 
         logger.info(
             "Member kicked",

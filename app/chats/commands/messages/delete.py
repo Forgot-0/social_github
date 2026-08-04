@@ -53,8 +53,8 @@ class DeleteMessageCommandHandler(BaseCommandHandler[DeleteMessageCommand, None]
             raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=user_id)
 
         message.delete(deleted_by=user_id)
-        await self.session.commit()
         await self.event_bus.publish(message.pull_events())
+        await self.session.commit()
 
         logger.info(
             "Message deleted",

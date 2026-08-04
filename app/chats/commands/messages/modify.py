@@ -41,8 +41,8 @@ class EditMessageCommandHandler(BaseCommandHandler[EditMessageCommand, MessageDT
             raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=user_id)
 
         message.update_content(command.new_content, modified_by=user_id)
-        await self.session.commit()
         await self.event_bus.publish(message.pull_events())
+        await self.session.commit()
 
         logger.info(
             "Message edited",

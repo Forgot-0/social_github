@@ -41,8 +41,8 @@ class DeleteProjectCommandHandler(BaseCommandHandler[DeleteProjectCommand, None]
             raise AccessDeniedError(need_permissions={"project:delete" })
 
         project.soft_delete()
-        await self.session.commit()
         await self.event_bus.publish(project.pull_events())
+        await self.session.commit()
 
         await self.project_repository.invalidate_cache()
         logger.info(

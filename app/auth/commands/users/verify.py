@@ -38,7 +38,7 @@ class VerifyCommandHandler(BaseCommandHandler[VerifyCommand, None]):
         user.verify()
         await self.token_repository.invalidate_token(command.token)
         await self.user_repository.update(user)
-        await self.session.commit()
         await self.event_bus.publish(user.pull_events())
+        await self.session.commit()
 
         logger.info("Verify", extra={"email": user.email, "user_id": user.id})

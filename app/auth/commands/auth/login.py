@@ -49,8 +49,8 @@ class LoginCommandHandler(BaseCommandHandler[LoginCommand, TokenGroup]):
             user_id=user.id, user_agent=command.user_agent, ip_address=command.ip_address
         )
 
-        await self.session.commit()
         await self.event_bus.publish(session.pull_events())
+        await self.session.commit()
 
         token_group = self.jwt_manager.create_token_pair(
             AuthUserJWTData.create_from_user(user, device_id=session.device_id)

@@ -98,9 +98,9 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
         )
 
         await self.message_repository.create(msg)
+        await self.event_bus.publish(msg.pull_events())
         await self.session.commit()
 
-        await self.event_bus.publish(msg.pull_events())
         logger.info(
             "Message sent",
             extra={

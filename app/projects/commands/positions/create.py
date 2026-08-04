@@ -61,9 +61,8 @@ class CreatePositionCommandHandler(BaseCommandHandler[CreatePositionCommand, Non
             location_type=command.location_type,
             expected_load=command.expected_load,
         )
-        await self.session.commit()
-
         await self.event_bus.publish(project.pull_events())
+        await self.session.commit()
 
         await self.position_repository.invalidate_cache()
         await self.project_repository.invalidate_cache()

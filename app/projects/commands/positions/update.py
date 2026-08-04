@@ -66,8 +66,8 @@ class UpdatePositionCommandHandler(BaseCommandHandler[UpdatePositionCommand, Non
         if command.expected_load is not None:
             position.expected_load = PositionLoad(command.expected_load)
 
-        await self.session.commit()
         await self.event_bus.publish(project.pull_events())
+        await self.session.commit()
 
         await self.position_repository.invalidate_cache()
         await self.project_repository.invalidate_cache()

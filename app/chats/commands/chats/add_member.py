@@ -60,8 +60,8 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
             role_id=command.role_id,
         )
 
-        await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.session.commit()
 
         logger.info(
             "Member added to chat",

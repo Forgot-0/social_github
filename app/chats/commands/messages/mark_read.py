@@ -51,12 +51,13 @@ class MarkAsReadCommandHandler(BaseCommandHandler[MarkAsReadCommand, None]):
             chat_id=command.chat_id,
             message_seq=command.message_seq,
         )
-        await self.session.commit()
         await self.event_bus.publish([ReadedMessageEvent(
-            chat_id=str(command.chat_id),
-            seq=command.message_seq,
-            reader_id=user_id
-        )])
+                    chat_id=str(command.chat_id),
+                    seq=command.message_seq,
+                    reader_id=user_id
+                )])
+        
+        await self.session.commit()
 
         logger.info(
             "Messages marked as read",

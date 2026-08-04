@@ -48,7 +48,7 @@ class ResetPasswordCommandHandler(BaseCommandHandler[ResetPasswordCommand, None]
         await self.token_repository.invalidate_token(token=command.token)
         await self.token_repository.add_user(user.id, expiration=timedelta(days=auth_config.REFRESH_TOKEN_EXPIRE_DAYS))
 
-
-        await self.session.commit()
         await self.event_bus.publish(user.pull_events())
+        await self.session.commit()
+
         logger.info("Password reset", extra={"user_id": user.id, "username": user.username})

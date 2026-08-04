@@ -64,7 +64,7 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDTO]):
             permissions=command.permissions,
         )
 
-        await self.sessions.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.sessions.commit()
 
         return ChatDTO.model_validate(chat)

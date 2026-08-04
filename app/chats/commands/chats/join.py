@@ -46,6 +46,6 @@ class JoinChatCommandHandler(BaseCommandHandler[JoinChatCommand, None]):
         role_id = 6 if chat.type == ChatType.CHANNEL else 5
         chat.add_member(user_id, role_id=role_id)
 
-        await self.session.commit()
         await self.event_bus.publish(chat.pull_events())
+        await self.session.commit()
         logger.info("User joined public chat", extra={"chat_id": command.chat_id, "user_id": user_id})
