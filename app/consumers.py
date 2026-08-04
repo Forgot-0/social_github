@@ -10,7 +10,7 @@ from faststream.kafka import KafkaBroker
 from faststream.kafka.prometheus import KafkaPrometheusMiddleware
 from prometheus_client import CollectorRegistry, make_asgi_app
 
-from app.chats.consumers import delivery as chat_delivery
+from app.chats.consumers import delivery, profiles
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
 from app.core.log.init import configure_logging
@@ -33,7 +33,8 @@ async def lifespan(context: ContextRepo) -> AsyncGenerator[None, None]:
 
 
 def setup_router(broker: KafkaBroker) -> None:
-    broker.include_router(chat_delivery.router)
+    broker.include_router(delivery.router)
+    broker.include_router(profiles.router)
     broker.include_router(user.router)
 
 

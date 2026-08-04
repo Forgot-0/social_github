@@ -2,11 +2,19 @@ from abc import (
     ABC,
     abstractmethod,
 )
-from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from collections.abc import AsyncIterator, Sequence
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.core.events.event import BaseEvent
+
+
+@dataclass(slots=True)
+class BrokerRecord:
+    topic: str
+    key: bytes
+    value: bytes
+    headers: list[tuple[str, bytes]] = field(default_factory=list)
 
 
 @dataclass
@@ -30,6 +38,10 @@ class BaseMessageBroker(ABC):
 
     @abstractmethod
     async def send_event(self, key: str, topic: str, event: BaseEvent) -> None:
+        ...
+
+    @abstractmethod
+    async def send_many(self, records: Sequence[BrokerRecord]) -> list[BaseException | None]:
         ...
 
     @abstractmethod

@@ -31,6 +31,7 @@ class ChatConfig(BaseConfig):
     RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
 
     CHAT_TOPIC: str = "chats"
+    PROFILE_TOPIC: str= "profiles"
 
     DELIVERY_ROUTER_GROUP_ID: str = "delivery-router"
     DELIVERY_ROUTER_CLIENT_ID: str = "delivery-router"
