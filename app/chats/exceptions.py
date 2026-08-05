@@ -379,7 +379,7 @@ class InvalidReactionError(ApplicationError):
 class TooManyReactionsError(ApplicationError):
     code: str = "TOO_MANY_REACTION"
     status: int = 400
-    
+
     @property
     def message(self) -> str:
         return "To many reaction"

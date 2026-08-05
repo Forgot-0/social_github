@@ -1,10 +1,18 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from html import escape
-from typing import TYPE_CHECKING, Optional, Self
+from typing import TYPE_CHECKING, Self
 from uuid import UUID, uuid7
 
-from sqlalchemy import UUID as SAUUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String
+from sqlalchemy import (
+    UUID as SAUUID,
+    BigInteger,
+    Boolean,
+    Enum as SAEnum,
+    ForeignKey,
+    Index,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
@@ -121,14 +129,14 @@ class Message(BaseModel, DateMixin):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    chat: Mapped["Chat"] = relationship(back_populates="messages", foreign_keys=[chat_id], lazy="noload")
-    reply_to: Mapped[Optional["Message"]] = relationship(
+    chat: Mapped[Chat] = relationship(back_populates="messages", foreign_keys=[chat_id], lazy="noload")
+    reply_to: Mapped[Message | None] = relationship(
         foreign_keys=[reply_to_id], remote_side="Message.id", lazy="noload"
     )
-    forwarded_from: Mapped[Optional["Message"]] = relationship(
+    forwarded_from: Mapped[Message | None] = relationship(
         foreign_keys=[forwarded_from_message_id], remote_side="Message.id", lazy="noload"
     )
-    attachments: Mapped[list["MessageAttachment"]] = relationship(
+    attachments: Mapped[list[MessageAttachment]] = relationship(
         lazy="noload", cascade="all, delete-orphan"
     )
     profile: Mapped[ChatUserProfile | None] = relationship(
@@ -217,9 +225,7 @@ class Message(BaseModel, DateMixin):
 
     def validate_content(self) -> None:
         if not self.content:
-            return
-
-        assert isinstance(self.content, str)
+            return            
 
         if len(self.content) > chat_config.MAX_MESSAGE_LENGTH:
             raise MessageTooLongError(

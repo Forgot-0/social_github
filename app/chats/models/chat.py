@@ -4,7 +4,16 @@ from enum import StrEnum
 from typing import Self
 from uuid import UUID, uuid7
 
-from sqlalchemy import UUID as SAUUID, BigInteger, Boolean, DateTime, Enum, Index, Integer, String
+from sqlalchemy import (
+    UUID as SAUUID,
+    BigInteger,
+    Boolean,
+    DateTime,
+    Enum,
+    Index,
+    Integer,
+    String,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -140,8 +149,8 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
 
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    members: Mapped[list["ChatMember"]] = relationship(back_populates="chat", lazy="noload")
-    messages: Mapped[list["Message"]] = relationship(
+    members: Mapped[list[ChatMember]] = relationship(back_populates="chat", lazy="noload")
+    messages: Mapped[list[Message]] = relationship(
         back_populates="chat", foreign_keys=[Message.chat_id], lazy="noload"
     )
 

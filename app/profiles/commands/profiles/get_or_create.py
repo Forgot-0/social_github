@@ -1,13 +1,11 @@
 import logging
 from dataclasses import dataclass
-from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.auth.dto import UserJWTData
 from app.profiles.dtos.profiles import ProfileDTO
-from app.profiles.exceptions import AlreadeExistProfileError
 from app.profiles.models.profile import Profile
 from app.profiles.repositories.profiles import ProfileRepository
 

@@ -3,7 +3,15 @@ from enum import StrEnum
 from typing import Any, Self
 from uuid import UUID, uuid7
 
-from sqlalchemy import UUID as SAUUID, DateTime, Enum as SAEnum, Index, Integer, String, Text
+from sqlalchemy import (
+    UUID as SAUUID,
+    DateTime,
+    Enum as SAEnum,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -69,7 +77,7 @@ class OutboxMessage(BaseModel, DateMixin):
             aggregate_type=event_name.split(".")[1],
             aggregate_id=aggregate_id,
             event_name=event_name,
-            topic=event_name.split(".")[0],
+            topic=event_name.split(".", maxsplit=1)[0],
             payload=payload,
             headers=headers or {},
             status=OutboxStatus.PENDING,

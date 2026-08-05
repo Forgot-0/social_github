@@ -51,10 +51,7 @@ class IRepository[T](ABC):
     session: AsyncSession
 
     async def find_by_filter(self, model: type[T], filters: BaseFilter) -> PageResult[T]:
-        if issubclass(model, SoftDeleteMixin):
-            stmt = model.select_not_deleted()
-        else:
-            stmt = select(model)
+        stmt = model.select_not_deleted() if issubclass(model, SoftDeleteMixin) else select(model)
 
         loading_options = SQLAlchemyFilterConverter.build_loading_options(model, filters.loading_config)
 

@@ -14,7 +14,6 @@ from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.storage.service import StorageService
 
-
 logger = logging.getLogger(__name__)
 
 

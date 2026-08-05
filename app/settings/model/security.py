@@ -12,7 +12,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.db.base_model import BaseModel, DateMixin
 
 
-
 class TwoFactorMethod(StrEnum):
     TOTP = "totp"
     SMS = "sms"

@@ -88,8 +88,8 @@ class User(BaseModel, DateMixin, SoftDeleteMixin):
     @classmethod
     def create(
         cls, email: str, username: str, password_hash: str | None,
-        roles: set["Role"], is_verified: bool=False
-    ) -> "User":
+        roles: set[Role], is_verified: bool=False
+    ) -> User:
         user = User(
             email=email,
             username=username,
@@ -110,23 +110,23 @@ class User(BaseModel, DateMixin, SoftDeleteMixin):
         return user
 
     @classmethod
-    def create_oauth(cls, email: str, username: str, roles: set["Role"]) -> "User":
+    def create_oauth(cls, email: str, username: str, roles: set[Role]) -> User:
         return User.create(
             email, username=username, password_hash=None,
             roles=roles, is_verified=True
         )
 
 
-    def add_role(self, role: "Role") -> None:
+    def add_role(self, role: Role) -> None:
         self.roles.add(role)
 
-    def delete_role(self, role: "Role") -> None:
+    def delete_role(self, role: Role) -> None:
         self.roles.remove(role)
 
-    def add_permission(self, permission: "Permission") -> None:
+    def add_permission(self, permission: Permission) -> None:
         self.permissions.add(permission)
 
-    def delete_permission(self, permission: "Permission") -> None:
+    def delete_permission(self, permission: Permission) -> None:
         self.permissions.remove(permission)
 
     def password_reset(self, password_hash: str) -> None:
@@ -142,20 +142,20 @@ class User(BaseModel, DateMixin, SoftDeleteMixin):
             )
         )
 
-    def get_highest_role(self) -> "Role":
+    def get_highest_role(self) -> Role:
         return max(self.roles, key=lambda r: r.security_level)
 
-    def has_permission(self, permission: "Permission") -> bool:
+    def has_permission(self, permission: Permission) -> bool:
         return any(role.has_permission(permission) for role in self.roles) or permission in self.permissions
 
-    def get_all_permissions_with_inheritance(self) -> set["Permission"]:
+    def get_all_permissions_with_inheritance(self) -> set[Permission]:
         all_permissions = set()
         for role in self.roles:
             all_permissions.update(role.permissions)
         all_permissions.update(self.permissions)
         return all_permissions
 
-    def can_manage_user(self, target_user: "User") -> bool:
+    def can_manage_user(self, target_user: User) -> bool:
         my_highest_role = self.get_highest_role()
         target_highest_role = target_user.get_highest_role()
 

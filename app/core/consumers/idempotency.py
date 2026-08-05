@@ -3,7 +3,6 @@ from typing import Any
 
 from redis.asyncio import Redis
 
-
 _PROCESSED_KEY_TEMPLATE = "consumers:processed:{group}:{event_id}"
 
 

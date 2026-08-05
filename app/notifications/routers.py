@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 
-from app.notifications.routes.v1 import devices
-from app.notifications.routes.v1 import notifications
+from app.notifications.routes.v1 import devices, notifications
 
 router_v1 = APIRouter()
 router_v1.include_router(devices.router, prefix="/devices", tags=["notifications"])

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,8 +26,8 @@ class MessageDTO(BaseModel):
     author_profile: ChatProfileDTO | None = Field(default=None)
     attachments: list[AttachmentDTO] = Field(default_factory=list)
 
-    reply_to: Optional["MessageDTO"] = Field(default=None)
-    forwarded_from: Optional["MessageDTO"] = Field(default=None)
+    reply_to: MessageDTO | None = Field(default=None)
+    forwarded_from: MessageDTO | None = Field(default=None)
 
     model_config = ConfigDict(from_attributes=True)
 

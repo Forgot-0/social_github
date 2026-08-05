@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,6 +20,6 @@ class MemberDTO(BaseModel):
     permissions_overrides: dict
 
     role: ProjectRoleDTO | None = None
-    project: Optional["ProjectDTO"] = Field(default=None, repr=False)
+    project: ProjectDTO | None = Field(default=None, repr=False)
 
     model_config = ConfigDict(from_attributes=True)

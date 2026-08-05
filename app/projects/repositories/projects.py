@@ -39,9 +39,6 @@ class ProjectRepository(IRepository[Project], CacheRepository):
     async def create(self, project: Project) -> None:
         self.session.add(project)
 
-    async def update(self, project: Project) -> None:
-        return
-
     async def get_membership(self, project_id: int, user_id: int) -> ProjectMembership | None:
         result = await self.session.execute(
             select(ProjectMembership).where(

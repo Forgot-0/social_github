@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     logger.info("Starting FastAPI")
 
     redis_client = await app.state.dishka_container.get(redis.Redis)

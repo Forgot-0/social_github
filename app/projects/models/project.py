@@ -1,9 +1,15 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Self
+from typing import Any, Self
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Boolean, Enum as SAEnum, Index, String
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Enum as SAEnum,
+    Index,
+    String,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
@@ -71,14 +77,14 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     tags: Mapped[list[str]] = mapped_column(ARRAY(String(project_config.MAX_LEN_TAG)))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    memberships: Mapped[list["ProjectMembership"]] = relationship(
+    memberships: Mapped[list[ProjectMembership]] = relationship(
         "ProjectMembership",
         lazy="selectin",
         back_populates="project",
         cascade="all, delete-orphan",
     )
 
-    positions: Mapped[list["Position"]] = relationship(
+    positions: Mapped[list[Position]] = relationship(
         "Position",
         lazy="selectin",
         back_populates="project",
@@ -195,13 +201,13 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     def update_tags(self, tags: set[str]) -> None:
         self.tags = list(tags)
 
-    def get_memeber_by_user_id(self, user_id: int) -> Optional["ProjectMembership"]:
+    def get_memeber_by_user_id(self, user_id: int) -> ProjectMembership | None:
         for member in self.memberships:
             if member.user_id == user_id:
                 return member
         return None
 
-    def get_position_by_id(self, position_id: UUID) -> Optional["Position"]:
+    def get_position_by_id(self, position_id: UUID) -> Position | None:
         for pos in self.positions:
             if pos.id == position_id:
                 return pos

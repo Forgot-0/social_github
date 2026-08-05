@@ -2,7 +2,15 @@ from enum import StrEnum
 from typing import Self
 from uuid import UUID, uuid7
 
-from sqlalchemy import UUID as SAUUID, BigInteger, Enum, ForeignKey, Index, Integer, String
+from sqlalchemy import (
+    UUID as SAUUID,
+    BigInteger,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base_model import BaseModel, DateMixin

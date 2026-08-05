@@ -11,7 +11,6 @@ from app.chats.schemas.ws import WSClientOp
 from app.chats.services.messages import MessageService
 from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
-from app.core.utils import now_utc
 
 
 @dataclass(frozen=True)

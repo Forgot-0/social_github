@@ -1,5 +1,5 @@
-from typing import Self
 from datetime import time
+from typing import Self
 
 from sqlalchemy import (
     BigInteger,
@@ -10,7 +10,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base_model import BaseModel, DateMixin
-
 
 
 class UserNotificationSettings(BaseModel, DateMixin):

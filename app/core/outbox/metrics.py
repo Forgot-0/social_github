@@ -2,7 +2,6 @@ from prometheus_client import Counter, Gauge
 
 from app.core.outbox.repository import OutboxRepository
 
-
 OUTBOX_PENDING_MESSAGES = Gauge(
     "outbox_pending_messages",
     "Number of outbox messages in PENDING status",

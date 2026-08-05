@@ -51,7 +51,7 @@ class OAuthAccountDTO(BaseModel):
     provider: OAuthProviderEnum
     provider_user_id: int
     provider_email: str
-    
-    is_active: bool    
+
+    is_active: bool
 
     model_config = ConfigDict(from_attributes=True)

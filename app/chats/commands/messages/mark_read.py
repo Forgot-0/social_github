@@ -56,7 +56,7 @@ class MarkAsReadCommandHandler(BaseCommandHandler[MarkAsReadCommand, None]):
                     seq=command.message_seq,
                     reader_id=user_id
                 )])
-        
+
         await self.session.commit()
 
         logger.info(

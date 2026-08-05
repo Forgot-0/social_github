@@ -60,7 +60,7 @@ class KafkaMessageBroker(BaseMessageBroker):
 
         return results
 
-    async def start_consuming(self, topic: list[str]) -> AsyncGenerator[dict[str, Any], None]:
+    async def start_consuming(self, topic: list[str]) -> AsyncGenerator[dict[str, Any]]:
         self.consumer.subscribe(topics=topic)
 
         async for message in self.consumer:

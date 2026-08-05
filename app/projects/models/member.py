@@ -2,7 +2,13 @@ from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, Enum as SAEnum, ForeignKey, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -46,13 +52,13 @@ class ProjectMembership(BaseModel, DateMixin):
     joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     permissions_overrides: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}")
 
-    project: Mapped["Project"] = relationship(
+    project: Mapped[Project] = relationship(
         "Project",
         lazy="selectin",
         back_populates="memberships",
     )
 
-    role: Mapped["ProjectRole"] = relationship("ProjectRole", lazy="selectin")
+    role: Mapped[ProjectRole] = relationship("ProjectRole", lazy="selectin")
 
     __table_args__ = (UniqueConstraint("project_id", "user_id", name="uq_project_user"),)
 

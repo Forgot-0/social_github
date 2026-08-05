@@ -3,7 +3,15 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import UUID as SAUUID, BigInteger, DateTime, Enum as SAEnum, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import (
+    UUID as SAUUID,
+    BigInteger,
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db.base_model import BaseModel, DateMixin
@@ -49,8 +57,8 @@ class Application(BaseModel, DateMixin):
     decided_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    project: Mapped["Project"] = relationship("Project", lazy="selectin", back_populates="applications")
-    position: Mapped["Position"] = relationship("Position", lazy="selectin", back_populates="applications")
+    project: Mapped[Project] = relationship("Project", lazy="selectin", back_populates="applications")
+    position: Mapped[Position] = relationship("Position", lazy="selectin", back_populates="applications")
 
     @classmethod
     def create(
@@ -59,7 +67,7 @@ class Application(BaseModel, DateMixin):
         position_id: UUID,
         candidate_id: int,
         message: str | None = None,
-    ) -> "Application":
+    ) -> Application:
         instance = cls(
             id=uuid4(),
             project_id=project_id,

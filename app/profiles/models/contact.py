@@ -21,7 +21,7 @@ class Contact(BaseModel, DateMixin):
         nullable=False, index=True
     )
 
-    profile: Mapped["Profile"] = relationship("Profile", back_populates="contacts")
+    profile: Mapped[Profile] = relationship("Profile", back_populates="contacts")
 
     __table_args__ = (
         UniqueConstraint("profile_id", "provider", name="unique_profile_provider"),

@@ -100,7 +100,7 @@ class WSConnection:
         if self.closed:
             return False
         try:
-            event['ts'] = now_utc().isoformat()
+            event["ts"] = now_utc().isoformat()
             self.send_queue.put_nowait(orjson.dumps(event))
         except asyncio.QueueFull:
             return False

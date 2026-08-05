@@ -2,7 +2,16 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Self
 from uuid import UUID
 
-from sqlalchemy import UUID as SAUUID, BigInteger, DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy import (
+    UUID as SAUUID,
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,9 +44,9 @@ class ChatMember(BaseModel, DateMixin):
 
     permissions_overrides: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}")
 
-    chat: Mapped["Chat"] = relationship("Chat", back_populates="members", lazy="noload")
-    role: Mapped["ChatRole"] = relationship("ChatRole")
-    bans: Mapped[list["ChatMemberBan"]] = relationship("ChatMemberBan", back_populates="member", lazy="noload")
+    chat: Mapped[Chat] = relationship("Chat", back_populates="members", lazy="noload")
+    role: Mapped[ChatRole] = relationship("ChatRole")
+    bans: Mapped[list[ChatMemberBan]] = relationship("ChatMemberBan", back_populates="member", lazy="noload")
 
     __table_args__ = (
         UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),

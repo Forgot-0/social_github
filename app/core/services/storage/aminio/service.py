@@ -157,11 +157,10 @@ class MinioStorageService(StorageService):
 
     async def download(self, bucket_name: str, file_key: str) -> bytes:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(
+        return await loop.run_in_executor(
             self.thread_executor,
             lambda: self._download_file_sync(bucket_name=bucket_name, file_key=file_key)
         )
-        return result
 
     async def download_range(self, bucket_name: str, file_key: str, offset: int, length: int) -> bytes:
         loop = asyncio.get_running_loop()

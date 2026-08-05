@@ -298,6 +298,7 @@ def app_config_override() -> dict[str, Any]:
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line("markers", "core: Core тесты")
     config.addinivalue_line("markers", "unit: Unit тесты")
     config.addinivalue_line("markers", "integration: Integration тесты")
     config.addinivalue_line("markers", "e2e: E2E тесты")

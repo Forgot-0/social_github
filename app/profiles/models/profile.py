@@ -42,7 +42,7 @@ class ProfileCreated(BaseEvent):
     date_birthday: str | None
     skills: list[str]
 
-    __event_name__: str = 'profiles.profile.created'
+    __event_name__: str = "profiles.profile.created"
 
     def get_aggregate_id(self) -> str:
         return str(self.user_id)
@@ -60,7 +60,7 @@ class ProfileUpdated(BaseEvent):
     date_birthday: str | None
     skills: list[str]
 
-    __event_name__: str = 'profiles.profile.updated'
+    __event_name__: str = "profiles.profile.updated"
 
     def get_aggregate_id(self) -> str:
         return str(self.user_id)
@@ -97,7 +97,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
         skills: set[str] | None = None,
         date_birthday: date | None=None,
         contacts: list[Contact] | None=None,
-    ) -> "Profile":
+    ) -> Profile:
         instance = cls(
             id=user_id,
             username=username,

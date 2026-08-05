@@ -1,7 +1,12 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import UUID as SAUUID, BigInteger, DateTime, String
+from sqlalchemy import (
+    UUID as SAUUID,
+    BigInteger,
+    DateTime,
+    String,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,7 +38,7 @@ class ChatUserProfile(BaseModel, DateMixin):
         avatars: dict | None = None,
         last_event_id: UUID | None = None,
         source_updated_at: datetime | None = None,
-    ) -> "ChatUserProfile":
+    ) -> ChatUserProfile:
         instance = cls(
             user_id=user_id,
             username=username,

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.config import chat_config
 from app.chats.exceptions import (
     InvalidReactionError,
     NotChatMemberError,
@@ -11,7 +12,6 @@ from app.chats.exceptions import (
     NotFoundMessageError,
     TooManyReactionsError,
 )
-from app.chats.config import chat_config
 from app.chats.models.reaction import ReactionUpdatedEvent
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository

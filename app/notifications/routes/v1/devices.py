@@ -6,7 +6,6 @@ from app.core.services.auth.depends import CurrentUserJWTData
 from app.notifications.commands.devices.create import CreateUserDeviceCommand
 from app.notifications.schemas.devices.requests import CreateUserDeviceRequest
 
-
 router = APIRouter(route_class=DishkaRoute)
 
 

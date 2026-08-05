@@ -2,7 +2,16 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Self
 from uuid import UUID, uuid4
 
-from sqlalchemy import UUID as SAUUID, BigInteger, Boolean, Enum as SAEnum, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    UUID as SAUUID,
+    BigInteger,
+    Boolean,
+    Enum as SAEnum,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
@@ -60,8 +69,8 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
         SAEnum(PositionLoad), nullable=False, server_default=PositionLoad.medium.name
     )
 
-    project: Mapped["Project"] = relationship("Project", lazy="selectin", back_populates="positions")
-    applications: Mapped[list["Application"]] = relationship("Application", lazy="selectin", back_populates="position")
+    project: Mapped[Project] = relationship("Project", lazy="selectin", back_populates="positions")
+    applications: Mapped[list[Application]] = relationship("Application", lazy="selectin", back_populates="position")
 
     @classmethod
     def create(
