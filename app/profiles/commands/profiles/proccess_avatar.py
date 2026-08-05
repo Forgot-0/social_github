@@ -6,6 +6,7 @@ import magic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.events.service import BaseEventBus
 from app.core.services.storage.dtos import UploadFile
 from app.core.services.storage.service import StorageService
 from app.profiles.config import profile_config
@@ -28,6 +29,7 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
     session: AsyncSession
     storage_service: StorageService
     profile_repository: ProfileRepository
+    event_bus: BaseEventBus
 
     async def handle(self, command: ProccessAvatarCommand) -> None:
         profile = await self.profile_repository.get_by_id(command.user_id)
@@ -77,7 +79,8 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
 
             versions[s.value] = {"webp": webp_url, "avif": avif_url, "jpg": jpg_url}
 
-        profile.avatars = versions # type: ignore
+        profile.update_avatar(versions)
+        await self.event_bus.publish(profile.pull_events())
         await self.session.commit()
         await self.profile_repository.invalidate_cache()
 

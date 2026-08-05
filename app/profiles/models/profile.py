@@ -200,6 +200,21 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
     def remove_contact(self, provider: str) -> None:
         self.contacts = [c for c in self.contacts if c.provider != provider]
 
+    def update_avatar(self, avatar_s3_keys: dict) -> None:
+        self.avatars = avatar_s3_keys
+        self.register_event(
+            ProfileUpdated(
+                user_id=self.id,
+                username=self.username,
+                avatars=self.avatars,
+                display_name=self.display_name,
+                bio=self.bio,
+                date_birthday=str(self.date_birthday) if self.date_birthday else None,
+                skills=self.skills,
+                specialization=self.specialization
+            )
+        )
+
     @validates("skills")
     def validate_skills(self, key: Any, value: list[str]) -> list[str]:
 

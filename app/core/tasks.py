@@ -1,6 +1,7 @@
 from taskiq import AsyncBroker
 
 from app.auth.tasks import register_auth_tasks
+from app.chats.tasks import register_chat_tasks
 from app.core.services.mail.aiosmtplib.task import SendEmail
 
 
@@ -11,3 +12,4 @@ def register_tasks(broker: AsyncBroker) -> None:
     )
 
     register_auth_tasks(broker)
+    register_chat_tasks(broker)

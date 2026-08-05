@@ -75,6 +75,25 @@ class OutboxRepository:
         await self.session.execute(stmt)
         await self.session.commit()
 
+    async def cleanup_stale_pending(self, retention_days: int | None = None) -> int:
+        threshold = now_utc() - timedelta(
+            days=retention_days or app_config.OUTBOX_RETENTION_DAYS
+        )
+        subquery = (
+            select(OutboxMessage.id)
+            .where(
+                OutboxMessage.status == OutboxStatus.PENDING,
+                OutboxMessage.created_at < threshold,
+            )
+            .limit(app_config.OUTBOX_CLEANUP_BATCH_SIZE)
+            .scalar_subquery()
+        )
+        stmt = delete(OutboxMessage).where(OutboxMessage.id.in_(subquery))
+
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+        return len(result.scalars().all())
+
     async def requeue_failed(self, limit: int = 1_000) -> int:
         stmt = (
             select(OutboxMessage)

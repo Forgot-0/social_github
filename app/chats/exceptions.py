@@ -357,3 +357,30 @@ class MaxLimitCursorError(ApplicationError):
             "max": self.max_len,
             "current": self.current_len
         }
+
+@dataclass(kw_only=True)
+class InvalidReactionError(ApplicationError):
+    emoji: str
+
+    code: str = "INVALID_REACTION"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Reaction is not valid"
+
+    @property
+    def detail(self) -> dict:
+        return {
+            "emoji": self.emoji,
+        }
+
+@dataclass(kw_only=True)
+class TooManyReactionsError(ApplicationError):
+    code: str = "TOO_MANY_REACTION"
+    status: int = 400
+    
+    @property
+    def message(self) -> str:
+        return "To many reaction"
+

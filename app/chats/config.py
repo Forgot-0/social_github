@@ -97,5 +97,9 @@ class ChatConfig(BaseConfig):
 
     ATTACHMENT_BUCKET: str = "chat-attachments"
 
+    RATE_LIMIT_REACTIONS_PER_SECOND : int = 10
+    MAX_REACRTION_LENGTH: int = 32
+
+    PROFILE_PROJECTION_GROUP_ID: str = "profile_projection"
 
 chat_config = ChatConfig()

@@ -1,15 +1,21 @@
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 
 from app.core.events.event import BaseEvent
 from app.core.events.service import BaseEventBus
+from app.core.outbox.metrics import OUTBOX_EVENTS_WRITTEN
 from app.core.outbox.model import OutboxMessage
 from app.core.outbox.repository import OutboxRepository
 from app.core.outbox.serializer import event_to_payload
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(eq=False)
 class MediatorEventBus(BaseEventBus):
+
+
     outbox_repository: OutboxRepository
 
     async def publish(self, events: Iterable[BaseEvent]) -> None:
@@ -20,3 +26,16 @@ class MediatorEventBus(BaseEventBus):
                 payload=event_to_payload(event)
             )
             await self.outbox_repository.create(outbox)
+
+            OUTBOX_EVENTS_WRITTEN.labels(
+                topic=outbox.topic, event_name=outbox.event_name
+            ).inc()
+            logger.info(
+                "Domain event staged to outbox",
+                extra={
+                    "event_id": str(event.event_id),
+                    "event_name": outbox.event_name,
+                    "aggregate_id": outbox.aggregate_id,
+                    "topic": outbox.topic,
+                },
+            )

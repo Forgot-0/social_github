@@ -26,7 +26,6 @@ from testcontainers.redis import AsyncRedisContainer
 
 from app.core.db.base_model import BaseModel
 from app.core.di.container import create_container
-from app.core.events.event import EventRegistry
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import JwtTokenType, UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager
@@ -35,7 +34,7 @@ from app.core.services.mail.service import BaseMailService
 from app.core.services.queues.service import QueueService
 from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
-from app.init_data import init_data
+from app.init_data import create_first_data
 from app.main import test_app
 from tests.chats.providers import ChatsIntegrationProvider
 from tests.mocks import FakeQueueService, FakeStorageService, MockEventBus, MockMailService
@@ -95,7 +94,7 @@ async def load_initial_data(db_engine: AsyncEngine) -> AsyncGenerator[None, None
     session_maker = async_sessionmaker(bind=db_engine, class_=AsyncSession, expire_on_commit=False)
 
     async with session_maker() as session:
-        await init_data(session)
+        await create_first_data(session)
 
     yield
 

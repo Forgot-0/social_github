@@ -1,9 +1,9 @@
-from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.dialects.postgresql import insert
 
 from app.chats.models.profile import ChatUserProfile
@@ -16,10 +16,16 @@ from app.core.utils import now_utc
 class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
 
     async def get_by_ids(self, user_ids: list[int]) -> list[ChatUserProfile]:
+        if not user_ids:
+            return []
 
-        stmt = select(ChatUserProfile).where(ChatUserProfile.user_id.in_(user_ids))
+        stmt = select(ChatUserProfile).where(ChatUserProfile.user_id.in_(list(user_ids)))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_map_by_ids(self, user_ids: list[int]) -> dict[int, ChatUserProfile]:
+        profiles = await self.get_by_ids(user_ids)
+        return {profile.user_id: profile for profile in profiles}
 
     async def get_by_id(self, user_id: int) -> ChatUserProfile | None:
         stmt = select(ChatUserProfile).where(ChatUserProfile.user_id == user_id)
@@ -29,11 +35,13 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
     async def upsert(
         self,
         user_id: int,
-        username: str,
+        username: str | None,
         display_name: str | None,
         avatars: dict[str, Any] | None,
-        revision: datetime,
+        source_updated_at: datetime,
+        event_id: UUID | None = None,
     ) -> bool:
+
         now = now_utc()
         stmt = (
             insert(ChatUserProfile)
@@ -42,6 +50,8 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
                 username=username,
                 display_name=display_name,
                 avatars=avatars or {},
+                last_event_id=event_id,
+                source_updated_at=source_updated_at,
                 created_at=now,
                 updated_at=now,
             )
@@ -51,10 +61,15 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
                     "username": username,
                     "display_name": display_name,
                     "avatars": avatars or {},
+                    "last_event_id": event_id,
+                    "source_updated_at": source_updated_at,
                     "updated_at": now,
                 },
                 where=(
-                    (ChatUserProfile.updated_at < revision)
+                    or_(
+                        ChatUserProfile.source_updated_at.is_(None),
+                        ChatUserProfile.source_updated_at < source_updated_at,
+                    )
                 ),
             )
             .returning(ChatUserProfile.user_id)

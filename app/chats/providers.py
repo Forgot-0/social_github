@@ -26,6 +26,7 @@ from app.chats.commands.messages.forward import ForwardMessageCommand, ForwardMe
 from app.chats.commands.messages.mark_read import MarkAsReadCommand, MarkAsReadCommandHandler
 from app.chats.commands.messages.modify import EditMessageCommand, EditMessageCommandHandler
 from app.chats.commands.messages.send import SendMessageCommand, SendMessageCommandHandler
+from app.chats.commands.profiles.upsert import UpsertProfileProjectionCommand, UpsertProfileProjectionCommandHandler
 from app.chats.commands.websockets.ping import PingCommand, PingCommandHandler
 from app.chats.commands.websockets.pong import PongCommand, PongCommandHandler
 from app.chats.commands.websockets.resume import ResumeCommand, ResumeCommandHandler
@@ -43,6 +44,7 @@ from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
+from app.chats.repositories.user_profile import ChatUserProfileRepository
 from app.chats.services.access import ChatAccessService
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.livekit_service import LiveKitService
@@ -92,6 +94,7 @@ class ChatModuleProvider(Provider):
         ResumeCommandHandler,
         SubscribeCommandHandler,
         UnsubscribeCommandHandler,
+        UpsertProfileProjectionCommandHandler,
         scope=Scope.REQUEST,
     )
 
@@ -111,6 +114,7 @@ class ChatModuleProvider(Provider):
         MessageRepository,
         AttachmentRepository,
         ReadReceiptRepository,
+        ChatUserProfileRepository,
         scope=Scope.REQUEST,
     )
 
@@ -148,6 +152,7 @@ class ChatModuleProvider(Provider):
         command_registry.register_command(ResumeCommand, ResumeCommandHandler)
         command_registry.register_command(SubscribeCommand, SubscribeCommandHandler)
         command_registry.register_command(UnsubscribeCommand, UnsubscribeCommandHandler)
+        command_registry.register_command(UpsertProfileProjectionCommand, UpsertProfileProjectionCommandHandler)
         return command_registry
 
     @decorate

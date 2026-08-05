@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.chats.dtos.profiels import ChatProfileDTO
+
 
 class Role(BaseModel):
     id: int
@@ -16,6 +18,8 @@ class MemberChatDTO(BaseModel):
     is_muted: bool
     is_banned: bool
     permissions_overrides: dict[str, bool] = Field(default_factory=dict)
+
+    profile: ChatProfileDTO | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,6 +38,8 @@ class MemeberDetailDTO(BaseModel):
 
     is_online: bool
     role: Role
+
+    profile: ChatProfileDTO | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
