@@ -44,6 +44,8 @@ class MessageType(StrEnum):
     SYSTEM = "system"
     REPLY = "reply"
     FORWARD = "forward"
+    VOICE = "voice"
+    VIDEO_NOTE = "video_note"
 
 
 @dataclass(frozen=True)

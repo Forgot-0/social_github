@@ -94,4 +94,3 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
                 )
         except Exception:
             logger.exception("Failed to notify user of upload results")
-

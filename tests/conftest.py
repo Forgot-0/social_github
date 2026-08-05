@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
+from fastapi.exceptions import RequestValidationError
 import pytest
 import pytest_asyncio
 from dishka import AsyncContainer, Provider, Scope, provide
@@ -24,9 +25,12 @@ from sqlalchemy.pool import NullPool
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import AsyncRedisContainer
 
+from app.core.configs.app import app_config
 from app.core.db.base_model import BaseModel
 from app.core.di.container import create_container
 from app.core.events.service import BaseEventBus
+from app.core.exceptions import ApplicationError
+from app.core.log.init import configure_logging
 from app.core.services.auth.dto import JwtTokenType, UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager
 from app.core.services.auth.rbac import RBACManagerInterface
@@ -35,9 +39,16 @@ from app.core.services.queues.service import QueueService
 from app.core.services.storage.service import StorageService
 from app.core.utils import now_utc
 from app.init_data import create_first_data
-from app.main import test_app
+from app.main import (
+    custom_openapi,
+    handle_application_exception,
+    handle_unknown_exception,
+    handle_validation_exception,
+    setup_middleware,
+    setup_router
+)
 from tests.chats.providers import ChatsIntegrationProvider
-from tests.mocks import FakeQueueService, FakeStorageService, MockEventBus, MockMailService
+from tests.mocks import FakeQueueService, FakeStorageService, MockMailService
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -262,6 +273,27 @@ async def jwt_manager(di_container: AsyncContainer) -> JWTManager:
 @pytest.fixture
 async def rbac_manager(di_container: AsyncContainer) -> RBACManagerInterface:
     return await di_container.get(RBACManagerInterface)
+
+
+def test_app() -> FastAPI:
+    app = FastAPI(
+        openapi_url=(
+            f"{app_config.API_V1_STR}/openapi.json"
+            if app_config.ENVIRONMENT in ["local", "testing"]
+            else None
+        ),
+        redirect_slashes=False
+    )
+
+    configure_logging()
+    setup_middleware(app)
+    setup_router(app)
+
+    app.add_exception_handler(Exception, handle_unknown_exception)
+    app.add_exception_handler(ApplicationError, handle_application_exception)  # type: ignore
+    app.add_exception_handler(RequestValidationError, handle_validation_exception) # type: ignore
+    app.openapi = lambda: custom_openapi(app)
+    return app
 
 
 @pytest_asyncio.fixture

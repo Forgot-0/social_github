@@ -10,6 +10,21 @@ from app.core.db.repository import IRepository
 from app.core.filters.base import BaseFilter
 
 
+def _message_load_options() -> list:
+    return [
+        selectinload(Message.attachments),
+        selectinload(Message.profile),
+        selectinload(Message.reply_to).options(
+            selectinload(Message.profile),
+            selectinload(Message.attachments),
+        ),
+        selectinload(Message.forwarded_from).options(
+            selectinload(Message.profile),
+            selectinload(Message.attachments),
+        ),
+    ]
+
+
 @dataclass
 class MessageRepository(IRepository[Message]):
 
@@ -19,7 +34,7 @@ class MessageRepository(IRepository[Message]):
             Message.is_deleted.is_(False),
         )
         if with_attachment:
-            stmt = stmt.options(selectinload(Message.attachments))
+            stmt = stmt.options(*_message_load_options())
 
         result = await self.session.execute(stmt)
         return result.scalar()
@@ -37,11 +52,7 @@ class MessageRepository(IRepository[Message]):
         stmt = select(Message).where(
             Message.chat_id == chat_id,
             Message.is_deleted.is_(False),
-        ).options(
-            selectinload(Message.reply_to),
-            selectinload(Message.attachments),
-            selectinload(Message.forwarded_from)
-        )
+        ).options(*_message_load_options())
 
         if cursor_seq is not None:
             if direction == "backward":
@@ -73,11 +84,7 @@ class MessageRepository(IRepository[Message]):
             )
             .order_by(Message.seq.asc())
             .limit(limit + 1)
-            .options(
-                selectinload(Message.reply_to),
-                selectinload(Message.attachments),
-                selectinload(Message.forwarded_from),
-            )
+            .options(*_message_load_options())
         )
         result = await self.session.execute(stmt)
         return list(result.scalars())
@@ -95,11 +102,7 @@ class MessageRepository(IRepository[Message]):
             .where(and_(Message.chat_id == chat_id, Message.seq <= target_seq), Message.is_deleted.is_(False))
             .order_by(Message.seq.desc())
             .limit(half)
-            .options(
-                selectinload(Message.reply_to),
-                selectinload(Message.attachments),
-                selectinload(Message.forwarded_from)
-            )
+            .options(*_message_load_options())
         )
 
         newer_stmt = (
@@ -107,11 +110,7 @@ class MessageRepository(IRepository[Message]):
             .where(and_(Message.chat_id == chat_id, Message.seq > target_seq))
             .order_by(Message.seq.asc())
             .limit(half)
-            .options(
-                selectinload(Message.reply_to),
-                selectinload(Message.attachments),
-                selectinload(Message.forwarded_from)
-            )
+            .options(*_message_load_options())
         )
 
         older_res = await self.session.execute(older_stmt)
