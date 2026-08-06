@@ -7,7 +7,6 @@ from app.core.mediators.base import BaseMediator
 from app.core.services.queues.task import BaseTask
 
 
-
 @dataclass
 class BackfillChatProfilesTask(BaseTask):
     __task_name__ = "chats.profiles.backfill"

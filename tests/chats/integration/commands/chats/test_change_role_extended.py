@@ -9,7 +9,6 @@ from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
 
-
 OWNER_ID  = ChatRolesEnum.OWNER.value.id
 ADMIN_ID  = ChatRolesEnum.ADMIN.value.id
 EDITOR_ID = ChatRolesEnum.EDITOR.value.id

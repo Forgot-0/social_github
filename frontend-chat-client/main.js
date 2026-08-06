@@ -1,8 +1,8 @@
 const els = Object.fromEntries([...document.querySelectorAll('[id]')].map((e) => [e.id, e]));
 
 const state = {
-  apiBaseUrl: localStorage.getItem('apiBaseUrl') || 'http://localhost:8000/api/v1',
-  wsBaseUrl: localStorage.getItem('wsBaseUrl') || 'ws://localhost:8000/api/v1/chats/ws',
+  apiBaseUrl: localStorage.getItem('apiBaseUrl') || 'http://localhost:8000/api/v1/',
+  wsBaseUrl: localStorage.getItem('wsBaseUrl') || 'ws://localhost:8000/api/v1/chats/ws/',
   accessToken: localStorage.getItem('accessToken') || '',
   activeChatId: null,
   ws: null,
@@ -58,12 +58,12 @@ async function register() {
     password: els.regPassword.value,
     password_repeat: els.regPasswordRepeat.value,
   };
-  const data = await api('/users/register', { method: 'POST', json: payload });
+  const data = await api('/users/register/', { method: 'POST', json: payload });
   log('Registered:', data);
 }
 
 async function login() {
-  const data = await api('/auth/login', {
+  const data = await api('/auth/login/', {
     method: 'POST',
     form: { username: els.loginUsername.value, password: els.loginPassword.value },
   });
@@ -74,7 +74,7 @@ async function login() {
 }
 
 async function refresh() {
-  const data = await api('/auth/refresh', { method: 'POST' });
+  const data = await api('/auth/refresh/', { method: 'POST' });
   state.accessToken = data.access_token;
   saveState();
   syncUi();
@@ -82,17 +82,17 @@ async function refresh() {
 }
 
 async function logout() {
-  await api('/auth/logout', { method: 'POST' });
+  await api('/auth/logout/', { method: 'POST' });
   state.accessToken = '';
   saveState();
   syncUi();
   log('Logout done');
 }
 
-async function loadMe() { log('me:', await api('/users/me')); }
+async function loadMe() { log('me:', await api('/users/me/')); }
 
 async function loadChats() {
-  const data = await api('/chats');
+  const data = await api('/chats/');
   const chats = data.items || data.chats || [];
   els.chatList.innerHTML = '';
   chats.forEach((chat) => {
@@ -109,7 +109,7 @@ async function loadChats() {
 }
 
 async function createChat() {
-  const data = await api('/chats', {
+  const data = await api('/chats/', {
     method: 'POST',
     json: {
       name: els.chatName.value,
@@ -129,7 +129,7 @@ async function createChat() {
 
 async function loadMessages() {
   if (!state.activeChatId) throw new Error('Select chat first');
-  const data = await api(`/chats/${state.activeChatId}/messages?limit=50`);
+  const data = await api(`/chats/${state.activeChatId}/messages/?limit=50`);
   const items = data.items || data.messages || [];
   els.messageList.innerHTML = '';
   items.forEach((m) => {
@@ -142,7 +142,7 @@ async function loadMessages() {
 
 async function sendMessage() {
   if (!state.activeChatId) throw new Error('Select chat first');
-  const data = await api(`/chats/${state.activeChatId}/messages`, {
+  const data = await api(`/chats/${state.activeChatId}/messages/`, {
     method: 'POST',
     json: { content: els.messageInput.value, message_type: 'text', upload_tokens: [] },
   });

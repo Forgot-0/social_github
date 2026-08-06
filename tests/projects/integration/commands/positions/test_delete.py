@@ -10,7 +10,6 @@ from app.projects.models.position import Position
 from app.projects.repositories.positions import PositionRepository
 
 
-
 @pytest.mark.integration
 @pytest.mark.projects
 @pytest.mark.asyncio

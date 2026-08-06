@@ -25,7 +25,7 @@ class TestLeaveChatCommand:
         handler: LeaveChatCommandHandler,
         chat_repository: ChatRepository,
         make_user_jwt
-    ) -> None: 
+    ) -> None:
         await handler.handle(LeaveChatCommand(chat_id=group_chat.id, user_jwt_data=make_user_jwt(id="2")))
 
         member = await chat_repository.get_member_chat(chat_id=group_chat.id, member_id=2)
@@ -40,7 +40,7 @@ class TestLeaveChatCommand:
         group_chat: Chat,
         user_jwt: UserJWTData,
         handler: LeaveChatCommandHandler,
-    ) -> None: 
+    ) -> None:
         with pytest.raises(AccessDeniedChatError):
             await handler.handle(LeaveChatCommand(chat_id=group_chat.id, user_jwt_data=user_jwt))
 
@@ -49,7 +49,7 @@ class TestLeaveChatCommand:
         group_chat: Chat,
         handler: LeaveChatCommandHandler,
         make_user_jwt
-    ) -> None: 
+    ) -> None:
         with pytest.raises(NotChatMemberError):
             await handler.handle(
                 LeaveChatCommand(chat_id=group_chat.id, user_jwt_data=make_user_jwt(id="999"))

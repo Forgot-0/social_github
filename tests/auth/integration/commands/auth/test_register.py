@@ -1,6 +1,5 @@
 import pytest
 from dishka import AsyncContainer
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.users.register import RegisterCommand, RegisterCommandHandler
 from app.auth.exceptions import DuplicateUserError, PasswordMismatchError

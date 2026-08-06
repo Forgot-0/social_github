@@ -13,6 +13,7 @@ from app.chats.models.permission import (
 )
 from app.core.utils import now_utc
 
+
 def make_member(
     role: ChatRole,
     *,

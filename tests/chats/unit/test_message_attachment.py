@@ -4,6 +4,7 @@ import pytest
 
 from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
 
+
 def make_attachment(
     att_type: AttachmentType = AttachmentType.IMAGE,
     *,

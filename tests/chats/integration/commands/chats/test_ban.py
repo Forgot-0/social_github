@@ -1,7 +1,8 @@
 from datetime import timedelta
+from uuid import uuid4
 
-from dishka import AsyncContainer
 import pytest
+from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.chats.ban_member import BanMemberCommand, BanMemberCommandHandler
@@ -10,11 +11,9 @@ from app.chats.exceptions import (
     NotChatMemberError,
     NotFoundChatError,
 )
-from app.chats.models.chat import BannedChatMemberEvent, Chat
+from app.chats.models.chat import Chat
 from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
-from uuid import uuid4
-
 from app.core.utils import now_utc
 
 

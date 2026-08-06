@@ -5,7 +5,7 @@ from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.exceptions import AccessDeniedError
 from app.profiles.commands.profiles.remove_contact import (
     RemoveContactToProfileCommand,
-    RemoveContactToProfileCommandHandler
+    RemoveContactToProfileCommandHandler,
 )
 from app.profiles.exceptions import NotFoundProfileError
 from app.profiles.models.profile import Profile

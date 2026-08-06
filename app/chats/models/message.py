@@ -227,7 +227,7 @@ class Message(BaseModel, DateMixin):
 
     def validate_content(self) -> None:
         if not self.content:
-            return            
+            return
 
         if len(self.content) > chat_config.MAX_MESSAGE_LENGTH:
             raise MessageTooLongError(

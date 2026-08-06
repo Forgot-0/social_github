@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 
 from app.chats.config import chat_config
@@ -14,7 +16,6 @@ from app.chats.models.message import (
     ModifiedMessageEvent,
     SendedMessageEvent,
 )
-from uuid import uuid4
 
 
 def create_message(

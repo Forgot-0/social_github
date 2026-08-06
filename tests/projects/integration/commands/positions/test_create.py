@@ -45,6 +45,7 @@ class TestCreatePositionCommand:
 
         project = await position_repository.session.get(Project, persisted_project.id)
         from sqlalchemy import select
+
         from app.projects.models.position import Position as Pos
         result = await position_repository.session.execute(
             select(Pos).where(Pos.project_id == persisted_project.id)

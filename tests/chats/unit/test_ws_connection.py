@@ -1,13 +1,11 @@
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from fastapi.websockets import WebSocketState
 import orjson
 import pytest
+from fastapi.websockets import WebSocketState
 
 from app.chats.config import chat_config
 from app.chats.dtos.websocket import WSConnection
-
 
 
 def make_ws_mock() -> MagicMock:

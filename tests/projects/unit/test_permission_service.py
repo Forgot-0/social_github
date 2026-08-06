@@ -1,7 +1,6 @@
-from typing import Callable
 
-from dishka import AsyncContainer
 import pytest
+from dishka import AsyncContainer
 
 from app.core.services.auth.dto import UserJWTData
 from app.projects.models.member import MembershipStatus, ProjectMembership

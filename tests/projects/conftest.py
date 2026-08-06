@@ -1,9 +1,9 @@
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.projects.repositories.projects import ProjectRepository
-from app.projects.repositories.positions import PositionRepository
 from app.projects.repositories.applications import ApplicationRepository
+from app.projects.repositories.positions import PositionRepository
+from app.projects.repositories.projects import ProjectRepository
 from app.projects.repositories.roles import ProjectRoleRepository
 from app.projects.services.permission_service import ProjectPermissionService
 

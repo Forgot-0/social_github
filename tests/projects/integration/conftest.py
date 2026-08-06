@@ -2,14 +2,12 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.services.auth.dto import UserJWTData
-from app.projects.models.member import MembershipStatus, ProjectMembership
-from app.projects.models.project import Project, ProjectVisibility
-from app.projects.models.position import Position, PositionLocationType, PositionLoad
-from app.projects.models.application import Application
-from app.projects.models.role_permissions import ProjectRolesEnum
-
 from app.core.utils import now_utc
-
+from app.projects.models.application import Application
+from app.projects.models.member import MembershipStatus, ProjectMembership
+from app.projects.models.position import Position, PositionLoad, PositionLocationType
+from app.projects.models.project import Project, ProjectVisibility
+from app.projects.models.role_permissions import ProjectRolesEnum
 
 
 @pytest_asyncio.fixture

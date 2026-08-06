@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from app.projects.commands.applications.create import CreateApplicationCommand, CreateApplicationCommandHandler
 from app.projects.exceptions import NotFoundPositionError
-from app.projects.models.application import  Application, ApplicationStatus
+from app.projects.models.application import Application, ApplicationStatus
 from app.projects.models.position import Position
 from app.projects.repositories.applications import ApplicationRepository
 

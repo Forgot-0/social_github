@@ -11,7 +11,6 @@ from app.projects.models.role_permissions import ProjectRolesEnum
 from app.projects.repositories.projects import ProjectRepository
 
 
-
 @pytest.mark.integration
 @pytest.mark.projects
 @pytest.mark.asyncio

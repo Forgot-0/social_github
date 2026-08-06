@@ -1,16 +1,17 @@
 import shutil
 from pathlib import Path
 
+
 def clean_pycache(directory: str):
     # Превращаем строку в объект пути
     root = Path(directory).resolve()
-    
+
     if not root.exists():
         print(f"Ошибка: Директория '{root}' не найдена.")
         return
 
     print(f"Начинаю поиск __pycache__ в: {root}")
-    
+
     # rglob ищет рекурсивно во всех подпапках
     count = 0
     for pycache_folder in root.rglob("__pycache__"):

@@ -10,7 +10,6 @@ from app.chats.repositories.chat import ChatRepository
 from app.core.services.auth.dto import UserJWTData
 
 
-
 @pytest.mark.integration
 @pytest.mark.chats
 @pytest.mark.asyncio

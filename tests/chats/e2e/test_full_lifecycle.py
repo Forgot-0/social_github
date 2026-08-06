@@ -1,4 +1,3 @@
-import asyncio
 
 import pytest
 from httpx import AsyncClient
@@ -62,7 +61,7 @@ class TestFullChatLifecycleE2E:
                     event = await ws.recv_event()
                     if event.get("type") in ("ws.history", "new_message"):
                         break
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
 
             await ws.send_json({"op": "ping"})

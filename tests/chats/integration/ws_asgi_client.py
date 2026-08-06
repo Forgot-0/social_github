@@ -62,7 +62,7 @@ class AsyncASGIWebSocketSession:
         base_headers = [(b"host", b"test")]
         merged = [
             *base_headers, *(headers or []),
-            ("sec-websocket-protocol".encode(), ",".join(subprotocols or []).encode())
+            (b"sec-websocket-protocol", ",".join(subprotocols or []).encode())
         ]
         self.scope = _ws_scope(
             app,

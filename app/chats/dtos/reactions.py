@@ -15,8 +15,8 @@ class ReactionSummaryDTO(BaseModel):
 
 
 def build_reaction_summaries(
-    counters: Sequence["MessageReactionCounter"],
-    user_reactions: Sequence["MessageReaction"],
+    counters: Sequence[MessageReactionCounter],
+    user_reactions: Sequence[MessageReaction],
 ) -> dict[UUID, list[ReactionSummaryDTO]]:
     my_emojis: dict[UUID, set[str]] = {}
     for reaction in user_reactions:

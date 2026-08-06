@@ -1,5 +1,6 @@
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from app.projects.models.application import Application, ApplicationStatus
 from app.projects.models.member import MembershipStatus, ProjectMembership
