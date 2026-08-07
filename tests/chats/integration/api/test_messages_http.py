@@ -31,8 +31,10 @@ class TestMessagesHttpEndpoints:
         client: AsyncClient,
         user_jwt: UserJWTData,
         create_auth_headers,
+        create_profile
     ) -> None:
         headers = create_auth_headers(user_jwt)
+        await create_profile(user_jwt)
         chat_id = await _create_group_chat(client, headers)
 
         send_resp = await client.post(

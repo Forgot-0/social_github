@@ -96,6 +96,7 @@ class ChatConfig(BaseConfig):
     ATTACHMENT_UPLOAD_TOKEN_TTL: int = 3_600
 
     ATTACHMENT_BUCKET: str = "chat-attachments"
+    AVATAR_BUCKET: str = "profiles"
 
     RATE_LIMIT_REACTIONS_PER_SECOND : int = 10
     MAX_REACRTION_LENGTH: int = 32

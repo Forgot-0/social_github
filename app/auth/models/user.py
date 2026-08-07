@@ -23,7 +23,7 @@ class CreatedUserEvent(BaseEvent):
 
     __event_name__: str = "auth.user.created"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.username)
 
 
@@ -35,7 +35,7 @@ class VerifiedUserEvent(BaseEvent):
 
     __event_name__: str = "auth.user.verified"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.user_id)
 
 

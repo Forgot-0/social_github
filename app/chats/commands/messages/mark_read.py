@@ -52,10 +52,10 @@ class MarkAsReadCommandHandler(BaseCommandHandler[MarkAsReadCommand, None]):
             message_seq=command.message_seq,
         )
         await self.event_bus.publish([ReadedMessageEvent(
-                    chat_id=str(command.chat_id),
-                    seq=command.message_seq,
-                    reader_id=user_id
-                )])
+            chat_id=str(command.chat_id),
+            seq=command.message_seq,
+            reader_id=user_id
+        )])
 
         await self.session.commit()
 

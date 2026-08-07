@@ -1,10 +1,12 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class ChatProfileDTO(BaseModel):
     user_id: int
     username: str | None = None
     display_name: str | None = None
-    avatars: dict[str, dict[str, str]] = Field(default_factory=dict)
+    avatar_url: str | None = None
+
+    avatar_s3_key: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

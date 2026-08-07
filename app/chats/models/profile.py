@@ -7,7 +7,6 @@ from sqlalchemy import (
     DateTime,
     String,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base_model import BaseModel, DateMixin
@@ -23,7 +22,7 @@ class ChatUserProfile(BaseModel, DateMixin):
     username: Mapped[str | None] = mapped_column(String, nullable=True)
 
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
-    avatars: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
+    avatar_s3_key: Mapped[str | None] = mapped_column(String, nullable=True)
 
     last_event_id: Mapped[UUID | None] = mapped_column(SAUUID(as_uuid=True), nullable=True)
     source_updated_at: Mapped[datetime | None] = mapped_column(
@@ -35,7 +34,7 @@ class ChatUserProfile(BaseModel, DateMixin):
         user_id: int,
         username: str | None,
         display_name: str | None = None,
-        avatars: dict | None = None,
+        avatar_s3_key: str | None = None,
         last_event_id: UUID | None = None,
         source_updated_at: datetime | None = None,
     ) -> ChatUserProfile:
@@ -43,7 +42,7 @@ class ChatUserProfile(BaseModel, DateMixin):
             user_id=user_id,
             username=username,
             display_name=display_name,
-            avatars=avatars or {},
+            avatar_s3_key=avatar_s3_key,
             last_event_id=last_event_id,
             source_updated_at=source_updated_at,
         )

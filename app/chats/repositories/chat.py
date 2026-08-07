@@ -4,11 +4,13 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import Select, and_, or_, select, update
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import contains_eager, selectinload
 
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
+from app.chats.models.message import Message
 from app.chats.models.permission import ChatRolesEnum
+from app.chats.models.profile import ChatUserProfile
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import CacheRepository, IRepository
 from app.core.filters.base import BaseFilter
@@ -173,9 +175,9 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         limit: int,
         last_activity_at: datetime | None = None,
         chat_id: UUID | None = None,
-    ) -> list[tuple[Chat, ChatMember, ReadReceipt | None]]:
+    ) -> list[tuple[Chat, ChatMember, ReadReceipt | None, Message | None]]:
         stmt = (
-            select(Chat, ChatMember, ReadReceipt)
+            select(Chat, ChatMember, ReadReceipt, Message)
             .join(
                 ChatMember,
                 and_(ChatMember.chat_id == Chat.id, ChatMember.user_id == user_id),
@@ -183,15 +185,25 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             .outerjoin(
                 ReadReceipt,
                 and_(ReadReceipt.chat_id == Chat.id, ReadReceipt.user_id == user_id),
-            )
-            .where(
+            ).outerjoin(
+                Message,
+                and_(
+                    Message.chat_id == Chat.id,
+                    Message.seq == Chat.seq_counter,
+                    Message.is_deleted.is_(False),
+                ),
+            ).outerjoin(
+                ChatUserProfile, ChatUserProfile.user_id == Message.author_id
+            ).options(
+                contains_eager(Message.profile)
+            ).where(
                 ChatMember.user_id == user_id,
                 ChatMember.banned_to.is_not(None),
                 ChatMember.banned_to < now_utc(),
                 Chat.deleted_at.is_(None),
-            )
-            .order_by(Chat.last_activity_at.desc().nullslast(), Chat.id.desc())
-            .limit(limit + 1)
+            ).order_by(
+                Chat.last_activity_at.desc().nullslast(), Chat.id.desc()
+            ).limit(limit + 1)
         )
 
         if last_activity_at is not None and chat_id is not None:

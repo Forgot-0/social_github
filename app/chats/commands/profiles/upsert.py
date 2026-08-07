@@ -17,7 +17,7 @@ class UpsertProfileProjectionCommand(BaseCommand):
     user_id: int
     username: str | None = None
     display_name: str | None = None
-    avatars: dict[str, Any] = field(default_factory=dict)
+    avatars: dict[int, dict[str, str]] = field(default_factory=dict)
 
     event_id: UUID | None = None
     event_updated_at: datetime | None = None
@@ -42,7 +42,7 @@ class UpsertProfileProjectionCommandHandler(
             user_id=command.user_id,
             username=command.username,
             display_name=command.display_name,
-            avatars=command.avatars,
+            avatar_s3_key=command.avatars[64]["jpg"] if command.avatars else None,
             source_updated_at=command.event_updated_at,
             event_id=command.event_id,
         )

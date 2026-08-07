@@ -264,11 +264,3 @@ Acceptance criteria:
 ```
 
 ---
-
-## Рекомендуемый порядок доработок
-
-1. Сначала стабилизировать уже существующий Outbox/Debezium и idempotency consumers.
-2. Затем исправить текущую chat profile projection (`avatars`, revision/event_id, consumer payload, backfill).
-3. Потом реально подключить profile DTO к REST/WS ответам без N+1.
-4. После этого завершить end-to-end voice/video-note flow поверх уже добавленных attachment types.
-5. В конце добавить реакции, используя готовый outbox и delivery pipeline.

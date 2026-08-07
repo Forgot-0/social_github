@@ -23,8 +23,10 @@ class TestFullChatLifecycleE2E:
         user_jwt: UserJWTData,
         create_access_token,
         create_auth_headers,
+        create_profile,
     ) -> None:
         headers = create_auth_headers(user_jwt)
+        await create_profile(user_jwt)
 
         create_resp = await client.post(
             api_path("chats/"),

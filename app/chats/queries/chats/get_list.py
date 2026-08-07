@@ -4,7 +4,7 @@ from uuid import UUID
 
 from app.chats.dtos.chats import ChatDTO, ListChats
 from app.chats.dtos.members import MemberChatDTO
-from app.chats.dtos.messages import ReadDetail
+from app.chats.dtos.messages import MessageDTO, ReadDetail
 from app.chats.repositories.chat import ChatRepository
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
@@ -33,8 +33,7 @@ class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListCha
         page = rows[:limit]
 
         chats = []
-        for chat, member, read in page:
-            read_dto = ReadDetail.model_validate(read) if read is not None else None
+        for chat, member, read, message in page:
             chats.append(ChatDTO(
                 id=chat.id,
                 seq_counter=chat.seq_counter,
@@ -55,7 +54,8 @@ class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListCha
                     else chat.seq_counter
                 ),
                 me=MemberChatDTO.model_validate(member),
-                last_read=read_dto,
+                last_read=ReadDetail.model_validate(read) if read is not None else None,
+                last_message=MessageDTO.model_validate(message) if message is not None else None
             ))
 
         return ListChats(

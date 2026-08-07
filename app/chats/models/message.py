@@ -58,7 +58,7 @@ class SendedMessageEvent(BaseEvent):
 
     __event_name__ = "chats.message.sent"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.chat_id)
 
 
@@ -70,7 +70,7 @@ class ReadedMessageEvent(BaseEvent):
 
     __event_name__ = "chats.message.readed"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.chat_id)
 
 
@@ -83,7 +83,7 @@ class ModifiedMessageEvent(BaseEvent):
 
     __event_name__ = "chats.message.modified"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.chat_id)
 
 
@@ -96,7 +96,7 @@ class DeletedMessageEvent(BaseEvent):
 
     __event_name__ = "chats.message.deleted"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.chat_id)
 
 

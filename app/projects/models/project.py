@@ -36,7 +36,7 @@ class CreatedPositionEvent(BaseEvent):
 
     __event_name__: str = "projects.position.created"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.project_id)
 
 class ProjectVisibility(Enum):

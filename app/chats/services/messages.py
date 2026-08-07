@@ -7,6 +7,7 @@ from redis.asyncio import Redis
 
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO
+from app.chats.dtos.profiels import ChatProfileDTO
 from app.chats.exceptions import SlowModeLimitError
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
@@ -63,7 +64,13 @@ class MessageService:
         message_list = [messages] if isinstance(messages, MessageDTO) else list(messages)
 
         attachments_by_key: dict[str, AttachmentDTO] = {}
+
         for message in message_list:
+            if message.profile is not None and message.profile.avatar_s3_key:
+                message.profile.avatar_url = await self.get_chat_profile_url_by_key(
+                    message.profile.avatar_s3_key
+                )
+
             for attachment in message.attachments:
                 attachments_by_key[attachment.s3_key] = attachment
 
@@ -84,7 +91,6 @@ class MessageService:
 
         return message_list[0] if isinstance(messages, MessageDTO) else message_list
 
-
     async def get_attachmnent_url_by_key(self, s3_key: str) -> str:
         key = f"attachment:{s3_key}"
         url = await self.redis.get(key)
@@ -98,3 +104,15 @@ class MessageService:
 
         return url
 
+    async def get_chat_profile_url_by_key(self, s3_key: str) -> str:
+        key = f"chat:profile:{s3_key}"
+        url = await self.redis.get(key)
+        if url is None:
+            url = await self.storage_service.generate_presigned_url(
+                bucket_name=chat_config.AVATAR_BUCKET,
+                file_key=s3_key,
+                expires=chat_config.DOWNLOAD_URL_TTL,
+            )
+            await self.redis.set(key, url, ex=chat_config.DOWNLOAD_URL_TTL-30)
+
+        return url

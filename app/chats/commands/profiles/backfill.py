@@ -49,7 +49,7 @@ class BackfillChatProfilesCommandHandler(
                     user_id=int(row["id"]),
                     username=row["username"],
                     display_name=row["display_name"],
-                    avatars=row["avatars"] or {},
+                    avatar_s3_key=row["avatars"] or {},
                     source_updated_at=row["updated_at"],
                     event_id=None,
                 )

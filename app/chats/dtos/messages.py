@@ -23,7 +23,7 @@ class MessageDTO(BaseModel):
     is_edited: bool
     created_at: datetime
 
-    author_profile: ChatProfileDTO | None = Field(default=None)
+    profile: ChatProfileDTO | None = Field(default=None)
     attachments: list[AttachmentDTO] = Field(default_factory=list)
 
     reply_to: MessageDTO | None = Field(default=None)

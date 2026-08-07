@@ -44,7 +44,7 @@ class ProfileCreated(BaseEvent):
 
     __event_name__: str = "profiles.profile.created"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.user_id)
 
 
@@ -62,7 +62,7 @@ class ProfileUpdated(BaseEvent):
 
     __event_name__: str = "profiles.profile.updated"
 
-    def get_aggregate_id(self) -> str:
+    def get_partition_key(self) -> str:
         return str(self.user_id)
 
 

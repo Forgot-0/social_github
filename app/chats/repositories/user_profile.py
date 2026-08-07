@@ -37,7 +37,7 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
         user_id: int,
         username: str | None,
         display_name: str | None,
-        avatars: dict[str, Any] | None,
+        avatar_s3_key: str | None,
         source_updated_at: datetime,
         event_id: UUID | None = None,
     ) -> bool:
@@ -49,7 +49,7 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
                 user_id=user_id,
                 username=username,
                 display_name=display_name,
-                avatars=avatars or {},
+                avatar_s3_key=avatar_s3_key,
                 last_event_id=event_id,
                 source_updated_at=source_updated_at,
                 created_at=now,
@@ -60,7 +60,7 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
                 set_={
                     "username": username,
                     "display_name": display_name,
-                    "avatars": avatars or {},
+                    "avatar_s3_key": avatar_s3_key,
                     "last_event_id": event_id,
                     "source_updated_at": source_updated_at,
                     "updated_at": now,

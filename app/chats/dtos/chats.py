@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.chats.dtos.members import MemberChatDTO
-from app.chats.dtos.messages import ReadDetail
+from app.chats.dtos.messages import MessageDTO, ReadDetail
 from app.chats.models.chat import ChatType
 
 
@@ -27,8 +27,9 @@ class ChatDTO(BaseModel):
     member_count: int
     unread_count: int = 0
 
-    me: MemberChatDTO | None = None
-    last_read: ReadDetail | None = None
+    me: MemberChatDTO | None = Field(default=None)
+    last_read: ReadDetail | None = Field(default=None)
+    last_message: MessageDTO | None = Field(default=None)
 
     model_config = ConfigDict(from_attributes=True)
 
