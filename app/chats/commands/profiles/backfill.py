@@ -31,7 +31,7 @@ class BackfillChatProfilesCommandHandler(
             result = await self.session.execute(
                 text(
                     """
-                    SELECT id, username, display_name, avatars, updated_at
+                    SELECT id, username, display_name, avatar_s3_key, updated_at
                     FROM profiles
                     WHERE id > :last_id AND deleted_at IS NULL
                     ORDER BY id
@@ -49,7 +49,7 @@ class BackfillChatProfilesCommandHandler(
                     user_id=int(row["id"]),
                     username=row["username"],
                     display_name=row["display_name"],
-                    avatar_s3_key=row["avatars"] or {},
+                    avatar_s3_key=row["avatar_s3_key"],
                     source_updated_at=row["updated_at"],
                     event_id=None,
                 )

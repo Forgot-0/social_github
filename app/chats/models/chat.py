@@ -327,6 +327,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     def kick_member(self, target: int, requester_id: int) -> None:
         if target == requester_id:
             raise AccessDeniedChatError(chat_id=str(self.id), requester_id=requester_id)
+
         self.member_count -= 1
         self.register_event(KickedChatMemberEvent(
             chat_id=str(self.id),
@@ -337,6 +338,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     def ban_member(self, target: int, requester_id: int, ban: bool) -> None:
         if target == requester_id:
             raise AccessDeniedChatError(chat_id=str(self.id), requester_id=requester_id)
+
         self.register_event(BannedChatMemberEvent(
             chat_id=str(self.id),
             requester_id=requester_id,
