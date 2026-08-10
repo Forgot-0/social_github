@@ -5,6 +5,7 @@ from app.chats.dtos.chats import ChatDetaiDTO
 from app.chats.dtos.members import MemberChatDTO
 from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.messages import MessageService
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
 
@@ -18,6 +19,7 @@ class GetChatDetailQuery(BaseQuery):
 @dataclass(frozen=True)
 class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetaiDTO]):
     chat_repository: ChatRepository
+    message_service: MessageService
 
     async def handle(self, query: GetChatDetailQuery) -> ChatDetaiDTO:
         user_id = int(query.user_jwt_data.id)
@@ -26,9 +28,16 @@ class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetaiDT
         if chat is None:
             raise NotFoundChatError(chat_id=str(query.chat_id))
 
-        member = await self.chat_repository.get_member_chat(query.chat_id, user_id, with_role=False)
+        member = await self.chat_repository.get_member_chat(
+            query.chat_id, user_id, with_role=False
+        )
         if member is None or member.is_banned:
             raise NotChatMemberError(chat_id=str(query.chat_id), user_id=user_id)
+
+        member_dtos = [MemberChatDTO.model_validate(item) for item in chat.members]
+        await self.message_service.attach_profile_urls(
+            [dto.profile for dto in member_dtos]
+        )
 
         return ChatDetaiDTO(
             id=chat.id,
@@ -44,5 +53,5 @@ class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetaiDT
             permissions=chat.permissions or {},
             created_by=chat.created_by,
             member_count=chat.member_count,
-            members=[MemberChatDTO.model_validate(member) for member in chat.members],
+            members=member_dtos,
         )

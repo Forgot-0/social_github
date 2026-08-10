@@ -4,6 +4,7 @@ from uuid import UUID
 from app.chats.dtos.members import ListMembers, MemberChatDTO, MemberPresenceDTO
 from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.messages import MessageService
 from app.chats.services.presence import PresenceService
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
@@ -22,6 +23,7 @@ class GetChatMembersQuery(BaseQuery):
 class GetChatMembersQueryHandler(BaseQueryHandler[GetChatMembersQuery, ListMembers]):
     chat_repository: ChatRepository
     presence_service: PresenceService
+    message_service: MessageService
 
     async def handle(self, query: GetChatMembersQuery) -> ListMembers:
         requester_id = int(query.user_jwt_data.id)
@@ -51,8 +53,13 @@ class GetChatMembersQueryHandler(BaseQueryHandler[GetChatMembersQuery, ListMembe
                 for user_id in user_ids
             ]
 
+        member_dtos = [MemberChatDTO.model_validate(member) for member in page]
+        await self.message_service.attach_profile_urls(
+            [dto.profile for dto in member_dtos]
+        )
+
         return ListMembers(
-            members=[MemberChatDTO.model_validate(member) for member in page],
+            members=member_dtos,
             has_next=len(members) > limit,
             next_user_id=page[-1].user_id if len(members) > limit and page else None,
             presence=presence,

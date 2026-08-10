@@ -16,6 +16,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
+from app.chats.models.profile import ChatUserProfile
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
 
@@ -47,6 +48,14 @@ class ChatMember(BaseModel, DateMixin):
     chat: Mapped[Chat] = relationship("Chat", back_populates="members", lazy="noload")
     role: Mapped[ChatRole] = relationship("ChatRole")
     bans: Mapped[list[ChatMemberBan]] = relationship("ChatMemberBan", back_populates="member", lazy="noload")
+
+    profile: Mapped[ChatUserProfile | None] = relationship(
+        ChatUserProfile,
+        foreign_keys=[user_id],
+        primaryjoin="ChatMember.user_id == ChatUserProfile.user_id",
+        lazy="noload",
+        viewonly=True,
+    )
 
     __table_args__ = (
         UniqueConstraint("chat_id", "user_id", name="uq_chat_member"),

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.dtos.avatars import pick_avatar_key
 from app.chats.repositories.user_profile import ChatUserProfileRepository
 from app.core.commands import BaseCommand, BaseCommandHandler
 
@@ -17,7 +18,7 @@ class UpsertProfileProjectionCommand(BaseCommand):
     user_id: int
     username: str | None = None
     display_name: str | None = None
-    avatars: dict[int, dict[str, str]] = field(default_factory=dict)
+    avatars: dict[Any, dict[str, str]] = field(default_factory=dict)
 
     event_id: UUID | None = None
     event_updated_at: datetime | None = None
@@ -42,7 +43,7 @@ class UpsertProfileProjectionCommandHandler(
             user_id=command.user_id,
             username=command.username,
             display_name=command.display_name,
-            avatar_s3_key=command.avatars[64]["jpg"] if command.avatars else None,
+            avatar_s3_key=pick_avatar_key(command.avatars),
             source_updated_at=command.event_updated_at,
             event_id=command.event_id,
         )

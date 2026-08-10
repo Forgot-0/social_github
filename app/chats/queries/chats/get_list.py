@@ -5,7 +5,9 @@ from uuid import UUID
 from app.chats.dtos.chats import ChatDTO, ListChats
 from app.chats.dtos.members import MemberChatDTO
 from app.chats.dtos.messages import MessageDTO, ReadDetail
+from app.chats.dtos.profiles import ChatProfileDTO
 from app.chats.repositories.chat import ChatRepository
+from app.chats.services.messages import MessageService
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
 
@@ -21,6 +23,7 @@ class GetListChatUserQuery(BaseQuery):
 @dataclass(frozen=True)
 class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListChats]):
     chat_repository: ChatRepository
+    message_service: MessageService
 
     async def handle(self, query: GetListChatUserQuery) -> ListChats:
         limit = min(max(query.limit, 1), 100)
@@ -33,7 +36,17 @@ class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListCha
         page = rows[:limit]
 
         chats = []
+        profiles: list[ChatProfileDTO | None] = []
         for chat, member, read, message in page:
+            me_dto = MemberChatDTO.model_validate(member)
+            last_message = (
+                MessageDTO.model_validate(message) if message is not None else None
+            )
+
+            profiles.append(me_dto.profile)
+            if last_message is not None:
+                profiles.append(last_message.profile)
+
             chats.append(ChatDTO(
                 id=chat.id,
                 seq_counter=chat.seq_counter,
@@ -53,10 +66,12 @@ class GetListChatUserQueryHandler(BaseQueryHandler[GetListChatUserQuery, ListCha
                     if read is not None
                     else chat.seq_counter
                 ),
-                me=MemberChatDTO.model_validate(member),
+                me=me_dto,
                 last_read=ReadDetail.model_validate(read) if read is not None else None,
-                last_message=MessageDTO.model_validate(message) if message is not None else None
+                last_message=last_message,
             ))
+
+        await self.message_service.attach_profile_urls(profiles)
 
         return ListChats(
             has_next=len(rows) > limit,

@@ -64,15 +64,21 @@ class MessageService:
         message_list = [messages] if isinstance(messages, MessageDTO) else list(messages)
 
         attachments_by_key: dict[str, AttachmentDTO] = {}
+        profiles: list[ChatProfileDTO] = []
 
         for message in message_list:
-            if message.profile is not None and message.profile.avatar_s3_key:
-                message.profile.avatar_url = await self.get_chat_profile_url_by_key(
-                    message.profile.avatar_s3_key
-                )
+            if message.profile is not None:
+                profiles.append(message.profile)
+            # reply_to/forwarded_from carry their own author snapshot
+            if message.reply_to is not None and message.reply_to.profile is not None:
+                profiles.append(message.reply_to.profile)
+            if message.forwarded_from is not None and message.forwarded_from.profile is not None:
+                profiles.append(message.forwarded_from.profile)
 
             for attachment in message.attachments:
                 attachments_by_key[attachment.s3_key] = attachment
+
+        await self.attach_profile_urls(profiles)
 
         if not attachments_by_key:
             return message_list[0] if isinstance(messages, MessageDTO) else message_list
@@ -90,6 +96,32 @@ class MessageService:
             attachments_by_key[s3_key].url_expires_in = chat_config.DOWNLOAD_URL_TTL
 
         return message_list[0] if isinstance(messages, MessageDTO) else message_list
+
+    async def attach_profile_urls(
+        self, profiles: Iterable[ChatProfileDTO | None]
+    ) -> None:
+        """Resolve avatar_url for a batch of profile snapshots in place.
+
+        Deduplicates by s3_key and resolves concurrently: a 100-member list
+        with one presign round-trip per member would otherwise be 100
+        sequential Redis/S3 calls.
+        """
+        by_key: dict[str, list[ChatProfileDTO]] = {}
+        for profile in profiles:
+            if profile is None or not profile.avatar_s3_key:
+                continue
+            by_key.setdefault(profile.avatar_s3_key, []).append(profile)
+
+        if not by_key:
+            return
+
+        keys = tuple(by_key)
+        urls = await asyncio.gather(
+            *(self.get_chat_profile_url_by_key(s3_key) for s3_key in keys)
+        )
+        for s3_key, url in zip(keys, urls, strict=True):
+            for profile in by_key[s3_key]:
+                profile.avatar_url = url
 
     async def get_attachmnent_url_by_key(self, s3_key: str) -> str:
         key = f"attachment:{s3_key}"

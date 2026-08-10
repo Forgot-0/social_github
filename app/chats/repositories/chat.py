@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import Select, and_, or_, select, update
-from sqlalchemy.orm import contains_eager, selectinload
+from sqlalchemy.orm import aliased, contains_eager, selectinload
 
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
@@ -34,7 +34,10 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         if with_for_update:
             stmt = stmt.with_for_update()
         if with_members:
-            stmt = stmt.options(selectinload(Chat.members).selectinload(ChatMember.role))
+            stmt = stmt.options(
+                selectinload(Chat.members).selectinload(ChatMember.role),
+                selectinload(Chat.members).selectinload(ChatMember.profile),
+            )
 
         result = await self.session.execute(stmt)
         return result.scalar()
@@ -57,7 +60,11 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         self.session.add(chat)
 
     async def get_member_chat(
-        self, chat_id: UUID, member_id: int, with_role: bool = True
+        self,
+        chat_id: UUID,
+        member_id: int,
+        with_role: bool = True,
+        with_profile: bool = False,
     ) -> ChatMember | None:
         stmt = select(ChatMember).where(
             ChatMember.chat_id == chat_id,
@@ -65,6 +72,10 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         )
         if with_role:
             stmt = stmt.options(selectinload(ChatMember.role))
+
+        if with_profile:
+            stmt = stmt.options(selectinload(ChatMember.profile))
+
         result = await self.session.execute(stmt)
         return result.scalar()
 
@@ -88,7 +99,10 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         stmt = (
             select(ChatMember)
             .where(*conditions)
-            .options(selectinload(ChatMember.role))
+            .options(
+                selectinload(ChatMember.role),
+                selectinload(ChatMember.profile),
+            )
             .order_by(ChatMember.user_id.asc())
             .limit(limit + 1)
         )
@@ -176,6 +190,9 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         last_activity_at: datetime | None = None,
         chat_id: UUID | None = None,
     ) -> list[tuple[Chat, ChatMember, ReadReceipt | None, Message | None]]:
+        author_profile = aliased(ChatUserProfile, name="author_profile")
+        member_profile = aliased(ChatUserProfile, name="member_profile")
+
         stmt = (
             select(Chat, ChatMember, ReadReceipt, Message)
             .join(
@@ -193,9 +210,12 @@ class ChatRepository(IRepository[Chat], CacheRepository):
                     Message.is_deleted.is_(False),
                 ),
             ).outerjoin(
-                ChatUserProfile, ChatUserProfile.user_id == Message.author_id
+                author_profile, author_profile.user_id == Message.author_id
+            ).outerjoin(
+                member_profile, member_profile.user_id == ChatMember.user_id
             ).options(
-                contains_eager(Message.profile)
+                contains_eager(Message.profile.of_type(author_profile)),
+                contains_eager(ChatMember.profile.of_type(member_profile)),
             ).where(
                 ChatMember.user_id == user_id,
                 ChatMember.banned_to.is_not(None),
