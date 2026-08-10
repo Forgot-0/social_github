@@ -1,4 +1,4 @@
-import pytest_asyncio
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.services.auth.dto import UserJWTData
@@ -10,7 +10,7 @@ from app.projects.models.project import Project, ProjectVisibility
 from app.projects.models.role_permissions import ProjectRolesEnum
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def persisted_project(
     db_session: AsyncSession,
     user_jwt: UserJWTData,
@@ -31,7 +31,7 @@ async def persisted_project(
     return project
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def persisted_project_with_members(
     db_session: AsyncSession,
     user_jwt: UserJWTData,
@@ -65,7 +65,7 @@ async def persisted_project_with_members(
     return project
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def persisted_position(
     db_session: AsyncSession,
     persisted_project: Project,
@@ -85,7 +85,7 @@ async def persisted_position(
     return position
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def persisted_application(
     db_session: AsyncSession,
     persisted_position: Position,

@@ -1,10 +1,10 @@
-import pytest_asyncio
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.profiles.models.profile import Profile
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def persisted_profile_contact(db_session: AsyncSession, user_jwt):
     async def _make(contacts: list[tuple[str, str]]):
         profile = Profile.create(
@@ -26,7 +26,7 @@ async def persisted_profile_contact(db_session: AsyncSession, user_jwt):
     return _make
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def persisted_profile(db_session: AsyncSession, user_jwt) -> Profile:
     profile = Profile.create(
         user_id=int(user_jwt.id),

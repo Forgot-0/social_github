@@ -17,6 +17,8 @@ class WSEventType(StrEnum):
     TYPING_STOP = "typing_stop"
     PING = "ping"
 
+    REACTION_UPDATED = "reaction_update"
+
     ATTACHMENT_SUCCESS = "attachment_success"
 
     CHAT_CREATED = "chat_created"

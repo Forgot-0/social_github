@@ -7,7 +7,7 @@ from app.auth.models.user import User
 from app.auth.services.session import SessionManager
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.auth
 class TestSessionManager:
 
