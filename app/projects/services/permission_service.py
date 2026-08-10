@@ -25,12 +25,12 @@ class ProjectPermissionService:
         if int(user_jwt_data.id) == project.owner_id:
             return True
 
-        memeber = project.get_memeber_by_user_id(int(user_jwt_data.id))
-        if memeber is None or memeber.status != MembershipStatus.active:
+        member = project.get_member_by_user_id(int(user_jwt_data.id))
+        if member is None or member.status != MembershipStatus.active:
             return False
 
-        memeber_permissions = memeber.effective_permissions()
-        return all(memeber_permissions.get(perm, False) for perm in must_permissions)
+        member_permissions = member.effective_permissions()
+        return all(member_permissions.get(perm, False) for perm in must_permissions)
 
     def can_invite(
         self,
@@ -46,15 +46,15 @@ class ProjectPermissionService:
         if int(user_jwt_data.id) == project.owner_id:
             return True
 
-        memeber = project.get_memeber_by_user_id(int(user_jwt_data.id))
-        if memeber is None or memeber.status != MembershipStatus.active:
+        member = project.get_member_by_user_id(int(user_jwt_data.id))
+        if member is None or member.status != MembershipStatus.active:
             return False
 
-        memeber_permissions = memeber.effective_permissions()
-        if not memeber_permissions.get("member:invite", False):
+        member_permissions = member.effective_permissions()
+        if not member_permissions.get("member:invite", False):
             return False
 
-        return memeber.role.level > role.level
+        return member.role.level > role.level
 
     def can_view(
         self,
@@ -72,5 +72,5 @@ class ProjectPermissionService:
         if int(user_jwt_data.id) == project.owner_id:
             return True
 
-        memeber = project.get_memeber_by_user_id(int(user_jwt_data.id))
-        return memeber is not None and memeber.status == MembershipStatus.active
+        member = project.get_member_by_user_id(int(user_jwt_data.id))
+        return member is not None and member.status == MembershipStatus.active

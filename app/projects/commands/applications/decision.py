@@ -54,17 +54,17 @@ class DecideApplicationCommandHandler(BaseCommandHandler[DecideApplicationComman
         if command.approve:
             application.accept(decided_by=int(command.user_jwt_data.id))
 
-            existing_member = project.get_memeber_by_user_id(application.candidate_id)
+            existing_member = project.get_member_by_user_id(application.candidate_id)
             if existing_member is not None:
                 raise AlreadyMemberError
 
-            project.invite_memeber(
+            project.invite_member(
                 user_id=application.candidate_id,
                 role_id=ProjectRolesEnum.USER.value.id,
                 invited_by=int(command.user_jwt_data.id),
             )
 
-            membership = project.get_memeber_by_user_id(application.candidate_id)
+            membership = project.get_member_by_user_id(application.candidate_id)
             if membership:
                 membership.accept_invite()
 

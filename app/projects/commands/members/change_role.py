@@ -41,7 +41,7 @@ class ChangeRoleMemberCommandHandler(BaseCommandHandler[ChangeRoleMemberCommand,
         ):
             raise AccessDeniedError(need_permissions={"member:update", "permission:update"})
 
-        member = project.get_memeber_by_user_id(command.target_user_id)
+        member = project.get_member_by_user_id(command.target_user_id)
         if member is None:
             raise NotFoundMemberError(member_id=command.target_user_id)
 

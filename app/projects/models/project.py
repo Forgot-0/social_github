@@ -130,14 +130,14 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
 
         return instance
 
-    def invite_memeber(
+    def invite_member(
             self, user_id: int, role_id: int, invited_by: int,
             permissions_overrides: dict | None=None
         ) -> None:
         if user_id == invited_by:
             raise AlreadyMemberError
 
-        already_member = self.get_memeber_by_user_id(user_id=user_id)
+        already_member = self.get_member_by_user_id(user_id=user_id)
         if already_member is not None:
             raise AlreadyMemberError
 
@@ -201,7 +201,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
     def update_tags(self, tags: set[str]) -> None:
         self.tags = list(tags)
 
-    def get_memeber_by_user_id(self, user_id: int) -> ProjectMembership | None:
+    def get_member_by_user_id(self, user_id: int) -> ProjectMembership | None:
         for member in self.memberships:
             if member.user_id == user_id:
                 return member

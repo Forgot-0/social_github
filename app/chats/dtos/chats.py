@@ -34,7 +34,7 @@ class ChatDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ChatDetaiDTO(BaseModel):
+class ChatDetailDTO(BaseModel):
     id: UUID
     seq_counter: int
     last_activity_at: datetime | None

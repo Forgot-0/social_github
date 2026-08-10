@@ -9,7 +9,7 @@ from app.chats.commands.chats.delete import DeleteChatCommand
 from app.chats.commands.chats.join import JoinChatCommand
 from app.chats.commands.chats.leave import LeaveChatCommand
 from app.chats.commands.chats.update import UpdateChatCommand
-from app.chats.dtos.chats import ChatDetaiDTO, ChatDTO, ListChats
+from app.chats.dtos.chats import ChatDetailDTO, ChatDTO, ListChats
 from app.chats.queries.chats.get_detail import GetChatDetailQuery
 from app.chats.queries.chats.get_list import GetListChatUserQuery
 from app.chats.schemas.rest import CreateChatRequest, GetListUserChatsRequest, UpdateChatRequest
@@ -73,7 +73,7 @@ async def get_chat_detail(
     chat_id: UUID,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-) -> ChatDetaiDTO:
+) -> ChatDetailDTO:
     return await mediator.handle_query(GetChatDetailQuery(user_jwt_data=user_jwt_data, chat_id=chat_id))
 
 

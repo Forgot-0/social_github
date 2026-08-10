@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.chats.dtos.chats import ChatDetaiDTO
+from app.chats.dtos.chats import ChatDetailDTO
 from app.chats.dtos.members import MemberChatDTO
 from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
@@ -17,11 +17,11 @@ class GetChatDetailQuery(BaseQuery):
 
 
 @dataclass(frozen=True)
-class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetaiDTO]):
+class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetailDTO]):
     chat_repository: ChatRepository
     message_service: MessageService
 
-    async def handle(self, query: GetChatDetailQuery) -> ChatDetaiDTO:
+    async def handle(self, query: GetChatDetailQuery) -> ChatDetailDTO:
         user_id = int(query.user_jwt_data.id)
 
         chat = await self.chat_repository.get_by_id(query.chat_id, with_members=True)
@@ -39,7 +39,7 @@ class GetChatDetailQueryHandler(BaseQueryHandler[GetChatDetailQuery, ChatDetaiDT
             [dto.profile for dto in member_dtos]
         )
 
-        return ChatDetaiDTO(
+        return ChatDetailDTO(
             id=chat.id,
             seq_counter=chat.seq_counter,
             last_activity_at=chat.last_activity_at,

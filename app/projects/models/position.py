@@ -98,7 +98,7 @@ class Position(BaseModel, DateMixin, SoftDeleteMixin):
     def add_application(
         self, candidate_id: int, message: str | None
     ) -> None:
-        member = self.project.get_memeber_by_user_id(candidate_id)
+        member = self.project.get_member_by_user_id(candidate_id)
         if member and member.status != MembershipStatus.active:
             raise AlreadyMemberError
 

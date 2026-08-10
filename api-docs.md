@@ -715,9 +715,25 @@ interface ProjectRoleDTO { id: number; name: string; permissions: Record<string,
 
 Базовый путь для всех эндпоинтов ниже (если не указано иное) — `/chats` и вложенные `/chats/{chat_id}/...`. Все требуют авторизации.
 
+> ⚠️ **Раздел полностью пересобран в версии 2.1** по коду на коммите `7162e9b`. Главные добавления относительно версии 2.0: реакции (6.7), голосовые сообщения и видео-кружки (6.5), поле `profile` в DTO сообщений и участников, `last_message` в `ChatDTO`. Расширенная версия этого раздела с построчными ссылками на код лежит в `docs/chats-module.md`.
+
+### 6.0 Карта путей модуля (из `app/chats/routers.py`)
+
+| Префикс | Файл роутера | Тег | Подключён? |
+|---|---|---|---|
+| `/chats` | `routes/v1/chats.py` | `chats` | ✅ |
+| `/chats/{chat_id}/members` | `routes/v1/members.py` | `chat-members` | ✅ |
+| `/chats/{chat_id}/messages` | `routes/v1/messages.py` | `chat-messages` | ✅ |
+| `/chats/{chat_id}` | `routes/v1/attachments.py` | `chat-attachments` | ✅ |
+| `/chats/{chat_id}/calls` | `routes/v1/calls.py` | `chat-calls` | ✅ |
+| `/chats` (ws) | `routes/v1/ws.py` | `chats-ws` | ✅ |
+| `/chats/{chat_id}/messages/{message_id}/reactions` | `routes/v1/reactions.py` | — | ✅ |
+
 ### 6.1 Типы чатов и роли — коротко
 
 `ChatType`: `"direct" | "group" | "supergroup" | "channel"`. У каждого чата есть роли участников с числовым `role_id` (owner=1, admin=2, editor=3, direct=4, member=5, viewer=6) и построчной картой прав (`chat:delete`, `member:kick`, `message:send`, ...). Полная таблица — раздел 9.1. Лимиты участников по типу: direct=2, group=500, supergroup=1 000 000, channel=10 000 000 (иначе — обычный `MAX_MEMBERS=1000`).
+
+`ChatFanoutStrategy` (внутреннее, клиенту не отдаётся): `fanout_on_write | active_subscribers | channel_subscribers`.
 
 ### 6.2 Чаты — CRUD, join/leave
 
@@ -725,7 +741,7 @@ interface ProjectRoleDTO { id: number; name: string; permissions: Record<string,
 |---|---|---|---|---|
 | GET | `/chats/` | — | Query `GetListUserChatsRequest {limit=50 (≤100), last_chat_id?: UUID, last_activity_at?: datetime}` — курсорная пагинация | `ListChats` |
 | POST | `/chats/` | 4/5мин | `CreateChatRequest` | `201`, `ChatDTO` |
-| GET | `/chats/{chat_id}/` | — | — | `ChatDetaiDTO` *(так называется в коде, без "l")* |
+| GET | `/chats/{chat_id}/` | — | — | `ChatDetailDTO` *(так называется в коде, без "l")* |
 | PATCH | `/chats/{chat_id}/` | 4/5мин | `UpdateChatRequest` | `200`, `ChatDTO` |
 | DELETE | `/chats/{chat_id}/` | 4/5мин | — | `204` |
 | POST | `/chats/{chat_id}/join/` | 10/5мин | — | `204` — вступить в публичный чат |
@@ -757,8 +773,9 @@ interface ChatDTO {
   created_by: number; member_count: number; unread_count: number;
   me: MemberChatDTO | null;         // данные о текущем пользователе как участнике (роль, мьют, бан)
   last_read: ReadDetail | null;     // { last_read_message_seq: number, last_read_at: string }
+  last_message: MessageDTO | null;  // ⚠️ РЕАЛЬНО из кода — превью последнего сообщения для списка чатов
 }
-interface ChatDetaiDTO {   // ответ GET /chats/{id}/ — отличается от ChatDTO: вместо unread_count/me/last_read даёт полный список участников
+interface ChatDetailDTO {   // ответ GET /chats/{id}/ — отличается от ChatDTO: вместо unread_count/me/last_read/last_message даёт полный список участников
   id: string; seq_counter: number; last_activity_at: string | null;
   type: "direct" | "group" | "supergroup" | "channel";
   name: string | null; description: string | null; avatar_s3_key: string | null;
@@ -767,19 +784,18 @@ interface ChatDetaiDTO {   // ответ GET /chats/{id}/ — отличаетс
   created_by: number; member_count: number;
   members: MemberChatDTO[];
 }
-interface MemberChatDTO {
-  user_id: number; role_id: number; is_muted: boolean; is_banned: boolean;
-  permissions_overrides: Record<string, boolean>;
-}
 interface ListChats {   // ответ GET /chats/ — курсорная пагинация, has_next РЕАЛЬНОЕ поле
   has_next: boolean;
   chats: ChatDTO[];
   next_date: string | null;      // передать следующим запросом как last_activity_at
   next_chat_id: string | null;   // передать следующим запросом как last_chat_id
 }
+interface ReadDetail { last_read_message_seq: number; last_read_at: string }
 ```
 
-Ошибки: `400 MEMBER_LIMIT_EXCEEDED` (для direct — если `member_ids.length != 1`), `403 CHAT_ACCESS_DENIED/NOT_CHAT_MEMBER`, `404 NOT_FOUND_CHAT`, `409 DIRECT_CHAT_EXISTS` (при повторном создании direct-чата с тем же собеседником — в `detail.chat_id` уже придёт id существующего чата, можно сразу открывать его).
+⚠️ **Курсор списка чатов двусоставной**: для следующей страницы нужно передать **оба** значения — `last_activity_at = next_date` и `last_chat_id = next_chat_id` (сортировка `last_activity_at DESC, id DESC`, второй ключ разрешает коллизии по времени).
+
+Ошибки: `400 MEMBER_LIMIT_EXCEEDED` (для direct — если `member_ids.length != 1`), `400 SLOW_MODE_OUT_OF_RANGE`, `403 CHAT_ACCESS_DENIED/NOT_CHAT_MEMBER`, `404 NOT_FOUND_CHAT`, `409 DIRECT_CHAT_EXISTS` (при повторном создании direct-чата с тем же собеседником — в `detail.chat_id` уже придёт id существующего чата, можно сразу открывать его).
 
 ### 6.3 Участники чата
 
@@ -792,6 +808,26 @@ interface ListChats {   // ответ GET /chats/ — курсорная паг�
 | DELETE | `/chats/{chat_id}/members/{user_id}/` | — | — | `204` (кик) |
 
 ```ts
+interface MemberChatDTO {
+  user_id: number; role_id: number; is_muted: boolean; is_banned: boolean;
+  permissions_overrides: Record<string, boolean>;
+  profile: ChatProfileDTO | null;   // ⚠️ РЕАЛЬНО из кода — денормализованный профиль, ходить в /profiles/ не нужно
+}
+interface MemberDetailDTO {        // опечатка в коде сохранена
+  user_id: number; role_id: number; is_muted: boolean; is_banned: boolean;
+  permissions_overrides: Record<string, boolean>;
+  is_online: boolean;
+  role: Role;
+  profile: ChatProfileDTO | null;
+}
+interface Role { id: number; name: string; level: number; permissions: Record<string, boolean> }
+interface ChatProfileDTO {
+  user_id: number;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;        // presigned URL, генерируется на лету
+  avatar_s3_key: string | null;
+}
 interface ListMembers {   // курсорная пагинация
   members: MemberChatDTO[];
   has_next: boolean;
@@ -801,7 +837,9 @@ interface ListMembers {   // курсорная пагинация
 interface MemberPresenceDTO { user_id: number; is_online: boolean }
 ```
 
-Ошибки: `403 NOT_CHAT_MEMBER/CHAT_ACCESS_DENIED`, `404 NOT_FOUND_CHAT`, `409 ALREADY_CHAT_MEMBER`, `400 MEMBER_LIMIT_EXCEEDED`.
+⚠️ `presence` — **отдельный массив**, а не поле внутри `members`. Клиент сам джойнит по `user_id`; отсутствие записи трактовать как offline.
+
+Ошибки: `403 NOT_CHAT_MEMBER/CHAT_ACCESS_DENIED`, `404 NOT_FOUND_CHAT`, `409 ALREADY_CHAT_MEMBER`, `400 MEMBER_LIMIT_EXCEEDED`, `400 TOO_LONG_CHAT_ROLE_NAME`.
 
 ### 6.4 Сообщения
 
@@ -821,28 +859,31 @@ interface MemberPresenceDTO { user_id: number; is_online: boolean }
 {
   content?: string | null;          // ≤ 4096 симв.
   reply_to_id?: string | null;      // UUID сообщения, на которое отвечаем
-  message_type?: "text" | "image" | "file" | "system" | "reply" | "forward";  // по умолчанию "text"
-  upload_tokens?: string[];         // UUID'ы из подтверждённых вложений (см. 6.5), по умолчанию []
+  message_type?: "text" | "image" | "file" | "system" | "reply" | "forward" | "voice" | "video_note";  // по умолчанию "text"
+  upload_tokens?: string[];         // UUID'ы слотов вложений (см. 6.5), по умолчанию []
 }
 // ForwardMessageRequest
-{ source_chat_id: string; source_message_id: string; comment?: string | null }
+{ source_chat_id: string; source_message_id: string; comment?: string | null }  // comment ≤ 4096
 // MarkReadRequest
 { message_seq: number }
 ```
 
-**`Idempotency-Key`** (необязательный заголовок при отправке сообщения): если передать один и тот же ключ повторно в течение 24 часов, вместо повторной отправки вернётся закэшированный результат первой отправки. Если предыдущий запрос с тем же ключом ещё обрабатывается (гонка) — `409 IDEMPOTENCY_CONFLICT`. Рекомендуется всегда генерировать UUID на клиенте перед отправкой (важно для сценария "нет сети → повтор при реконнекте", чтобы не задублировать сообщение).
+⚠️ **`message_type` расширен**: добавлены `"voice"` и `"video_note"`. Для голосового нужно передать `message_type: "voice"` **и** `upload_tokens` со слотом, запрошенным с `attachment_type: "voice"` (см. 6.5).
+
+**`Idempotency-Key`** (необязательный заголовок при отправке сообщения): результат кэшируется в Redis на **86 400 сек (24 часа)**; повторный запрос с тем же ключом вернёт закэшированный `MessageDTO` первой отправки. Если предыдущий запрос с тем же ключом ещё обрабатывается (lock на 30 сек) — `409 IDEMPOTENCY_CONFLICT`. Рекомендуется всегда генерировать UUID на клиенте перед отправкой (важно для сценария "нет сети → повтор при реконнекте", чтобы не задублировать сообщение).
 
 ```ts
 interface MessageDTO {
   id: string; chat_id: string; seq: number; author_id: number | null;
-  type: "text" | "image" | "file" | "system" | "reply" | "forward";
+  type: "text" | "image" | "file" | "system" | "reply" | "forward" | "voice" | "video_note";
   content: string | null;
   reply_to_id: string | null;
   forwarded_from_chat_id: string | null;
   forwarded_from_message_id: string | null;
-  forwarded_from_author_id: string | null;
+  forwarded_from_author_id: number | null;   // ⚠️ number, не string
   is_edited: boolean;
   created_at: string;
+  profile: ChatProfileDTO | null;     // ⚠️ РЕАЛЬНО из кода — автор уже приложен, отдельный запрос не нужен
   attachments: AttachmentDTO[];
   reply_to: MessageDTO | null;        // вложенный объект оригинала, если это ответ
   forwarded_from: MessageDTO | null;  // вложенный объект оригинала, если это форвард
@@ -854,46 +895,75 @@ interface MessagesDTO {   // курсорная пагинация, has_next Р�
 }
 ```
 
+⚠️ **В `MessageDTO` НЕТ поля `reactions`** — сводку реакций нужно запрашивать отдельно (см. 6.7) и обновлять по WS-событию.
+
+**Порядок и курсор:** `GET /messages/` идёт `direction="backward"` — от новых к старым. `next_cursor` — `seq` последнего (самого старого) элемента страницы, заполняется **только когда `has_next == true`**, иначе `null`.
+
+Правка сообщения ограничена окном `MAX_EDIT_WINDOW_HOURS = 48` часов; история правок хранится до `MAX_EDIT_HISTORY = 20` записей.
+
 Ошибки: `400 MESSAGE_TOO_LONG/INVALID_MESSAGE/SLOW_MODE_OUT_OF_RANGE`, `403 NOT_CHAT_MEMBER/CHAT_ACCESS_DENIED`, `404 NOT_FOUND_CHAT/NOT_FOUND_MESSAGE`, `409 IDEMPOTENCY_CONFLICT`, `429 SLOW_MODE_LIMIT`.
 
 ### 6.5 Вложения — двухшаговая загрузка через presigned PUT ⚠️ отличается от аватара (POST!)
 
-**Ограничения** (см. также раздел 1): изображения/видео — ≤ 50 МБ, максимум 10 штук на сообщение; обычные файлы — ≤ 100 МБ, максимум 1 штука на сообщение. Разрешённые MIME:
-- Изображения: `image/jpeg, image/png, image/webp, image/gif`
-- Видео: `video/mp4, video/quicktime, video/webm`
-- Файлы: `application/pdf, application/zip, text/plain, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+**Типы вложений.** `AttachmentType`: `"image" | "video" | "file" | "voice" | "video_note"`. `AttachmentStatus`: `"pending" | "success" | "error"`.
+
+| Тип | Макс. размер | Макс. штук на сообщение | Доп. ограничения |
+|---|---|---|---|
+| `image` | 50 МБ (`MAX_MEDIA_SIZE`) | 10 (`MAX_MEDIA_PER_MESSAGE`) | — |
+| `video` | 50 МБ | 10 (общий счётчик с image) | — |
+| `file` | 100 МБ (`MAX_FILE_SIZE`) | 1 (`MAX_FILES_PER_MESSAGE`) | — |
+| `voice` 🆕 | 20 МБ (`MAX_VOICE_SIZE`) | 1 | ≤ 600 сек; **эксклюзивно** |
+| `video_note` 🆕 | 40 МБ (`MAX_VIDEO_NOTE_SIZE`) | 1 | ≤ 60 сек, ≤ 640 px; **эксклюзивно** |
+
+⚠️ **Правило эксклюзивности**: `voice` и `video_note` нельзя смешивать ни друг с другом, ни с media/file в одном запросе. Нарушение → `400 ATTACHMENT_LIMIT_EXCEEDED`.
+
+**Разрешённые MIME** (полные списки из `chat_config`):
+- Изображения: `image/jpeg, image/png, image/gif, image/webp, image/heic, image/heif`
+- Видео: `video/mp4, video/webm, video/quicktime, video/x-msvideo`
+- Файлы: `application/pdf, application/zip, application/x-zip-compressed, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/plain, text/csv`
+- Голосовые: `audio/ogg, audio/opus, audio/mpeg, audio/mp4, audio/aac, audio/webm, audio/x-m4a`
+- Видео-кружки: `video/mp4, video/webm, video/quicktime`
 
 **Шаг 1 — `POST /chats/{chat_id}/attachments/upload-requests/`**
 ```ts
-// Request
-{ uploads: Array<{ filename: string; mime_type: string; file_size: number }> }  // 1..11 элементов
+// Request — RequestAttachmentUploadRequest
+{
+  uploads: Array<{
+    filename: string;      // 1..256
+    mime_type: string;     // 1..128
+    file_size: number;     // > 0
+    attachment_type?: "image" | "video" | "file" | "voice" | "video_note" | null;
+      // ⚠️ ОБЯЗАТЕЛЬНО для voice и video_note. Без него тип выводится из MIME (image/video/file)
+  }>;   // 1..11 элементов (MAX_MEDIA_PER_MESSAGE + MAX_FILES_PER_MESSAGE)
+}
 // Response 201 — ГОЛЫЙ МАССИВ, не обёрнут в объект
 Array<{
-  upload_token: string;               // UUID, понадобится на шаге 3 и при отправке сообщения
+  upload_token: string;               // UUID, он же id будущего вложения; нужен на шаге 3 и при отправке сообщения
   upload_url: string;                 // presigned PUT URL, живёт 3600 сек
-  attachment_type: "image" | "video" | "file";
+  attachment_type: "image" | "video" | "file" | "voice" | "video_note";
   expires_in: number;
 }>
 ```
+Имя файла санитизируется регуляркой `[^\w.\-]` → `_` и обрезается до 200 символов; ключ в S3 — `chats/{chat_id}/{uuid4}/{clean_filename}`, бакет `chat-attachments`.
 
-**Шаг 2 — `PUT <upload_url>`** напрямую в S3/MinIO (минуя бэкенд), `Content-Type: <mime_type файла>`, тело — сырые байты файла целиком. Никакого multipart, никаких дополнительных полей — просто PUT с байтами.
+**Шаг 2 — `PUT <upload_url>`** напрямую в S3/MinIO (минуя бэкенд), `Content-Type: <mime_type файла>`, тело — сырые байты файла целиком. Никакого multipart, никаких дополнительных полей.
 
 **Шаг 3 — `POST /chats/{chat_id}/attachments/upload-requests/confirm/`**
 ```ts
-// Request
+// Request — ConfirmAttachmentUploadRequest
 { upload_tokens: string[] }   // 1..11 элементов, те же токены из шага 1
 // Response 202 Accepted, пустое тело — обработка асинхронная (fire-and-forget)
 ```
-После `202` бэкенд в фоне валидирует реальное содержимое файла и заполняет `width/height/duration_seconds`. Готовность отслеживается через WS-событие `attachment_success` (раздел 7.4) — в его `payload.tokens` попадут завершённые `upload_token`. Отдельного WS-события на ОШИБКУ обработки в протоколе не найдено — для проверки неудачи ориентируйтесь на итоговый статус вложения после отправки сообщения.
+После `202` бэкенд в фоне валидирует реальное содержимое файла и заполняет `width/height/duration_seconds`, переводя статус `pending → success` (или `error`). Готовность отслеживается через WS-событие `attachment_success` (раздел 7.4) — в его `payload.tokens` попадут завершённые `upload_token`. Отдельного WS-события на ОШИБКУ обработки в протоколе нет — для проверки неудачи ориентируйтесь на `attachment_status: "error"` после отправки сообщения.
 
-**Шаг 4 — отправить сообщение**, передав `upload_tokens` из шагов 1/3 в `POST /chats/{chat_id}/messages/` (раздел 6.4).
+**Шаг 4 — отправить сообщение**, передав `upload_tokens` из шагов 1/3 в `POST /chats/{chat_id}/messages/` (раздел 6.4) с корректным `message_type`.
 
 **Скачивание:** `GET /chats/{chat_id}/messages/{message_id}/attachments/{attachment_id}/download-url/` → `AttachmentDownloadUrlDTO { attachment_id: string; url: string; expires_in: number }` (ссылка живёт 300 секунд, генерировать заново при истечении).
 
 ```ts
 interface AttachmentDTO {
   id: string; message_id: string | null; chat_id: string; uploader_id: number;
-  attachment_type: "image" | "video" | "file";
+  attachment_type: "image" | "video" | "file" | "voice" | "video_note";
   attachment_status: "pending" | "success" | "error";
   url: string | null; url_expires_in: number | null;
   s3_key: string; mime_type: string; original_filename: string; size: number;
@@ -902,7 +972,9 @@ interface AttachmentDTO {
 }
 ```
 
-Ошибки: `400 ATTACHMENT_VALIDATION/INVALID_UPLOAD_TOKEN/ATTACHMENT_LIMIT_EXCEEDED/EMPTY_ATTACHMENT_UPLOAD_REQUEST`, `404 ATTACHMENT_NOT_FOUND`.
+⚠️ `url` живёт 300 секунд — кэшировать нужно скачанный файл (ключ — `s3_key`), а не сам URL.
+
+Ошибки: `400 ATTACHMENT_VALIDATION/INVALID_UPLOAD_TOKEN/ATTACHMENT_LIMIT_EXCEEDED/EMPTY_ATTACHMENT_UPLOAD_REQUEST`, `403 CHAT_ACCESS_DENIED/NOT_CHAT_MEMBER`, `404 NOT_FOUND_CHAT/ATTACHMENT_NOT_FOUND`.
 
 ### 6.6 Звонки (LiveKit)
 
@@ -913,10 +985,87 @@ interface AttachmentDTO {
 
 ```ts
 interface JoinTokenDTO { token: string; slug: string; livekit_url: string }
+interface LiveKitParticipantsDTO { identity: string; name: string; state: number; joined_at: number }
 ```
-`token` — это LiveKit access-токен, `livekit_url` — адрес LiveKit-сервера (`wss://...`) для подключения через LiveKit Flutter SDK (`livekit_client` пакет). Требует право `call:join` по роли в чате; мьют другого участника требует `call:mute_member`.
+`token` — LiveKit access-токен (TTL `ROOM_TOKEN_TTL = 3600`), `livekit_url` — адрес LiveKit-сервера (`wss://...`) для подключения через LiveKit Flutter SDK (`livekit_client`). Максимум участников — `ROOM_MAX_PARTICIPANTS = 100`.
 
-Ошибки: `404 NO_ACTIVE_CALL`, `409 ACTIVE_CALL_EXISTS`, `502 LIVEKIT_ERROR/LIVEKIT_UNAUTHORIZED`.
+⚠️ Эндпоинта "завершить/покинуть звонок" в REST нет — выход выполняется средствами LiveKit SDK (disconnect от комнаты). События `call_started/call_ended/call_joined/call_left` объявлены в `WSEventType`, но бэкендом **не публикуются**.
+
+Ошибки: `502 LIVEKIT_ERROR {reason}`, `502 LIVEKIT_UNAUTHORIZED`, `404 NO_ACTIVE_CALL`, `409 ACTIVE_CALL_EXISTS`.
+
+### 6.7 Реакции на сообщения 🆕
+
+#### 6.7.0
+
+#### 6.7.1 Эндпоинты
+
+Базовый префикс (после починки): `/chats/{chat_id}/messages/{message_id}/reactions`
+
+| Метод | Путь | Rate limit | Request | Response |
+|---|---|---|---|---|
+| PUT | `.../reactions/{emoji}/` | 10/сек (`RATE_LIMIT_REACTIONS_PER_SECOND`) | — | `204` — поставить/заменить реакцию |
+| DELETE | `.../reactions/{emoji}/` | 10/сек | — | `204` — снять реакцию |
+| GET | `.../reactions/` | — | Query `emoji?: string (1..32), limit=50 (≤100), cursor_user_id?: number (≥1)` | `200`, `MessageReactionsDTO` |
+
+`{emoji}` — path-параметр, строка 1..32, **обязательно URL-encoded** (`👍` → `%F0%9F%91%8D`).
+
+#### 6.7.2 Семантика «одна реакция на пользователя»
+
+⚠️ Ключевое отличие от Telegram/Slack: в БД стоит `UniqueConstraint(message_id, user_id)` — у пользователя может быть **ровно одна** реакция на сообщение.
+- `PUT` с новым эмодзи, когда уже стоит другой — это **замена**: старый счётчик декрементится, новый инкрементится, бэкенд публикует **два** события `reaction_updated`.
+- `PUT` с тем же эмодзи, который уже стоит — no-op (транзакция откатывается, событий нет), ответ всё равно `204`.
+- `DELETE` несуществующей реакции — тоже no-op, ответ `204`.
+
+Клиент не должен ожидать «набор эмодзи от одного юзера» — модель строго single-choice. Оптимистичный UI: ставя новый эмодзи, сразу снимать подсветку со старого.
+
+#### 6.7.3 Ответ GET
+
+```ts
+interface ReactionSummaryDTO { emoji: string; count: number; reacted_by_me: boolean }
+interface ReactionUserDTO { user_id: number; emoji: string }
+interface MessageReactionsDTO {
+  message_id: string;                 // ⚠️ string, не UUID-типизированное поле
+  summaries: ReactionSummaryDTO[];    // всегда: сводка по ВСЕМ эмодзи сообщения
+  emoji: string | null;               // эхо query-параметра
+  users: ReactionUserDTO[];           // непустой ТОЛЬКО если передан ?emoji=
+  has_next: boolean;
+  next_user_id: number | null;        // передать следующим запросом как cursor_user_id
+}
+```
+Два режима одного эндпоинта:
+1. **Без `?emoji=`** — только `summaries` (для «чипсов» под сообщением), `users = []`, `has_next = false`.
+2. **С `?emoji=👍`** — дополнительно постранично отдаёт список проголосовавших (шторка «кто поставил»).
+
+#### 6.7.4 Лимиты и ошибки
+
+- `MAX_REACTIONS_PER_MESSAGE = 20` — максимум **различных эмодзи** на сообщение (проверка срабатывает только при добавлении эмодзи, которого ещё нет).
+- `MAX_REACRTION_LENGTH = 32` (опечатка в имени константы сохранена).
+
+| code | HTTP | detail | Когда |
+|---|---|---|---|
+| `INVALID_REACTION` | 400 | `{ "emoji": string }` (обрезан до 64) | пустой эмодзи, длиннее 32, только пробелы, содержит `\x00` |
+| `TOO_MANY_REACTION` | 400 | `{}` | на сообщении уже 20 различных эмодзи |
+| `NOT_FOUND_CHAT` | 404 | `{ "chat_id": string }` | |
+| `NOT_CHAT_MEMBER` | 403 | `{ "chat_id": string, "user_id": number }` | в т.ч. если участник забанен |
+| `NOT_FOUND_MESSAGE` | 404 | `{ "message_id": string }` | в т.ч. если сообщение из другого чата |
+
+#### 6.7.5 WS-событие
+
+Доменное событие `chats.message.reaction_updated` (класс `ReactionUpdatedEvent`):
+```ts
+{
+  type: "chats.message.reaction_updated",   // ⚠️ НЕ короткий алиас — маппинга в CHAT_EVENT_TO_WS_TYPE нет
+  event_name: "chats.message.reaction_updated",
+  event_id: string, chat_id: string, ts: string,
+  payload: {
+    message_id: string;
+    emoji: string;
+    count: number;        // АБСОЛЮТНОЕ новое значение счётчика, не дельта
+    changed_by: number;   // user_id того, кто изменил
+  }
+}
+```
+Обработка: найти сообщение по `payload.message_id`, найти чипс по `payload.emoji`, выставить `count` в абсолютное значение; если `count == 0` — удалить чипс. Если `changed_by == myUserId` — не трогать локальный `reacted_by_me` (уже выставлен оптимистично).
 
 
 ## 7. Чаты — WebSocket

@@ -69,10 +69,10 @@ class TestProjectInviteMember:
     def test_invite_member_adds_to_memberships(self) -> None:
         project = make_project(owner_id=1)
 
-        project.invite_memeber(user_id=2, role_id=5, invited_by=1)
+        project.invite_member(user_id=2, role_id=5, invited_by=1)
 
         assert len(project.memberships) == 2
-        invited = project.get_memeber_by_user_id(2)
+        invited = project.get_member_by_user_id(2)
         assert invited is not None
         assert invited.status == MembershipStatus.invited
 
@@ -80,29 +80,29 @@ class TestProjectInviteMember:
         project = make_project(owner_id=1)
 
         with pytest.raises(Exception):
-            project.invite_memeber(user_id=1, role_id=5, invited_by=1)
+            project.invite_member(user_id=1, role_id=5, invited_by=1)
 
     def test_invite_already_member_raises(self) -> None:
         project = make_project(owner_id=1)
-        project.invite_memeber(user_id=2, role_id=5, invited_by=1)
+        project.invite_member(user_id=2, role_id=5, invited_by=1)
 
         with pytest.raises(Exception):
-            project.invite_memeber(user_id=2, role_id=5, invited_by=1)
+            project.invite_member(user_id=2, role_id=5, invited_by=1)
 
     def test_invite_with_permissions_overrides(self) -> None:
         project = make_project(owner_id=1)
         overrides = {"project:update": False}
 
-        project.invite_memeber(user_id=2, role_id=5, invited_by=1, permissions_overrides=overrides)
+        project.invite_member(user_id=2, role_id=5, invited_by=1, permissions_overrides=overrides)
 
-        member = project.get_memeber_by_user_id(2)
+        member = project.get_member_by_user_id(2)
         assert member is not None
         assert member.permissions_overrides == overrides
 
     def test_get_member_by_user_id_not_found_returns_none(self) -> None:
         project = make_project(owner_id=1)
 
-        assert project.get_memeber_by_user_id(999) is None
+        assert project.get_member_by_user_id(999) is None
 
 
 @pytest.mark.unit

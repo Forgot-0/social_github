@@ -29,7 +29,7 @@ class MemberPresenceDTO(BaseModel):
     is_online: bool
 
 
-class MemeberDetailDTO(BaseModel):
+class MemberDetailDTO(BaseModel):
     user_id: int
     role_id: int
     is_muted: bool

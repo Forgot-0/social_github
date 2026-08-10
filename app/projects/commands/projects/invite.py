@@ -49,7 +49,7 @@ class InviteMemberCommandHandler(BaseCommandHandler[InviteMemberCommand, None]):
         ):
             raise AccessDeniedError(need_permissions={"member:invite" })
 
-        project.invite_memeber(
+        project.invite_member(
             user_id=command.user_id,
             role_id=role.id,
             invited_by=int(command.user_jwt_data.id),
