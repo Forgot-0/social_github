@@ -189,6 +189,10 @@ class Message(BaseModel, DateMixin):
 
         if attachments is not None:
             instance.attachments.extend(attachments)
+
+        if attachments is not None or message_type in (
+            MessageType.VOICE, MessageType.VIDEO_NOTE
+        ):
             instance.validate_attachments()
 
         instance.register_event(SendedMessageEvent(
@@ -241,11 +245,15 @@ class Message(BaseModel, DateMixin):
             raise InvalidMessageError(reason="message content contains null byte")
 
     def validate_attachments(self) -> None:
-
         media_count = sum(
             1 for a in self.attachments if a.attachment_type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
         )
         file_count = sum(1 for a in self.attachments if a.attachment_type == AttachmentType.FILE)
+        voice_count = sum(1 for a in self.attachments if a.attachment_type == AttachmentType.VOICE)
+        video_note_count = sum(
+            1 for a in self.attachments if a.attachment_type == AttachmentType.VIDEO_NOTE
+        )
+        exclusive_count = voice_count + video_note_count
 
         success = all(a.attachment_status == AttachmentStatus.SUCCESS for a in self.attachments)
 
@@ -253,6 +261,28 @@ class Message(BaseModel, DateMixin):
             raise AttachmentLimitExceededError(count=media_count)
         if file_count > chat_config.MAX_FILES_PER_MESSAGE:
             raise AttachmentLimitExceededError(count=file_count)
+
+        if exclusive_count > 1:
+            raise AttachmentLimitExceededError(count=exclusive_count)
+        if exclusive_count and (media_count or file_count):
+            raise AttachmentLimitExceededError(
+                count=exclusive_count + media_count + file_count
+            )
+
+        if self.type == MessageType.VOICE and voice_count != 1:
+            raise InvalidMessageError(
+                reason="voice message requires exactly one voice attachment"
+            )
+        if self.type == MessageType.VIDEO_NOTE and video_note_count != 1:
+            raise InvalidMessageError(
+                reason="video_note message requires exactly one video_note attachment"
+            )
+        if exclusive_count and self.type not in (
+            MessageType.VOICE, MessageType.VIDEO_NOTE, MessageType.FORWARD
+        ):
+            raise InvalidMessageError(
+                reason="voice/video_note attachment requires matching message_type"
+            )
 
         if success is False:
             raise AttachmentNotFoundError(attachment_id="")

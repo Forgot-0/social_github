@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import StrEnum
 from typing import Any, Self
 from uuid import UUID, uuid7
@@ -84,19 +84,3 @@ class OutboxMessage(BaseModel, DateMixin):
             attempts=0,
             available_at=now_utc(),
         )
-
-    def mark_published(self) -> None:
-        self.status = OutboxStatus.PUBLISHED
-        self.published_at = now_utc()
-        self.last_error = None
-
-    def mark_retry(self, error: str, delay_seconds: float) -> None:
-        self.attempts += 1
-        self.status = OutboxStatus.PENDING
-        self.available_at = now_utc() + timedelta(seconds=delay_seconds)
-        self.last_error = error[:2000]
-
-    def mark_failed(self, error: str) -> None:
-        self.attempts += 1
-        self.status = OutboxStatus.FAILED
-        self.last_error = error[:2000]

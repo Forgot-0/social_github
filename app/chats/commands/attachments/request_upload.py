@@ -77,6 +77,7 @@ class RequestAttachmentUploadCommandHandler(
 
         media_count = 0
         file_count = 0
+        exclusive_count = 0
         att_types: list[AttachmentType] = []
 
         for req in command.uploads:
@@ -86,12 +87,18 @@ class RequestAttachmentUploadCommandHandler(
             if req.attachment_type == AttachmentType.VOICE:
                 if req.mime_type not in chat_config.ALLOWED_VOICE_MIMES:
                     raise AttachmentValidationError(mime_type=req.mime_type)
+                if req.file_size > chat_config.MAX_VOICE_SIZE:
+                    raise AttachmentValidationError(mime_type=req.mime_type)
                 att_type = AttachmentType.VOICE
+                exclusive_count += 1
 
             elif req.attachment_type == AttachmentType.VIDEO_NOTE:
                 if req.mime_type not in chat_config.ALLOWED_VIDEO_NOTE_MIMES:
                     raise AttachmentValidationError(mime_type=req.mime_type)
+                if req.file_size > chat_config.MAX_VIDEO_NOTE_SIZE:
+                    raise AttachmentValidationError(mime_type=req.mime_type)
                 att_type = AttachmentType.VIDEO_NOTE
+                exclusive_count += 1
 
             elif (
                 req.mime_type in chat_config.ALLOWED_IMAGE_MIMES or
@@ -120,6 +127,13 @@ class RequestAttachmentUploadCommandHandler(
 
         if file_count > chat_config.MAX_FILES_PER_MESSAGE:
             raise AttachmentLimitExceededError(count=file_count)
+
+        if exclusive_count > 1:
+            raise AttachmentLimitExceededError(count=exclusive_count)
+        if exclusive_count and (media_count or file_count):
+            raise AttachmentLimitExceededError(
+                count=exclusive_count + media_count + file_count
+            )
 
         slots = []
 

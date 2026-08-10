@@ -6,6 +6,7 @@ services:
       - "127.0.0.1:9090:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus.data:/prometheus:rw
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -124,6 +125,9 @@ services:
       - "127.0.0.1:9187:9187"
     environment:
       - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+    command:
+      - '--collector.replication_slot'
+      - '--collector.wal'
     networks:
       - app-network
     restart: unless-stopped
