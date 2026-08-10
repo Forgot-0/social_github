@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.chats.dtos.profiels import ChatProfileDTO
+from app.chats.dtos.profiles import ChatProfileDTO
 
 
 class Role(BaseModel):

@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.chats.dtos.attachments import AttachmentDTO
-from app.chats.dtos.profiels import ChatProfileDTO
+from app.chats.dtos.profiles import ChatProfileDTO
 from app.chats.models.message import MessageType
 
 

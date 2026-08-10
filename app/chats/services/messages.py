@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO
-from app.chats.dtos.profiels import ChatProfileDTO
+from app.chats.dtos.profiles import ChatProfileDTO
 from app.chats.exceptions import SlowModeLimitError
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
