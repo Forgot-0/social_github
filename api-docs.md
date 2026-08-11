@@ -209,7 +209,7 @@ interface ErrorResponse {
 | code | HTTP | detail |
 |---|---|---|
 | `NOT_FOUND_PROFILE` | 404 | `{ "profile_id": number }` |
-| `ALREADE_EXIST_PROFILE` *(опечатка в коде)* | 409 | `{}` |
+| `ALREADY_EXIST_PROFILE` | 409 | `{}` |
 | `TOO_LONG_SKILL_NAME` | 400 | `{ "skill_name": string }` — лимит 30 симв. |
 | `TOO_LONG_DISPLAY_NAME` | 400 | `{ "display_name": string }` — лимит 100 симв. |
 | `TOO_LONG_BIO` | 400 | `{ "bio": string }` — лимит 1024 симв. |
@@ -220,7 +220,7 @@ interface ErrorResponse {
 | code | HTTP | detail |
 |---|---|---|
 | `NOT_FOUND_PROJECT` | 404 | `{ "project_id": number }` |
-| `NOT_FOUND_POSTION` *(опечатка в коде, без "I")* | 404 | `{ "position_id": string }` |
+| `NOT_FOUND_POSITION` | 404 | `{ "position_id": string }` |
 | `NOT_FOUND_MEMBER` | 404 | `{ "member_id": number }` |
 | `ALREADY_MEMBER` | 409 | `{}` |
 | `NOT_PENDING_APPLICATION` | 409 | `{}` — заявка уже обработана |
@@ -232,7 +232,7 @@ interface ErrorResponse {
 | `MAX_PROJECTS_LIMIT_EXCEEDED` | 400 | `{ "owner_id": number, "limit": number }` — лимит 3 проекта на пользователя |
 | `MAX_POSITIONS_PER_PROJECT_LIMIT_EXCEEDED` | 400 | `{ "project_id": number, "limit": number }` — лимит 5 позиций на проект |
 | `ALREADY_EXISTS` | 409 | `{ "slug": string }` — слаг проекта занят |
-| `PROJECT_ACCESS_DENIED` | **409** *(не 403!)* | `{}` — не хватает прав в проекте |
+| `PROJECT_ACCESS_DENIED` | 403 | `{}` — не хватает прав в проекте |
 
 ### 2.7 Коды модуля `chats`
 
@@ -612,7 +612,7 @@ interface ProjectMemberDTO {
 }
 ```
 
-Ошибки: `400 TOO_LONG_NAME/TOO_LONG_TAG_NAME/MAX_PROJECTS_LIMIT_EXCEEDED`, `404 NOT_FOUND_PROJECT`, `409 ALREADY_EXISTS/PROJECT_ACCESS_DENIED`.
+Ошибки: `400 TOO_LONG_NAME/TOO_LONG_TAG_NAME/MAX_PROJECTS_LIMIT_EXCEEDED`, `403 PROJECT_ACCESS_DENIED`, `404 NOT_FOUND_PROJECT`, `409 ALREADY_EXISTS`.
 
 ### 5.2 Участники и приглашения
 
@@ -639,7 +639,7 @@ interface MemberDTO {   // используется и в /profiles/invites/my/,
 }
 ```
 
-Ошибки: `403 ACCESS_DENIED / PROJECT_ACCESS_DENIED(409)`, `404 NOT_FOUND_PROJECT/NOT_FOUND_PROJECT_ROLE/NOT_FOUND_MEMBER`, `409 ALREADY_MEMBER`.
+Ошибки: `403 ACCESS_DENIED / PROJECT_ACCESS_DENIED`, `404 NOT_FOUND_PROJECT/NOT_FOUND_PROJECT_ROLE/NOT_FOUND_MEMBER`, `409 ALREADY_MEMBER`.
 
 ### 5.3 Позиции (`/positions`, плюс вложенные под `/projects/{id}/positions/`)
 
@@ -677,7 +677,7 @@ interface PositionDTO {
 }
 ```
 
-Ошибки: `400 MAX_POSITIONS_PER_PROJECT_LIMIT_EXCEEDED`, `404 NOT_FOUND_POSTION` *(так в коде, без "I")*` / NOT_FOUND_PROJECT`.
+Ошибки: `400 MAX_POSITIONS_PER_PROJECT_LIMIT_EXCEEDED`, `404 NOT_FOUND_POSITION / NOT_FOUND_PROJECT`.
 
 ### 5.4 Заявки (`/applications`)
 
@@ -741,7 +741,7 @@ interface ProjectRoleDTO { id: number; name: string; permissions: Record<string,
 |---|---|---|---|---|
 | GET | `/chats/` | — | Query `GetListUserChatsRequest {limit=50 (≤100), last_chat_id?: UUID, last_activity_at?: datetime}` — курсорная пагинация | `ListChats` |
 | POST | `/chats/` | 4/5мин | `CreateChatRequest` | `201`, `ChatDTO` |
-| GET | `/chats/{chat_id}/` | — | — | `ChatDetailDTO` *(так называется в коде, без "l")* |
+| GET | `/chats/{chat_id}/` | — | — | `ChatDetailDTO` |
 | PATCH | `/chats/{chat_id}/` | 4/5мин | `UpdateChatRequest` | `200`, `ChatDTO` |
 | DELETE | `/chats/{chat_id}/` | 4/5мин | — | `204` |
 | POST | `/chats/{chat_id}/join/` | 10/5мин | — | `204` — вступить в публичный чат |
@@ -813,7 +813,7 @@ interface MemberChatDTO {
   permissions_overrides: Record<string, boolean>;
   profile: ChatProfileDTO | null;   // ⚠️ РЕАЛЬНО из кода — денормализованный профиль, ходить в /profiles/ не нужно
 }
-interface MemberDetailDTO {        // опечатка в коде сохранена
+interface MemberDetailDTO {
   user_id: number; role_id: number; is_muted: boolean; is_banned: boolean;
   permissions_overrides: Record<string, boolean>;
   is_online: boolean;
@@ -880,7 +880,7 @@ interface MessageDTO {
   reply_to_id: string | null;
   forwarded_from_chat_id: string | null;
   forwarded_from_message_id: string | null;
-  forwarded_from_author_id: number | null;   // ⚠️ number, не string
+  forwarded_from_author_id: number | null;
   is_edited: boolean;
   created_at: string;
   profile: ChatProfileDTO | null;     // ⚠️ РЕАЛЬНО из кода — автор уже приложен, отдельный запрос не нужен
@@ -1024,7 +1024,7 @@ interface LiveKitParticipantsDTO { identity: string; name: string; state: number
 interface ReactionSummaryDTO { emoji: string; count: number; reacted_by_me: boolean }
 interface ReactionUserDTO { user_id: number; emoji: string }
 interface MessageReactionsDTO {
-  message_id: string;                 // ⚠️ string, не UUID-типизированное поле
+  message_id: string;                 // UUID
   summaries: ReactionSummaryDTO[];    // всегда: сводка по ВСЕМ эмодзи сообщения
   emoji: string | null;               // эхо query-параметра
   users: ReactionUserDTO[];           // непустой ТОЛЬКО если передан ?emoji=
@@ -1272,7 +1272,7 @@ interface NotificationDTO {
 | `member:read` | ✅ | ✅ | ✅ | ✅ |
 | `member:invite` | ✅ | ✅ | ❌ | ❌ |
 | `member:kick` | ✅ | ✅ | ❌ | ❌ |
-| `member:udpate` ⚠️ *(опечатка в коде, без "a")* | ✅ | ✅ | ❌ | ❌ |
+| `member:update` | ✅ | ✅ | ❌ | ❌ |
 | `project:read` | ✅ | ✅ | ✅ | ✅ |
 | `project:update` | ✅ | ✅ | ✅ | ❌ |
 | `project:visibility` | ✅ | ✅ | ❌ | ❌ |

@@ -77,7 +77,7 @@ class GetMessageReactionsQueryHandler(
             next_user_id = page[-1].user_id if has_next and page else None
 
         return MessageReactionsDTO(
-            message_id=str(query.message_id),
+            message_id=query.message_id,
             summaries=summaries,
             emoji=query.emoji,
             users=users,

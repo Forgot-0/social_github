@@ -23,7 +23,7 @@ class NotFoundProjectError(ApplicationError):
 class NotFoundPositionError(ApplicationError):
     position_id: str
 
-    code: str = "NOT_FOUND_POSTION"
+    code: str = "NOT_FOUND_POSITION"
     status: int = 404
 
     @property
@@ -220,7 +220,7 @@ class AlreadySlugProjectExistsError(ApplicationError):
 @dataclass(kw_only=True)
 class AccessDeniedProjectError(ApplicationError):
     code: str = "PROJECT_ACCESS_DENIED"
-    status: int = 409
+    status: int = 403
 
     @property
     def message(self) -> str:

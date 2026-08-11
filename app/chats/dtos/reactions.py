@@ -44,7 +44,7 @@ class ReactionUserDTO(BaseModel):
 
 
 class MessageReactionsDTO(BaseModel):
-    message_id: str
+    message_id: UUID
     summaries: list[ReactionSummaryDTO] = Field(default_factory=list)
 
     emoji: str | None = None

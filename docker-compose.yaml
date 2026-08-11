@@ -259,6 +259,8 @@ services:
   debezium:
     image: debezium/connect:2.7.3.Final
     container_name: debezium
+    env_file:
+      - .env
     ports:
       - "8083:8083"
     environment:
@@ -298,6 +300,8 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        set -e
+
         echo "Waiting for Debezium..."
 
         until curl -sf http://debezium:8083/connectors >/dev/null; do
@@ -309,7 +313,7 @@ services:
         if ! curl -sf http://debezium:8083/connectors/outbox-connector >/dev/null; then
           echo "Creating outbox connector..."
 
-          curl -sf \
+          curl -f \
             -X POST \
             -H 'Content-Type: application/json' \
             --data @/config/outbox-connector.json \

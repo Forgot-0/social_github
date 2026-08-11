@@ -9,7 +9,7 @@ class ProjectRolesEnum(Enum):
         name="owner",
         level=9,
         permissions={
-            "member:read": True, "member:invite": True, "member:kick": True, "member:udpate": True,
+            "member:read": True, "member:invite": True, "member:kick": True, "member:update": True,
             "project:read": True, "project:update": True, "project:visibility": True, "project:delete": True,
             "position:create": True, "position:update": True, "position:delete": True,
             "permission:update": True,
@@ -21,7 +21,7 @@ class ProjectRolesEnum(Enum):
         name="maintainer",
         level=8,
         permissions={
-            "member:read": True, "member:invite": True, "member:kick": True, "member:udpate": True,
+            "member:read": True, "member:invite": True, "member:kick": True, "member:update": True,
             "project:read": True, "project:update": True, "project:visibility": True, "project:delete": False,
             "position:create": True, "position:update": True, "position:delete": True,
             "permission:update": True,
@@ -33,7 +33,7 @@ class ProjectRolesEnum(Enum):
         name="developer",
         level=7,
         permissions={
-            "member:read": True, "member:invite": False, "member:kick": False, "member:udpate": False,
+            "member:read": True, "member:invite": False, "member:kick": False, "member:update": False,
             "project:read": True, "project:update": True, "project:visibility": False, "project:delete": False,
             "position:create": True, "position:update": True, "position:delete": False,
             "permission:update": False,
@@ -45,7 +45,7 @@ class ProjectRolesEnum(Enum):
         name="user",
         level=1,
         permissions={
-            "member:read": True, "member:invite": False, "member:kick": False, "member:udpate": False,
+            "member:read": True, "member:invite": False, "member:kick": False, "member:update": False,
             "project:read": True, "project:update": False, "project:visibility": False, "project:delete": False,
             "position:create": False, "position:update": False, "position:delete": False,
             "permission:update": False,

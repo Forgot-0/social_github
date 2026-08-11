@@ -21,7 +21,7 @@ class NotFoundProfileError(ApplicationError):
 
 @dataclass(kw_only=True)
 class AlreadeExistProfileError(ApplicationError):
-    code: str = "ALREADE_EXIST_PROFILE"
+    code: str = "ALREADY_EXIST_PROFILE"
     status: int = 409
 
     @property
