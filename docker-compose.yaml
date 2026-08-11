@@ -176,6 +176,8 @@ services:
       context: .
       target: production
     container_name: queue_worker
+    tmpfs:
+      - /prometheus
     env_file:
       - .env
     command: ["taskiq", "worker", "app.tasks:broker", "--no-configure-logging"]
@@ -198,6 +200,8 @@ services:
       context: .
       target: production
     container_name: scheduler
+    tmpfs:
+      - /prometheus
     env_file:
       - .env
     command: ["taskiq", "scheduler", "app.tasks:scheduler", "--no-configure-logging"]
