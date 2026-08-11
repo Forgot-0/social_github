@@ -16,6 +16,7 @@ CHAT_EVENT_TO_WS_TYPE: dict[str, str] = {
     "chats.member.banned": WSEventType.MEMBER_BANNED,
     "chats.chat.created": WSEventType.CHAT_CREATED,
     "chats.chat.updated": WSEventType.CHAT_UPDATED,
+    "chats.message.reaction_updated": WSEventType.REACTION_UPDATED
 }
 
 _ENVELOPE_FIELDS = {"event_id", "event_name", "created_at"}

@@ -44,7 +44,7 @@
 | 8 | **`POST /profiles/`** | Был описан как способ создать профиль | Такого эндпоинта **не существует**. Профиль создаётся автоматически бэкендом через Kafka-consumer сразу после `POST /users/register/` (слушает топик `users`). Между регистрацией и появлением профиля возможна небольшая задержка (eventual consistency) — `GET /profiles/{id}/` может на короткое время вернуть 404 сразу после регистрации. |
 | 9 | **Аватар профиля** | `avatars: { "128": {"url": "..."}, "256": {"url": "..."} }` | Реальная структура: `avatars: { "32"\|"64"\|"256"\|"512": { "jpg": url, "webp": url, "avif": url } }` — 4 размера (не 128!) × 3 формата на размер. См. раздел 4.5. |
 | 10 | **Раздел "realtime" (`/chats/realtime/presence/`, `/chats/realtime/ws/status/`)** | Описан как отдельный REST-раздел | Таких путей **нет нигде в коде** (проверено `grep -r "realtime"` по всему репозиторию — ноль совпадений). Presence отдаётся через `GET /chats/{chat_id}/members/?include_presence=true` и через WS. |
-| 11 | **WebSocket-протокол** | Описаны только `ws.ready` и `ws.error` | На самом деле это полноценный протокол с 4 командами клиента (`subscribe`, `unsubscribe`, `resume`, `ping`/`pong`) и **~13 типами server-push событий** (`new_message`, `message_edited`, `message_deleted`, `messages_read`, `member_joined`, `member_left`, `member_kick`, `member_banned`, `chat_created`, `chat_updated`, `attachment_success`, `chat_deleted`, плюс служебные `ws.ready/subscribed/unsubscribed/history/pong/ping/error`). Полностью расписан в разделе 7 — это самая важная часть для чат-функциональности. |
+| 11 | **WebSocket-протокол** | Описаны только `ws.ready` и `ws.error` | На самом деле это полноценный протокол с 4 командами клиента (`subscribe`, `unsubscribe`, `resume`, `ping`/`pong`) и **~13 типами server-push событий** (`new_message`, `message_edited`, `message_deleted`, `messages_read`, `member_joined`, `member_left`, `member_kick`, `member_banned`, `chat_created`, `chat_updated`, `attachment_success`, `chat_deleted`, `reaction_update`, плюс служебные `ws.ready/subscribed/unsubscribed/history/pong/ping/error`). Полностью расписан в разделе 7 — это самая важная часть для чат-функциональности. |
 | 12 | **Уведомления (`/devices`, `/notifications`)** | Модуль отсутствовал в документе целиком | Полностью рабочий модуль пуш-уведомлений и in-app нотификаций. См. раздел 8. |
 | 13 | **Роли проекта** | `{owner, admin, member, viewer}`, `permissions: {}` | Реальные сид-роли: `owner(id=1)`, `maintainer(id=2)`, `developer(id=4, id=3 не существует)`, `user(id=5)`, с непустой картой прав. См. раздел 9. |
 | 14 | **Загрузка вложений в чат vs аватар** | Не различались | Это **два разных механизма**. Аватар — presigned **POST** (multipart form, поля из `fields`). Вложение чата — presigned **PUT** (сырые байты файла телом PUT-запроса на `upload_url`). Перепутать — значит получить 403/подпись не сойдётся. См. разделы 4.5 и 6.5. |
@@ -1054,7 +1054,7 @@ interface MessageReactionsDTO {
 Доменное событие `chats.message.reaction_updated` (класс `ReactionUpdatedEvent`):
 ```ts
 {
-  type: "chats.message.reaction_updated",   // ⚠️ НЕ короткий алиас — маппинга в CHAT_EVENT_TO_WS_TYPE нет
+  type: "reaction_update",   // ⚠️ НЕ короткий алиас — маппинга в CHAT_EVENT_TO_WS_TYPE нет
   event_name: "chats.message.reaction_updated",
   event_id: string, chat_id: string, ts: string,
   payload: {
@@ -1159,6 +1159,7 @@ interface WSEvent {
 | `chat_updated` | Изменены настройки чата | `{ chat_id: string; updated_by: number; name: string \| null; description: string \| null; is_public: boolean; admin_only: boolean; slow_mode_seconds: number; permissions: Record<string, boolean> }` |
 | `attachment_success` | Вложение(я) успешно обработаны после `confirm/` (шлётся лично пользователю-загрузчику, не всей подписке чата) | `{ user_id: number; chat_id: string; tokens: string[] }` — список готовых `upload_token` |
 | `chat_deleted` | Чат удалён | `{ chat_id: string; deleted_by: number }` |
+| `reaction_update` | Поставил/изменил реакцию на сообщении  `{message_id: string; emoji: string; count: number; changed_by: number}` | 
 
 **Определены, но реально нигде не публикуются** (есть в `WSEventType`, но `grep` по кодовой базе не находит ни одного места, где они реально отправляются): `typing_start`, `typing_stop`, `call_started`, `call_ended`, `call_joined`, `call_left`. Не полагайтесь на их получение — заложить обработку на будущее можно, но сейчас бэкенд их не шлёт.
 
