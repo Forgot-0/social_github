@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 from typing import Any
 from uuid import UUID
@@ -35,6 +36,8 @@ def additionally_serialize(obj: Any) -> Any:
             return str(obj)
         case BaseModel():
             return obj.model_dump()
+        case datetime():
+            return str(obj)
 
     logger.warning("Type is not JSON serializable: %s", type(obj), extra={"obj": repr(obj)})
     return repr(obj)

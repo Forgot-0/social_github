@@ -13,7 +13,6 @@ async def create_profile(db_session: AsyncSession):
             username=user_jwt.username
         )
         db_session.add(profile)
-        print("USER ", profile.user_id)
         await db_session.commit()
 
     return _headers

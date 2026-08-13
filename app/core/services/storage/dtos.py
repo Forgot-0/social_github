@@ -34,3 +34,13 @@ class UploadFilePost:
 class UploadFilePostResponse:
     url: str
     fields: dict[str, str]
+
+
+@dataclass(frozen=True)
+class ObjectStat:
+    bucket_name: str
+    file_key: str
+    size: int
+    etag: str | None = field(default=None)
+    version_id: str | None = field(default=None)
+    content_type: str | None = field(default=None)

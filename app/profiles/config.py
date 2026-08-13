@@ -2,6 +2,7 @@ from app.core.configs.base import BaseConfig
 
 
 class ProfileConfig(BaseConfig):
+    PENDING_AVATAR_BUCKET: str = "pending_avatar"
     AVATAR_BUCKET: str = "profiles"
     AVATAR_MAX_SIZE: int = 5*1024*1024
 

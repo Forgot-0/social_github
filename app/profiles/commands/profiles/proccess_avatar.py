@@ -10,7 +10,7 @@ from app.core.events.service import BaseEventBus
 from app.core.services.storage.dtos import UploadFile
 from app.core.services.storage.service import StorageService
 from app.profiles.config import profile_config
-from app.profiles.exceptions import AvatarNotImageTypeError, NotFoundProfileError
+from app.profiles.exceptions import AvatarNotImageTypeError, AvatarSizeError, NotFoundProfileError
 from app.profiles.models.profile import SizeAvatar
 from app.profiles.repositories.profiles import ProfileRepository
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class ProccessAvatarCommand(BaseCommand):
     user_id: int
-    key_base: str
+    file_key: str
 
 
 @dataclass(frozen=True)
@@ -36,9 +36,13 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
         if profile is None:
             raise NotFoundProfileError(profile_id=command.user_id)
 
-        original_key = f"{command.key_base}/original"
+        stat = await self.storage_service.get_stat(profile_config.PENDING_AVATAR_BUCKET, command.file_key)
+        if stat.size > profile_config.AVATAR_MAX_SIZE:
+            raise AvatarSizeError(
+                current_size=stat.size
+            )
 
-        data = await self.storage_service.download(profile_config.AVATAR_BUCKET,original_key)
+        data = await self.storage_service.download(profile_config.PENDING_AVATAR_BUCKET, command.file_key)
         mime = magic.from_buffer(data, mime=True)
 
         if not mime.startswith("image/"):
@@ -54,9 +58,9 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
             avif = thumb.write_to_buffer(".avif") # type: ignore
             jpg = thumb.write_to_buffer(".jpg") # type: ignore
 
-            key_webp = f"{command.key_base}/{s.value}.webp"
-            key_avif = f"{command.key_base}/{s.value}.avif"
-            key_jpg = f"{command.key_base}/{s.value}.jpg"
+            key_webp = f"{command.user_id}/{s.value}.webp"
+            key_avif = f"{command.user_id}/{s.value}.avif"
+            key_jpg = f"{command.user_id}/{s.value}.jpg"
 
             webp_url = await self.storage_service.upload_file(
                 upload_file=UploadFile(

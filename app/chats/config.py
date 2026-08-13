@@ -95,6 +95,7 @@ class ChatConfig(BaseConfig):
 
     MAX_VOICE_SIZE: int = 20 * 1024 * 1024
     MAX_VIDEO_NOTE_SIZE: int = 40 * 1024 * 1024
+    MAX_VIDEO_NOTE_FPS: int = 60
     MAX_VOICE_DURATION_SECONDS: int = 600
     MAX_VIDEO_NOTE_DURATION_SECONDS: int = 60
     MAX_VIDEO_NOTE_RESOLUTION_PX: int = 640
@@ -103,6 +104,7 @@ class ChatConfig(BaseConfig):
     ATTACHMENT_UPLOAD_TOKEN_TTL: int = 3_600
 
     ATTACHMENT_BUCKET: str = "chat-attachments"
+    ATTACHMENT_BUCKET_PENDING: str = "chat-pending-attachments"
     AVATAR_BUCKET: str = "profiles"
 
     RATE_LIMIT_REACTIONS_PER_SECOND : int = 10

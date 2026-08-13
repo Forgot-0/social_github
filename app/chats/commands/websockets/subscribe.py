@@ -30,7 +30,10 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
 
     async def handle(self, command: SubscribeCommand) -> None:
         chat_id = UUID(command.chat_id)
-        member = await self.chat_repository.get_member_chat(chat_id=chat_id, member_id=command.user_id, with_role=False)
+        member = await self.chat_repository.get_member_chat(
+            chat_id=chat_id, member_id=command.user_id, with_role=False
+        )
+
         if member is None or member.is_banned:
             event = {
                 "type": "ws.error",

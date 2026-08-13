@@ -50,6 +50,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         libmagic1 \
+        ffmpeg \
         build-essential \
     && rm -rf /var/lib/apt/lists/*
 

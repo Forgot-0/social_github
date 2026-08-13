@@ -102,3 +102,6 @@ class MessageAttachment(BaseModel, DateMixin):
 
     def mark_proccesed(self) -> None:
         self.attachment_status = AttachmentStatus.SUCCESS
+
+    def mark_error(self) -> None:
+        self.attachment_status = AttachmentStatus.ERROR

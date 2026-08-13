@@ -100,3 +100,21 @@ class AvatarNotImageTypeError(ApplicationError):
         return {
             "type": self.type_avatar
         }
+
+@dataclass(kw_only=True)
+class AvatarSizeError(ApplicationError):
+    current_size: int
+
+    code: str = "AVATAR_SIZE"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Avatar must be image type(jpg, png, ...)"
+
+    @property
+    def detail(self) -> dict:
+        return {
+            "current_size": self.current_size
+        }
+

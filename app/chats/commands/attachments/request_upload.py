@@ -24,7 +24,6 @@ from app.core.services.auth.dto import UserJWTData
 from app.core.services.storage.service import StorageService
 
 logger = logging.getLogger(__name__)
-clean_filename = re.compile(r"[^\w.\-]")
 
 
 @dataclass(frozen=True)
@@ -138,11 +137,11 @@ class RequestAttachmentUploadCommandHandler(
         slots = []
 
         for slot, att_type in zip(command.uploads, att_types, strict=False):
-            new_file_name = clean_filename.sub("_", slot.filename.strip())[:200]
+            new_file_name = self.storage_service.clean_filename(slot.filename)
             s3_key = f"chats/{command.chat_id}/{uuid4()}/{new_file_name}"
 
             upload_url = await self.storage_service.upload_put_url(
-                bucket_name=chat_config.ATTACHMENT_BUCKET,
+                bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
                 file_key=s3_key,
                 expires=chat_config.ATTACHMENT_UPLOAD_TOKEN_TTL,
             )

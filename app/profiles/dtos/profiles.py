@@ -18,8 +18,6 @@ class ProfileDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class AvatarPresignResponse(BaseModel):
+class AvatarPresign(BaseModel):
     url: str
-    fields: dict[str, str]
-    key_base: str
-
+    file_key: str

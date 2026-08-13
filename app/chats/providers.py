@@ -46,6 +46,7 @@ from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.repositories.user_profile import ChatUserProfileRepository
 from app.chats.services.access import ChatAccessService
+from app.chats.services.attachment_media import AttachmentMediaValidator
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.messages import MessageService
@@ -73,6 +74,7 @@ class ChatModuleProvider(Provider):
     commands = provide_all(
         RequestAttachmentUploadCommandHandler,
         SuccessUploadAttachmentsCommandHandler,
+        ProccessAttachmentsCommandHandler,
         JoinCallCommandHandler,
         MuteParticipantCommandHandler,
         AddMemberCommandHandler,
@@ -122,6 +124,7 @@ class ChatModuleProvider(Provider):
         MessageService,
         PresenceService,
         ChatAccessService,
+        AttachmentMediaValidator,
         scope=Scope.APP
     )
 

@@ -108,6 +108,7 @@ class WSConnection:
             return True
 
     async def close(self, code: int = 1000, reason: str = "") -> None:
+        print("CLOSE", code, reason)
         if self.closed:
             return
         self.closed = True

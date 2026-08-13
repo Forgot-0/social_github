@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class UpdateProfileAvatarCommand(BaseCommand):
-    key_base: str
+    file_key: str
     user_jwt_data: UserJWTData
 
 
@@ -24,13 +24,13 @@ class UpdateProfileAvatarCommandHandler(BaseCommandHandler[UpdateProfileAvatarCo
         await self.queue_service.push(
             AvatarUploadTask, {
                 "user_id": int(command.user_jwt_data.id),
-                "key_base": command.key_base
+                "key_base": command.file_key
             }
         )
         await self.profile_repository.invalidate_cache()
 
         logger.info(
             "Start proccess avatar resize", extra={
-                "key_base": command.key_base, "user_id": command.user_jwt_data.id
+                "key_base": command.file_key, "user_id": command.user_jwt_data.id
             }
         )

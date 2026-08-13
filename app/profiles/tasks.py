@@ -28,6 +28,6 @@ class AvatarUploadTask(BaseTask):
         await mediator.handle_command(
             ProccessAvatarCommand(
                 user_id=user_id,
-                key_base=key_base
+                file_key=key_base
             )
         )

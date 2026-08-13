@@ -14,7 +14,7 @@ from app.profiles.commands.profiles.get_or_create import GetOrCreateProfileComma
 from app.profiles.commands.profiles.remove_contact import RemoveContactToProfileCommand
 from app.profiles.commands.profiles.update import UpdateProfileCommand
 from app.profiles.commands.profiles.update_avatar import UpdateProfileAvatarCommand
-from app.profiles.dtos.profiles import AvatarPresignResponse, ProfileDTO
+from app.profiles.dtos.profiles import AvatarPresign, ProfileDTO
 from app.profiles.exceptions import NotFoundProfileError
 from app.profiles.queries.profiles.get_by_id import GetProfileByIdQuery
 from app.profiles.queries.profiles.get_list import GetProfilesQuery
@@ -103,13 +103,11 @@ async def get_avatar_presign_url(
     profile_request: AvatarPreSignUrlRequest,
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-) -> AvatarPresignResponse:
+) -> AvatarPresign:
     return await mediator.handle_query(
         GetAvatrProfileUrlQuery(
             user_id=int(user_jwt_data.id),
             file_name=profile_request.filename,
-            content_type=profile_request.content_type,
-            size=profile_request.size,
             user_jwt_data=user_jwt_data
         )
     )
@@ -126,7 +124,7 @@ async def upload_avatar_complete(
 ) -> ORJSONResponse:
     await mediator.handle_command(
         UpdateProfileAvatarCommand(
-            key_base=profile_request.key_base,
+            file_key=profile_request.file_key,
             user_jwt_data=user_jwt_data
         )
     )

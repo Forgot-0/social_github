@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from app.chats.config import chat_config
@@ -248,6 +249,46 @@ class AttachmentValidationError(ApplicationError):
     @property
     def detail(self) -> dict[str, Any]:
         return {"mime_type": self.mime_type}
+
+
+class AttachmentRejectionReason(StrEnum):
+    MIME_MISMATCH = "mime_mismatch"
+    SIZE_LIMIT_EXCEEDED = "size_limit_exceeded"
+    DURATION_LIMIT_EXCEEDED = "duration_limit_exceeded"
+    RESOLUTION_LIMIT_EXCEEDED = "resolution_limit_exceeded"
+    FRAME_RATE_LIMIT_EXCEEDED = "frame_rate_limit_exceeded"
+    METADATA_UNREADABLE = "metadata_unreadable"
+    PROBE_TIMEOUT = "probe_timeout"
+    INVALID_MEDIA = "invalid_media"
+
+
+@dataclass(kw_only=True)
+class AttachmentMediaValidationError(ApplicationError):
+    reason: AttachmentRejectionReason
+    attachment_id: str
+    attachment_type: str
+    limit: int | None = None
+    detected: dict[str, Any] | None = None
+
+    code: str = "ATTACHMENT_MEDIA_VALIDATION"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Attachment media validation failed"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "attachment_id": self.attachment_id,
+            "attachment_type": self.attachment_type,
+            "reason": self.reason.value,
+        }
+        if self.limit is not None:
+            payload["limit"] = self.limit
+        if self.detected:
+            payload.update(self.detected)
+        return payload
 
 
 @dataclass(kw_only=True)

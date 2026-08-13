@@ -51,22 +51,11 @@ class GetProfilesRequest(BaseModel):
 
 
 class AvatarUploadCompleteRequest(BaseModel):
-    key_base: str
-    size: int
-    content_type: str
+    file_key: str
 
 
 class AvatarPreSignUrlRequest(BaseModel):
     filename: str
-    size: int
-    content_type: str
-
-    @field_validator("content_type")
-    @classmethod
-    def validate_content_type(cls, v: str) -> str:
-        if v.split("/", maxsplit=1)[0] != "image":
-            raise AvatarNotImageTypeError(type_avatar="")
-        return v
 
 
 class AddContactProfileRequest(BaseModel):

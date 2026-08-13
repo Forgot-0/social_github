@@ -6,15 +6,21 @@ import magic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
+from app.chats.exceptions import AttachmentMediaValidationError, AttachmentRejectionReason
 from app.chats.keys import ChatKeys
-from app.chats.models.attachment import AttachmentStatus
+from app.chats.models.attachment import MessageAttachment
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
+from app.chats.services.attachment_media import AttachmentMediaValidator
 from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.services.media.exceptions import MediaProbeUnavailableError
+from app.core.services.storage.exceptions import StorageError
 from app.core.services.storage.service import StorageService
 
 logger = logging.getLogger(__name__)
+
+MAGIC_HEADER_BYTES = 1024
 
 
 @dataclass(frozen=True)
@@ -30,6 +36,7 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
     storage_service: StorageService
     connection_manager: ChatConnectionManager
     session: AsyncSession
+    media_validator: AttachmentMediaValidator
 
     async def handle(self, command: ProccessAttachmentsCommand) -> None:
         slots = await self.attachment_repository.get_by_ids(
@@ -40,10 +47,10 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
         for slot in slots:
             try:
                 data = await self.storage_service.download_range(
-                    bucket_name=chat_config.ATTACHMENT_BUCKET,
+                    bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
                     file_key=slot.s3_key,
                     offset=0,
-                    length=1024,
+                    length=MAGIC_HEADER_BYTES,
                 )
                 mime_type = magic.from_buffer(data, mime=True)
 
@@ -56,18 +63,65 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
                             "detected": mime_type,
                         },
                     )
-                    slot.attachment_status = AttachmentStatus.ERROR
+                    slot.mark_error()
                     failed_tokens.append(str(slot.id))
                     continue
 
+                if self.media_validator.requires_probe(slot.attachment_type):
+                    stat = await self.storage_service.get_stat(
+                        bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
+                        file_key=slot.s3_key,
+                    )
+                    media_info = await self.media_validator.validate_and_apply(slot, stat)
+
+                    logger.info(
+                        "Media attachment validated",
+                        extra={
+                            "slot_id": str(slot.id),
+                            "attachment_type": slot.attachment_type.value,
+                            "detected_mime": mime_type,
+                            "duration": slot.duration_seconds,
+                            "width": slot.width,
+                            "height": slot.height,
+                            "probed_duration": round(media_info.duration, 3),
+                        },
+                    )
+
                 slot.mark_proccesed()
+
+            except AttachmentMediaValidationError as exc:
+                logger.warning(
+                    "Attachment rejected by media validation",
+                    extra={
+                        "slot_id": str(slot.id),
+                        "attachment_type": slot.attachment_type.value,
+                        "reason": exc.reason.value,
+                        "limit": exc.limit,
+                        "detected": exc.detected,
+                        "error_class": "permanent",
+                    },
+                )
+                slot.mark_error()
+                failed_tokens.append(str(slot.id))
+
+            except (StorageError, MediaProbeUnavailableError):
+                logger.exception(
+                    "Attachment processing failed due to infrastructure error",
+                    extra={
+                        "slot_id": str(slot.id),
+                        "attachment_type": slot.attachment_type.value,
+                        "error_class": "transient",
+                    },
+                )
+                slot.mark_error()
+                failed_tokens.append(str(slot.id))
 
             except Exception:
                 logger.exception(
                     "Processing failed for attachment",
                     extra={"slot_id": str(slot.id)},
                 )
-                slot.attachment_status = AttachmentStatus.ERROR
+                slot.mark_error()
                 failed_tokens.append(str(slot.id))
 
         await self.session.commit()

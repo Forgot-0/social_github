@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from app.core.events.event import BaseEvent
@@ -8,7 +9,7 @@ from app.core.services.mail.service import BaseMailService, EmailData
 from app.core.services.mail.template import BaseTemplate
 from app.core.services.queues.service import QueueResult, QueueResultStatus, QueueService
 from app.core.services.queues.task import BaseTask
-from app.core.services.storage.dtos import UploadFile, UploadFilePost, UploadFilePostResponse
+from app.core.services.storage.dtos import ObjectStat, UploadFile, UploadFilePost, UploadFilePostResponse
 from app.core.services.storage.service import StorageService
 
 
@@ -65,6 +66,28 @@ class FakeStorageService(StorageService):
     def get_public_url_object(self, bucket: str, file_key: str) -> str:
         return f"https://storage.test/public/{bucket}/{file_key}"
 
+    async def get_stat(self, bucket_name: str, file_key: str) -> ObjectStat:
+        return ObjectStat(
+            bucket_name=bucket_name, file_key=file_key, size=0
+        )
+
+    async def copy_object(
+        self, bucket_from: str, file_key_from: str,
+        bucket_to: str, file_key_to: str
+    ) -> None:
+        ...
+
+    async def download_bytes(
+            self, bucket_name: str, file_key: str, *,
+            max_bytes: int, stat: ObjectStat | None = None
+        ) -> bytes:
+        return b""
+
+    async def download_to_path(
+            self, bucket_name: str, file_key: str, destination: Path, *,
+            max_bytes: int, stat: ObjectStat | None = None
+        ) -> int:
+        return 0
 
 
 @dataclass
