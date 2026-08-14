@@ -1,20 +1,14 @@
 ﻿# API Documentation — social_github
 
-> Версия документа: 2.0 (полная сверка с исходным кодом на `main`, 2026-07-18).
-> Этот файл — единственный источник правды для ИИ-агента, который будет писать Flutter-клиент. Он написан по реальному коду (роуты, Pydantic-схемы, DTO, exception-классы, конфиги), а не по предположениям. Расхождения с прошлой версией документа отмечены значком ⚠️ **ИСПРАВЛЕНО** там, где это критично для клиента.
+> Сверено с исходным кодом на `main` (2026-08-14). Основной референс для написания клиента (роуты, Pydantic-схемы, DTO, exception-классы, конфиги).
 
-## Как читать этот документ (для ИИ-агента)
-
-1. Раздел **0** — это чек-лист ловушек. Прочитай его первым и держи в голове весь остальной документ.
-2. Типы даны в псевдо-TypeScript (`interface`, `X | null`, `"a" | "b"` для enum). Это однозначно транслируется в Dart-модели (`X?`, `enum`).
-3. Все примеры путей — от `API_V1_STR = /api/v1`, кроме `/health`, у которого префикса нет.
-4. Если у поля в примере JSON стоит комментарий `// РЕАЛЬНО из кода`, значит это поле проверено построчно в реализации, а не восстановлено по аналогии.
+Типы даны в псевдо-TypeScript (`interface`, `X | null`, `"a" | "b"` для enum) — однозначно транслируется в Dart-модели. Все пути — от `API_V1_STR = /api/v1`, кроме `/health` и `/metrics`, у которых префикса нет. Раздел 0 — чек-лист неочевидного поведения, стоит прочитать первым.
 
 ---
 
 ## Оглавление
 
-- [0. КРИТИЧНО: ловушки и расхождения с прошлой версией доков](#0-критично-ловушки-и-расхождения-с-прошлой-версией-доков)
+- [0. КРИТИЧНО: неочевидное поведение API](#0-критично-неочевидное-поведение-api)
 - [1. Общие конвенции API](#1-общие-конвенции-api)
 - [2. Ошибки: формат и полный каталог кодов](#2-ошибки-формат-и-полный-каталог-кодов)
 - [3. Аутентификация и пользователи (`/auth`, `/users`, `/roles`, `/permissions`, `/sessions`)](#3-аутентификация-и-пользователи)
@@ -28,30 +22,29 @@
 
 ---
 
-## 0. КРИТИЧНО: ловушки и расхождения с прошлой версией доков
+## 0. КРИТИЧНО: неочевидное поведение API
 
 Это самое важное в документе. Если ИИ-агент прочитает только этот раздел, он всё равно избежит большинства багов.
 
-| # | Проблема | Что было в старой версии доков | Как на самом деле |
-|---|---|---|---|
-| 1 | **Слэш в конце пути** | Не всегда указывался | `redirect_slashes=False` в FastAPI-приложении (см. `app/main.py`). **Абсолютно все** пути требуют слэш в конце (`/auth/login/`, `/chats/`, `/profiles/{id}/`...). Запрос без слэша → `404 Not Found`, редиректа не будет. Http-клиент во Flutter должен всегда добавлять `/` в конце path (кроме query-параметров). |
-| 2 | **Формат ошибки** | `{ "code": "...", "message": "...", "detail": {...} }` плоским объектом | Реальный формат — **вложенный конверт**: `{ "error": { "code", "message", "detail" }, "status": number, "request_id": "uuid", "timestamp": number }`. См. раздел 2. |
-| 3 | **Пагинация списков** | Везде `{ items, total, page, page_size, total_pages, has_next, has_previous }` | Обычный `PageResult<T>` (используется почти во всех списках — профили, проекты, позиции, заявки, роли, права, сессии, пользователи, уведомления) отдаёт **только 4 поля**: `items, total, page, page_size`. `has_next`/`total_pages` — это Python `@property`, они **не сериализуются** (проверено эмпирически на реальной версии FastAPI/Pydantic из `poetry.lock`). Их нужно считать на клиенте: `total_pages = ceil(total / page_size)`, `has_next = page < total_pages`. Исключение — чат-эндпоинты со своей курсорной пагинацией (`ListChats`, `MessagesDTO`, `ListMembers`), у них `has_next` — реальное поле. |
-| 4 | **`POST /auth/login/`** | Похоже на JSON `{email, password}` | Эндпоинт использует `OAuth2PasswordRequestForm` → тело запроса **`application/x-www-form-urlencoded`**, поля называются `username` и `password` (не `email`!). JSON туда слать нельзя, FastAPI вернёт 422. |
-| 5 | **Refresh-токен** | Предполагался в теле JSON | Refresh-токен **никогда** не приходит и не уходит в JSON. Сервер кладёт его в **HttpOnly-cookie** `refresh_token` (`Secure=true`, `SameSite=strict`, `Path=/`). `POST /auth/refresh/` читает его из cookie автоматически. Из тела/заголовка достать нельзя. Подробности и последствия для мобильного/веб-клиента — в разделе 10. |
-| 6 | **Время жизни access-токена** | Не указывалось точно | `ACCESS_TOKEN_EXPIRE_MINUTES = 5`. Токен живёт **5 минут**. Клиенту обязателен агрессивный proactive-refresh или retry-on-401 механизм — иначе половина запросов будет падать. Refresh-токен живёт 60 дней. |
-| 7 | **`GET /projects/invites/my/`** | Путь указан под `/projects` | Роут физически зарегистрирован в файле `app/projects/routes/v1/profiles.py`, который подключён с префиксом `/profiles` (см. `app/projects/routers.py`). Реальный путь — **`GET /api/v1/profiles/invites/my/`**, а не `/projects/invites/my/`. |
-| 8 | **`POST /profiles/`** | Был описан как способ создать профиль | Такого эндпоинта **не существует**. Профиль создаётся автоматически бэкендом через Kafka-consumer сразу после `POST /users/register/` (слушает топик `users`). Между регистрацией и появлением профиля возможна небольшая задержка (eventual consistency) — `GET /profiles/{id}/` может на короткое время вернуть 404 сразу после регистрации. |
-| 9 | **Аватар профиля** | `avatars: { "128": {"url": "..."}, "256": {"url": "..."} }` | Реальная структура: `avatars: { "32"\|"64"\|"256"\|"512": { "jpg": url, "webp": url, "avif": url } }` — 4 размера (не 128!) × 3 формата на размер. См. раздел 4.5. |
-| 10 | **Раздел "realtime" (`/chats/realtime/presence/`, `/chats/realtime/ws/status/`)** | Описан как отдельный REST-раздел | Таких путей **нет нигде в коде** (проверено `grep -r "realtime"` по всему репозиторию — ноль совпадений). Presence отдаётся через `GET /chats/{chat_id}/members/?include_presence=true` и через WS. |
-| 11 | **WebSocket-протокол** | Описаны только `ws.ready` и `ws.error` | На самом деле это полноценный протокол с 4 командами клиента (`subscribe`, `unsubscribe`, `resume`, `ping`/`pong`) и **~13 типами server-push событий** (`new_message`, `message_edited`, `message_deleted`, `messages_read`, `member_joined`, `member_left`, `member_kick`, `member_banned`, `chat_created`, `chat_updated`, `attachment_success`, `chat_deleted`, `reaction_update`, плюс служебные `ws.ready/subscribed/unsubscribed/history/pong/ping/error`). Полностью расписан в разделе 7 — это самая важная часть для чат-функциональности. |
-| 12 | **Уведомления (`/devices`, `/notifications`)** | Модуль отсутствовал в документе целиком | Полностью рабочий модуль пуш-уведомлений и in-app нотификаций. См. раздел 8. |
-| 13 | **Роли проекта** | `{owner, admin, member, viewer}`, `permissions: {}` | Реальные сид-роли: `owner(id=1)`, `maintainer(id=2)`, `developer(id=4, id=3 не существует)`, `user(id=5)`, с непустой картой прав. См. раздел 9. |
-| 14 | **Загрузка вложений в чат vs аватар** | Не различались | Это **два разных механизма**. Аватар — presigned **POST** (multipart form, поля из `fields`). Вложение чата — presigned **PUT** (сырые байты файла телом PUT-запроса на `upload_url`). Перепутать — значит получить 403/подпись не сойдётся. См. разделы 4.5 и 6.5. |
-| 15 | **429 Too Many Requests** | Предполагался в общем формате ошибок | Рейт-лимит **не** проходит через `ApplicationError` — это обычный FastAPI `HTTPException`, отдаётся как `{"detail": "Too Many Requests"}`, без `error/status/request_id/timestamp`. Обрабатывать нужно отдельной веткой по HTTP-статусу 429. |
-| 16 | **`GET /users/me/`** | Предполагался полным `UserDTO` (roles/permissions/sessions) | Возвращает **облегчённый `UserResponse`**: только `{id, username, email}`. Роли/права/сессии на этом эндпоинте недоступны — их нужно брать через `GET /users/` (админский, постранично) или `GET /users/sessions/`. |
-| 17 | **`GET /users/sessions/`** | — | Возвращает **голый массив** `SessionDTO[]`, не обёрнутый в `PageResult`/`{items: [...]}`. |
-| 18 | **`PATCH /notifications/read_all/`** | — | Возвращает **голое число** (int) — количество обновлённых уведомлений, не объект. |
+| # | Что нужно знать |
+|---|---|
+| 1 | **Слэш в конце пути обязателен.** `redirect_slashes=False` в FastAPI-приложении (`app/main.py`). **Абсолютно все** пути требуют слэш в конце (`/auth/login/`, `/chats/`, `/profiles/{id}/`...). Запрос без слэша → `404 Not Found`, редиректа не будет. |
+| 2 | **Формат ошибки — вложенный конверт**: `{ "error": { "code", "message", "detail" }, "status": number, "request_id": "uuid", "timestamp": number }`. См. раздел 2. |
+| 3 | **Пагинация списков.** Обычный `PageResult<T>` (профили, проекты, позиции, заявки, роли, права, сессии, пользователи, уведомления) отдаёт только 4 поля: `items, total, page, page_size`. `has_next`/`total_pages` — Python `@property`, они не сериализуются и их нужно считать на клиенте: `total_pages = ceil(total / page_size)`, `has_next = page < total_pages`. Исключение — чат-эндпоинты со своей курсорной пагинацией (`ListChats`, `MessagesDTO`, `ListMembers`), у них `has_next` — реальное поле. |
+| 4 | **`POST /auth/login/`** использует `OAuth2PasswordRequestForm` → тело запроса **`application/x-www-form-urlencoded`**, поля называются `username` и `password` (не `email`!). JSON туда слать нельзя, FastAPI вернёт 422. |
+| 5 | **Refresh-токен** никогда не приходит и не уходит в JSON. Сервер кладёт его в **HttpOnly-cookie** `refresh_token` (`Secure=true`, `SameSite=strict`, `Path=/`). `POST /auth/refresh/` читает его из cookie автоматически. Подробности и последствия для мобильного/веб-клиента — в разделе 10. |
+| 6 | **Время жизни access-токена** — `ACCESS_TOKEN_EXPIRE_MINUTES = 5`. Клиенту обязателен агрессивный proactive-refresh или retry-on-401 механизм. Refresh-токен живёт 60 дней. |
+| 7 | **`GET /projects/invites/my/`** физически зарегистрирован в `app/projects/routes/v1/profiles.py`, который подключён с префиксом `/profiles`. Реальный путь — **`GET /api/v1/profiles/invites/my/`**, а не `/projects/invites/my/`. |
+| 8 | **`POST /profiles/` не существует.** Профиль создаётся автоматически бэкендом через Kafka-consumer сразу после `POST /users/register/` (слушает топик `users`). Между регистрацией и появлением профиля возможна небольшая задержка (eventual consistency) — `GET /profiles/{id}/` может на короткое время вернуть 404 сразу после регистрации. |
+| 9 | **Аватар профиля**: `avatars: { "32"\|"64"\|"256"\|"512": { "jpg": url, "webp": url, "avif": url } }` — 4 размера × 3 формата на размер. См. раздел 4.5. |
+| 10 | **Загрузка аватара — presigned PUT**, тем же механизмом, что и вложения чата (раздел 6.5), но валидация типа/размера файла происходит **асинхронно**, уже после подтверждения загрузки — `POST /profiles/avatar/upload_complete/` всегда отвечает `200 OK`, даже если файл в итоге окажется невалидным и аватар не обновится. См. раздел 4.5. |
+| 11 | Раздела "realtime" (`/chats/realtime/presence/`, `/chats/realtime/ws/status/`) в коде нет. Presence отдаётся через `GET /chats/{chat_id}/members/?include_presence=true` и через WS. |
+| 12 | **WebSocket-протокол** — полноценный протокол с 4 командами клиента (`subscribe`, `unsubscribe`, `resume`, `ping`/`pong`) и ~13 типами server-push событий (`new_message`, `message_edited`, `message_deleted`, `messages_read`, `member_joined`, `member_left`, `member_kick`, `member_banned`, `chat_created`, `chat_updated`, `attachment_success`, `chat_deleted`, `reaction_update`, плюс служебные `ws.ready/subscribed/unsubscribed/history/pong/ping/error`). Полностью расписан в разделе 7. |
+| 13 | **Роли проекта** — реальные сид-роли: `owner(id=1)`, `maintainer(id=2)`, `developer(id=4, id=3 не существует)`, `user(id=5)`, с непустой картой прав. См. раздел 9. |
+| 14 | **429 Too Many Requests** не проходит через `ApplicationError` — это обычный FastAPI `HTTPException`, отдаётся как `{"detail": "Too Many Requests"}`, без `error/status/request_id/timestamp`. Обрабатывать нужно отдельной веткой по HTTP-статусу 429. |
+| 15 | **`GET /users/me/`** возвращает облегчённый `UserResponse`: только `{id, username, email}`. Роли/права/сессии — через `GET /users/` (админский, постранично) или `GET /users/sessions/`. |
+| 16 | **`GET /users/sessions/`** возвращает голый массив `SessionDTO[]`, не обёрнутый в `PageResult`. |
+| 17 | **`PATCH /notifications/read_all/`** возвращает голое число (int) — количество обновлённых уведомлений, не объект. |
 
 ---
 
@@ -80,8 +73,7 @@ Authorization: Bearer <access_token>
 
 По умолчанию везде `application/json`, кроме:
 - `POST /auth/login/` — `application/x-www-form-urlencoded` (см. п. 0.4).
-- `PUT <presigned upload URL>` (S3/MinIO) — `Content-Type` файла, тело — сырые байты.
-- `POST <presigned POST URL>` (аватар) — `multipart/form-data`.
+- `PUT <presigned upload URL>` (S3/MinIO, аватар и вложения чата) — тело запроса, сырые байты файла.
 
 ### 1.4 Успешный ответ
 
@@ -128,7 +120,7 @@ Query-параметры запроса, общие почти для всех �
 
 ## 2. Ошибки: формат и полный каталог кодов
 
-### 2.1 Формат ошибки (⚠️ полностью переписан относительно старой версии)
+### 2.1 Формат ошибки
 
 Все ошибки уровня приложения (`ApplicationError` и наследники) возвращаются в едином конверте:
 
@@ -213,7 +205,10 @@ interface ErrorResponse {
 | `TOO_LONG_SKILL_NAME` | 400 | `{ "skill_name": string }` — лимит 30 симв. |
 | `TOO_LONG_DISPLAY_NAME` | 400 | `{ "display_name": string }` — лимит 100 симв. |
 | `TOO_LONG_BIO` | 400 | `{ "bio": string }` — лимит 1024 симв. |
-| `AVATAR_NOT_TYPE_IMAGE` | 400 | `{ "type": string }` — presign запрошен не с `image/*` content-type |
+| `AVATAR_NOT_TYPE_IMAGE` | 400 | `{ "type": string }` — реальный MIME-тип загруженного файла (определяется через `python-magic` по содержимому, а не по расширению) не начинается с `image/` |
+| `AVATAR_SIZE` | 400 | `{ "current_size": number }` — файл больше `AVATAR_MAX_SIZE` (5 МБ) |
+
+⚠️ Оба кода выше возникают **асинхронно**, внутри фоновой задачи обработки аватара — они не приходят как HTTP-ответ ни на `/avatar/presign/`, ни на `/avatar/upload_complete/` (оба всегда отвечают `200`, если запрос сам по себе корректен). См. раздел 4.5.
 
 ### 2.6 Коды модуля `projects` (`/projects`, `/positions`, `/applications`, `/project_roles`)
 
@@ -522,33 +517,34 @@ interface ContactDTO { profile_id: number; provider: string; contact: string }
 
 **Response `200`**: пустое тело. Ошибки: `400 TOO_LONG_*`, `403 ACCESS_DENIED`, `404 NOT_FOUND_PROFILE`.
 
-### 4.5 Загрузка аватара — presigned POST (⚠️ НЕ такой же механизм, как вложения в чатах, см. раздел 6.5!)
+### 4.5 Загрузка аватара — presigned PUT (тот же механизм, что и вложения чата, см. раздел 6.5)
 
-Двухшаговый флоу, всегда только для **своего** профиля (`profile_id` в пути не передаётся, привязка идёт по JWT):
+Двухшаговый флоу, всегда только для **своего** профиля (`profile_id` в пути не передаётся, привязка идёт по JWT).
 
 **Шаг 1 — `POST /profiles/avatar/presign/`** 🔒 (лимит 4/5мин)
 ```ts
 // Request (AvatarPreSignUrlRequest)
-{ filename: string; size: number; content_type: string }  // content_type ДОЛЖЕН начинаться с "image/", иначе 400 AVATAR_NOT_TYPE_IMAGE
+{ filename: string }
 ```
-Ограничение размера — 5 МБ (`AVATAR_MAX_SIZE`), проверяется на этом шаге.
+Имя файла санитизируется той же регуляркой `[^\w.\-]` → `_`, ключ в S3 — `{user_id}/{clean_filename}`, бакет `pending_avatar`. Никакой проверки типа/размера на этом шаге нет — сервер просто генерирует ключ и подписывает URL.
 ```ts
-// Response 200 (AvatarPresignResponse)
+// Response 200 (AvatarPresign)
 {
-  url: string;                        // куда слать POST
-  fields: Record<string, string>;     // поля presigned POST policy (S3/MinIO: key, policy, x-amz-*...) — вставить как есть в multipart form
-  key_base: string;                   // формат "avatars/{user_id}", понадобится на шаге 3
+  url: string;       // presigned PUT URL, живёт 90 секунд — короче, чем у вложений чата (3600 сек)!
+  file_key: string;  // понадобится на шаге 3
 }
 ```
 
-**Шаг 2 — прямой `POST` на `url` из ответа**, `Content-Type: multipart/form-data`, поля — это ключи из `fields` + сам файл под ключом `file` (стандартная S3/MinIO presigned-POST форма). Идёт напрямую в S3/MinIO, минуя бэкенд.
+**Шаг 2 — `PUT <url>`** напрямую в S3/MinIO, минуя бэкенд. Тело — сырые байты файла целиком, без multipart и без дополнительных полей. Успеть уложиться нужно в 90 секунд от шага 1.
 
 **Шаг 3 — `POST /profiles/avatar/upload_complete/`** 🔒 (лимит 4/5мин)
 ```ts
 // Request (AvatarUploadCompleteRequest)
-{ key_base: string; size: number; content_type: string }
+{ file_key: string }   // тот же file_key из шага 1
 ```
-Ответ `200`, тело `"OK"` (строка). Бэкенд асинхронно генерирует 4 размера (32/64/256/512) × 3 формата (jpg/webp/avif) и складывает их в `ProfileDTO.avatars`. Небольшая задержка между шагом 3 и появлением готовых URL в `GET /profiles/{id}/` возможна (фоновая обработка).
+Ответ `200`, тело `"OK"` (строка). Эндпоинт только ставит фоновую задачу в очередь и сразу отвечает — никакой валидации файла на этом шаге не происходит.
+
+**Фоновая обработка** (без обратной связи в API): задача скачивает файл из `pending_avatar`, определяет реальный MIME-тип по содержимому (`python-magic`, не по расширению/заголовку), проверяет размер (≤ 5 МБ, `AVATAR_MAX_SIZE`) — при нарушении генерируется `AVATAR_SIZE`/`AVATAR_NOT_TYPE_IMAGE`, но это не долетает до клиента как HTTP-ответ (см. раздел 2.5), просто новый аватар не появится. При успехе генерируются 4 размера (32/64/256/512) × 3 формата (jpg/webp/avif), заливаются в бакет `profiles` и складываются в `ProfileDTO.avatars`. Клиенту стоит после шага 3 подождать и переопросить `GET /profiles/{id}/` (например с retry/poll в течение нескольких секунд), а если `avatars` не изменился — считать, что загрузка не удалась, и позволить попробовать снова.
 
 ### 4.6 Контакты профиля
 
@@ -773,7 +769,7 @@ interface ChatDTO {
   created_by: number; member_count: number; unread_count: number;
   me: MemberChatDTO | null;         // данные о текущем пользователе как участнике (роль, мьют, бан)
   last_read: ReadDetail | null;     // { last_read_message_seq: number, last_read_at: string }
-  last_message: MessageDTO | null;  // ⚠️ РЕАЛЬНО из кода — превью последнего сообщения для списка чатов
+  last_message: MessageDTO | null;  // превью последнего сообщения для списка чатов
 }
 interface ChatDetailDTO {   // ответ GET /chats/{id}/ — отличается от ChatDTO: вместо unread_count/me/last_read/last_message даёт полный список участников
   id: string; seq_counter: number; last_activity_at: string | null;
@@ -784,7 +780,7 @@ interface ChatDetailDTO {   // ответ GET /chats/{id}/ — отличает�
   created_by: number; member_count: number;
   members: MemberChatDTO[];
 }
-interface ListChats {   // ответ GET /chats/ — курсорная пагинация, has_next РЕАЛЬНОЕ поле
+interface ListChats {   // ответ GET /chats/ — курсорная пагинация, has_next — реальное поле
   has_next: boolean;
   chats: ChatDTO[];
   next_date: string | null;      // передать следующим запросом как last_activity_at
@@ -811,7 +807,7 @@ interface ReadDetail { last_read_message_seq: number; last_read_at: string }
 interface MemberChatDTO {
   user_id: number; role_id: number; is_muted: boolean; is_banned: boolean;
   permissions_overrides: Record<string, boolean>;
-  profile: ChatProfileDTO | null;   // ⚠️ РЕАЛЬНО из кода — денормализованный профиль, ходить в /profiles/ не нужно
+  profile: ChatProfileDTO | null;   // денормализованный профиль, ходить в /profiles/ не нужно
 }
 interface MemberDetailDTO {
   user_id: number; role_id: number; is_muted: boolean; is_banned: boolean;
@@ -883,12 +879,12 @@ interface MessageDTO {
   forwarded_from_author_id: number | null;
   is_edited: boolean;
   created_at: string;
-  profile: ChatProfileDTO | null;     // ⚠️ РЕАЛЬНО из кода — автор уже приложен, отдельный запрос не нужен
+  profile: ChatProfileDTO | null;     // автор уже приложен, отдельный запрос не нужен
   attachments: AttachmentDTO[];
   reply_to: MessageDTO | null;        // вложенный объект оригинала, если это ответ
   forwarded_from: MessageDTO | null;  // вложенный объект оригинала, если это форвард
 }
-interface MessagesDTO {   // курсорная пагинация, has_next РЕАЛЬНОЕ поле
+interface MessagesDTO {   // курсорная пагинация, has_next — реальное поле
   messages: MessageDTO[];
   next_cursor: number | null;   // передать следующим запросом как cursor_message_seq
   has_next: boolean;
@@ -903,7 +899,7 @@ interface MessagesDTO {   // курсорная пагинация, has_next Р�
 
 Ошибки: `400 MESSAGE_TOO_LONG/INVALID_MESSAGE/SLOW_MODE_OUT_OF_RANGE`, `403 NOT_CHAT_MEMBER/CHAT_ACCESS_DENIED`, `404 NOT_FOUND_CHAT/NOT_FOUND_MESSAGE`, `409 IDEMPOTENCY_CONFLICT`, `429 SLOW_MODE_LIMIT`.
 
-### 6.5 Вложения — двухшаговая загрузка через presigned PUT ⚠️ отличается от аватара (POST!)
+### 6.5 Вложения — двухшаговая загрузка через presigned PUT (детали отличаются от аватара, см. 10.4)
 
 **Типы вложений.** `AttachmentType`: `"image" | "video" | "file" | "voice" | "video_note"`. `AttachmentStatus`: `"pending" | "success" | "error"`.
 
@@ -1318,15 +1314,19 @@ interface NotificationDTO {
 1. **Обычные списки** (`PageResult<T>`) — считать `has_next`/`total_pages` вручную на клиенте по `total`/`page`/`page_size`. Использовать для: профилей, проектов, позиций, заявок, ролей/прав auth, ролей проекта, сессий, пользователей, уведомлений.
 2. **Курсорные списки чатов** (`ListChats`, `MessagesDTO`, `ListMembers`) — `has_next` уже готовое поле; для следующей "страницы" использовать `next_chat_id`/`next_date`, `next_cursor`, `next_user_id` соответственно, не `page`.
 
-### 10.4 Загрузка файлов — два разных механизма, не перепутать
+### 10.4 Загрузка файлов — общий механизм, но детали разные
+
+Оба флоу — presigned **PUT** (сырые байты файла телом запроса, без multipart), но реализованы независимо и отличаются деталями:
 
 | | Аватар профиля | Вложение в чат |
 |---|---|---|
 | Presign-эндпоинт | `POST /profiles/avatar/presign/` | `POST /chats/{id}/attachments/upload-requests/` |
-| HTTP-метод загрузки | **POST** (`multipart/form-data`) | **PUT** (сырые байты) |
-| Что слать | Поля из `fields` + файл под ключом `file` | Тело = байты файла как есть |
-| Подтверждение | `POST /profiles/avatar/upload_complete/` | `POST /chats/{id}/attachments/upload-requests/confirm/` |
-| Результат | Появляется в `ProfileDTO.avatars` | WS-событие `attachment_success`, затем прикрепить `upload_token` к сообщению |
+| Что слать на presign | `{ filename }` | `{ uploads: [{ filename, mime_type, file_size, attachment_type? }] }`, до 11 файлов за раз |
+| TTL presigned URL | 90 секунд | 3600 секунд |
+| Подтверждение | `POST /profiles/avatar/upload_complete/` — `{ file_key }` | `POST /chats/{id}/attachments/upload-requests/confirm/` — `{ upload_tokens }` |
+| Валидация типа/размера | только асинхронно, после подтверждения (в фоне) | синхронно на presign по `mime_type`/`file_size` из запроса + асинхронно после подтверждения (доуточнение `width/height/duration`) |
+| Как узнать результат | переопросить `GET /profiles/{id}/` — новый `avatars`, либо файл не появится | WS-событие `attachment_success` / `attachment_status: "error"` на вложении |
+| Результат | Появляется в `ProfileDTO.avatars` | Прикрепить `upload_token` к сообщению в `POST /chats/{id}/messages/` |
 
 ### 10.5 WebSocket-клиент
 
@@ -1350,7 +1350,7 @@ interface NotificationDTO {
 - [ ] Ошибки читаются из `body.error.code`, кроме 429 (`body.detail`)
 - [ ] Реализован refresh-интерцептор на 5-минутное истечение токена
 - [ ] `has_next`/`total_pages` считаются на клиенте для обычных списков
-- [ ] Аватар грузится через presigned POST, вложения чата — через presigned PUT
+- [ ] И аватар, и вложения чата грузятся через presigned PUT, но с разным TTL ссылки (90 сек / 3600 сек) и разным моментом валидации (см. 10.4)
 - [ ] WS обрабатывает все перечисленные в 7.4 типы событий
 - [ ] `new_message`/`message_edited`/`message_deleted` не рендерятся напрямую из WS-payload
 - [ ] `resume` никогда не отправляется больше чем с 20 курсорами

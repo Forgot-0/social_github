@@ -38,6 +38,7 @@ class WSConnection:
     async def _start_writer(self) -> None:
         if self.writer_task and not self.writer_task.done():
             return
+
         self.writer_task = asyncio.create_task(
             self._writer_loop(), name=f"ws:writer:{self.connection_id}"
         )
@@ -45,6 +46,7 @@ class WSConnection:
     async def _start_heartbeat(self) -> None:
         if self.heartbeat_task and not self.heartbeat_task.done():
             return
+
         self.heartbeat_task = asyncio.create_task(
             self._heartbeat_loop(), name=f"ws:heartbeat:{self.connection_id}"
         )
@@ -61,6 +63,7 @@ class WSConnection:
                     )
                 except TimeoutError:
                     continue
+
                 await self.websocket.send_text(payload.decode())
         except asyncio.CancelledError:
             raise
@@ -77,10 +80,13 @@ class WSConnection:
                 await asyncio.sleep(chat_config.WS_HEARTBEAT_INTERVAL)
                 if self.closed:
                     return
+
                 idle = (now_utc() - self.last_seen_at).total_seconds()
+
                 if idle > chat_config.WS_HEARTBEAT_TIMEOUT:
                     await self.close(code=1001, reason="heartbeat timeout")
                     return
+
                 if not self.try_send(
                     {
                         "type": "ws.ping",
@@ -108,9 +114,9 @@ class WSConnection:
             return True
 
     async def close(self, code: int = 1000, reason: str = "") -> None:
-        print("CLOSE", code, reason)
         if self.closed:
             return
+
         self.closed = True
 
         current = asyncio.current_task()
