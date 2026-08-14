@@ -45,7 +45,6 @@ class ChatConfig(BaseConfig):
     WS_GATEWAY_STREAM_READ_COUNT: int = 200
     WS_GATEWAY_STREAM_BLOCK_MS: int = 5_000
     WS_GATEWAY_STREAM_USERS_PER_ENTRY: int = 1_000
-    WS_GATEWAY_STREAM_BACKLOG_INTERVAL: int = 5
 
     LIVEKIT_URL: str = "ws://localhost:7880"
     LIVEKIT_API_KEY: str = ""

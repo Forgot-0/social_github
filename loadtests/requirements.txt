@@ -1,4 +1,0 @@
-# Load test only dependencies. Kept out of pyproject.toml so they never ship
-# with the application image.
-locust==2.32.4
-websocket-client==1.8.0
