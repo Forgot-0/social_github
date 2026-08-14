@@ -1,17 +1,21 @@
+x-app-base: &app-base
+  build:
+    context: .
+    target: production
+  tmpfs:
+      - /prometheus
+  env_file:
+    - .env
+  restart: unless-stopped
+  networks:
+    - app-network
+
 services:
   app:
-    build:
-      context: .
-      target: production
+    <<: *app-base
     container_name: app
     ports:
       - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      PROMETHEUS_MULTIPROC_DIR: /prometheus
-    tmpfs:
-      - /prometheus
     command: >
       sh -c "
       rm -rf /prometheus/* &&
@@ -38,9 +42,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    restart: unless-stopped
-    networks:
-      - app-network
     deploy:
       resources:
         limits:
@@ -50,31 +51,64 @@ services:
           memory: 256M
 
   consumers:
-    build:
-      context: .
-      target: production
+    <<: *app-base
     container_name: consumers
     hostname: consumers
-    env_file:
-      - .env
-    environment:
-      PROMETHEUS_MULTIPROC_DIR: /prometheus
-    tmpfs:
-      - /prometheus
     command: ["faststream", "run", "app.consumers:app", "--host", "0.0.0.0", "--port", "9002", "--workers", "2"]
     depends_on:
       kafka:
         condition: service_healthy
       db:
         condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - app-network
     deploy:
       resources:
         limits:
           cpus: "1"
           memory: 512M
+
+  queue_worker:
+    <<: *app-base
+    container_name: queue_worker
+    command: ["taskiq", "worker", "app.tasks:broker", "--no-configure-logging"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  scheduler:
+    <<: *app-base
+    container_name: scheduler
+    command: ["taskiq", "scheduler", "app.tasks:scheduler", "--no-configure-logging"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  migrations:
+    <<: *app-base
+    container_name: migrations
+    command:
+    - sh
+    - -c
+    - |
+      alembic upgrade head
+      python -m app.init_data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
 
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
@@ -148,9 +182,7 @@ services:
     command: >
       redis-server
       --maxmemory 2gb
-      --maxmemory-policy allkeys-lru
-      --save ""
-      --appendonly no
+      --maxmemory-policy noeviction
       --hz 20
       --tcp-backlog 511
       --timeout 0
@@ -170,54 +202,6 @@ services:
         limits:
           cpus: "1"
           memory: 2200M
-
-  queue_worker:
-    build:
-      context: .
-      target: production
-    container_name: queue_worker
-    tmpfs:
-      - /prometheus
-    env_file:
-      - .env
-    command: ["taskiq", "worker", "app.tasks:broker", "--no-configure-logging"]
-    depends_on:
-      redis:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - app-network
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 512M
-
-  scheduler:
-    build:
-      context: .
-      target: production
-    container_name: scheduler
-    tmpfs:
-      - /prometheus
-    env_file:
-      - .env
-    command: ["taskiq", "scheduler", "app.tasks:scheduler", "--no-configure-logging"]
-    depends_on:
-      redis:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - app-network
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
 
   kafka:
     image: confluentinc/cp-kafka:8.2.0
@@ -333,28 +317,6 @@ services:
         fi
     volumes:
       - ./infra/debezium/outbox-connector.json:/config/outbox-connector.json
-    restart: "no"
-    networks:
-      - app-network
-
-  migrations:
-    build:
-      context: .
-      target: production
-    container_name: migrations
-    tmpfs:
-      - /prometheus
-    env_file:
-      - .env
-    command:
-    - sh
-    - -c
-    - |
-      alembic upgrade head
-      python -m app.init_data
-    depends_on:
-      db:
-        condition: service_healthy
     restart: "no"
     networks:
       - app-network
