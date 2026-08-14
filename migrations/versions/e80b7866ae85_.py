@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 291cf13121ff
+Revision ID: e80b7866ae85
 Revises: 
-Create Date: 2026-08-11 18:38:54.800520
+Create Date: 2026-08-14 20:18:09.179417
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '291cf13121ff'
+revision: str = 'e80b7866ae85'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -84,19 +84,11 @@ def upgrade() -> None:
     sa.Column('topic', sa.String(length=128), nullable=False),
     sa.Column('payload', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('headers', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('status', sa.Enum('PENDING', 'PUBLISHED', 'FAILED', name='outbox_status'), nullable=False),
-    sa.Column('attempts', sa.Integer(), nullable=False),
-    sa.Column('available_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('published_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('last_error', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_outbox_aggregate', 'outbox_messages', ['aggregate_type', 'aggregate_id'], unique=False)
-    op.create_index('ix_outbox_failed', 'outbox_messages', ['id'], unique=False, postgresql_where="status = 'FAILED'")
-    op.create_index('ix_outbox_pending_available', 'outbox_messages', ['available_at', 'id'], unique=False, postgresql_where="status = 'PENDING'")
-    op.create_index('ix_outbox_published_at', 'outbox_messages', ['published_at'], unique=False)
     op.create_table('permissions',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -461,9 +453,6 @@ def downgrade() -> None:
     op.drop_table('profiles')
     op.drop_index(op.f('ix_permissions_name'), table_name='permissions')
     op.drop_table('permissions')
-    op.drop_index('ix_outbox_published_at', table_name='outbox_messages')
-    op.drop_index('ix_outbox_pending_available', table_name='outbox_messages', postgresql_where="status = 'PENDING'")
-    op.drop_index('ix_outbox_failed', table_name='outbox_messages', postgresql_where="status = 'FAILED'")
     op.drop_index('ix_outbox_aggregate', table_name='outbox_messages')
     op.drop_table('outbox_messages')
     op.drop_index('ix_notifications_user_unread', table_name='notifications')

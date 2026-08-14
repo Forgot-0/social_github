@@ -101,12 +101,6 @@ class MessageService:
     async def attach_profile_urls(
         self, profiles: Iterable[ChatProfileDTO | None]
     ) -> None:
-        """Resolve avatar_url for a batch of profile snapshots in place.
-
-        Deduplicates by s3_key and resolves concurrently: a 100-member list
-        with one presign round-trip per member would otherwise be 100
-        sequential Redis/S3 calls.
-        """
         by_key: dict[str, list[ChatProfileDTO]] = {}
         for profile in profiles:
             if profile is None or not profile.avatar_s3_key:

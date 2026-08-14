@@ -5,9 +5,9 @@
 
     "database.hostname": "db",
     "database.port": "5432",
-    "database.user": "${POSTGRES_USER}",
-    "database.password": "${POSTGRES_PASSWORD}",
-    "database.dbname": "${POSTGRES_DB}",
+    "database.user": "${env:POSTGRES_USER}",
+    "database.password": "${env:POSTGRES_PASSWORD}",
+    "database.dbname": "${env:POSTGRES_DB}",
 
     "topic.prefix": "social_db",
 

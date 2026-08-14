@@ -285,8 +285,14 @@ services:
 
       CONNECT_REST_ADVERTISED_HOST_NAME: debezium
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+
+      CONNECT_CONFIG_PROVIDERS: env
+      CONNECT_CONFIG_PROVIDERS_ENV_CLASS: org.apache.kafka.common.config.provider.EnvVarConfigProvider
+
     depends_on:
       kafka:
+        condition: service_healthy
+      db:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -298,6 +304,8 @@ services:
     depends_on:
       - debezium
     entrypoint: ["/bin/sh", "-c"]
+    env_file:
+      - .env
     command:
       - |
         set -e
@@ -313,7 +321,7 @@ services:
         if ! curl -sf http://debezium:8083/connectors/outbox-connector >/dev/null; then
           echo "Creating outbox connector..."
 
-          curl -f \
+          curl -sf \
             -X POST \
             -H 'Content-Type: application/json' \
             --data @/config/outbox-connector.json \
@@ -324,7 +332,7 @@ services:
           echo "Connector already exists"
         fi
     volumes:
-      - ./infra/debezium/outbox-connector.json:/config/outbox-connector.json:ro
+      - ./infra/debezium/outbox-connector.json:/config/outbox-connector.json
     restart: "no"
     networks:
       - app-network
@@ -334,6 +342,8 @@ services:
       context: .
       target: production
     container_name: migrations
+    tmpfs:
+      - /prometheus
     env_file:
       - .env
     command:
