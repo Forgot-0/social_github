@@ -73,7 +73,8 @@ class FakeStorageService(StorageService):
 
     async def copy_object(
         self, bucket_from: str, file_key_from: str,
-        bucket_to: str, file_key_to: str
+        bucket_to: str, file_key_to: str,
+        source_stat: ObjectStat | None=None
     ) -> None:
         ...
 

@@ -69,9 +69,10 @@ class MessageService:
         for message in message_list:
             if message.profile is not None:
                 profiles.append(message.profile)
-            # reply_to/forwarded_from carry their own author snapshot
+
             if message.reply_to is not None and message.reply_to.profile is not None:
                 profiles.append(message.reply_to.profile)
+
             if message.forwarded_from is not None and message.forwarded_from.profile is not None:
                 profiles.append(message.forwarded_from.profile)
 

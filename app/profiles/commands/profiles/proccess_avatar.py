@@ -10,7 +10,7 @@ from app.core.events.service import BaseEventBus
 from app.core.services.storage.dtos import UploadFile
 from app.core.services.storage.service import StorageService
 from app.profiles.config import profile_config
-from app.profiles.exceptions import AvatarNotImageTypeError, AvatarSizeError, NotFoundProfileError
+from app.profiles.exceptions import AvatarFileKeyError, AvatarNotImageTypeError, AvatarSizeError, NotFoundProfileError
 from app.profiles.models.profile import SizeAvatar
 from app.profiles.repositories.profiles import ProfileRepository
 
@@ -32,6 +32,9 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
     event_bus: BaseEventBus
 
     async def handle(self, command: ProccessAvatarCommand) -> None:
+        if not command.file_key.startswith(f"{command.user_id}/"):
+            raise AvatarFileKeyError(file_key=command.file_key)
+
         profile = await self.profile_repository.get_by_id(command.user_id)
         if profile is None:
             raise NotFoundProfileError(profile_id=command.user_id)
@@ -45,10 +48,13 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
         data = await self.storage_service.download(profile_config.PENDING_AVATAR_BUCKET, command.file_key)
         mime = magic.from_buffer(data, mime=True)
 
-        if not mime.startswith("image/"):
+        if not mime.startswith("image/") and mime not in profile_config.AVATAR_ALLOWED_MIMES:
             raise AvatarNotImageTypeError(type_avatar=mime)
 
-        img: pyvips.Image = pyvips.Image.new_from_buffer(data, "") # type: ignore
+        img: pyvips.Image = pyvips.Image.new_from_buffer(data, "", access="sequential") # type: ignore
+        if img.width <= 0 or img.height <= 0 or img.width * img.height > profile_config.AVATAR_MAX_PIXELS:
+            raise AvatarSizeError(current_size=img.width * img.height)
+
         versions = {}
 
         for s in SizeAvatar:

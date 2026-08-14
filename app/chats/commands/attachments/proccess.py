@@ -6,7 +6,7 @@ import magic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
-from app.chats.exceptions import AttachmentMediaValidationError, AttachmentRejectionReason
+from app.chats.exceptions import AccessDeniedChatError, AttachmentMediaValidationError, AttachmentRejectionReason
 from app.chats.keys import ChatKeys
 from app.chats.models.attachment import MessageAttachment
 from app.chats.repositories.attachment import AttachmentRepository
@@ -46,6 +46,22 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
         failed_tokens: list[str] = []
         for slot in slots:
             try:
+                if slot.uploader_id != command.user_id:
+                    raise AccessDeniedChatError(chat_id=str(slot.chat_id), requester_id=command.user_id)
+
+                stat = await self.storage_service.get_stat(
+                    bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
+                    file_key=slot.s3_key,
+                )
+                if stat.size <= 0 or stat.size > slot.size:
+                    logger.warning(
+                        "Attachment size validation failed",
+                        extra={"slot_id": str(slot.id), "size": stat.size, "limit": slot.size},
+                    )
+                    slot.mark_error()
+                    failed_tokens.append(str(slot.id))
+                    continue
+
                 data = await self.storage_service.download_range(
                     bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
                     file_key=slot.s3_key,
@@ -68,10 +84,6 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
                     continue
 
                 if self.media_validator.requires_probe(slot.attachment_type):
-                    stat = await self.storage_service.get_stat(
-                        bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
-                        file_key=slot.s3_key,
-                    )
                     media_info = await self.media_validator.validate_and_apply(slot, stat)
 
                     logger.info(
@@ -87,6 +99,16 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
                         },
                     )
 
+                await self.storage_service.copy_object(
+                    bucket_from=chat_config.ATTACHMENT_BUCKET_PENDING,
+                    file_key_from=slot.s3_key,
+                    bucket_to=chat_config.ATTACHMENT_BUCKET,
+                    file_key_to=slot.s3_key,
+                )
+                await self.storage_service.delete_file(
+                    bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
+                    file_key=slot.s3_key,
+                )
                 slot.mark_proccesed()
 
             except AttachmentMediaValidationError as exc:

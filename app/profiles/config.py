@@ -5,6 +5,11 @@ class ProfileConfig(BaseConfig):
     PENDING_AVATAR_BUCKET: str = "pending_avatar"
     AVATAR_BUCKET: str = "profiles"
     AVATAR_MAX_SIZE: int = 5*1024*1024
+    AVATAR_MAX_PIXELS: int = 25_000
+    AVATAR_ALLOWED_MIMES: frozenset[str] = frozenset(
+        {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
+    )
+
 
     MAX_LEN_SKILL_NAME: int = 30
     MAX_LEN_BIO: int = 1024

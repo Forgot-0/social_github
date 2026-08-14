@@ -92,7 +92,7 @@ class AttachmentMediaValidator:
 
             try:
                 await self.storage_service.download_to_path(
-                    bucket_name=chat_config.ATTACHMENT_BUCKET,
+                    bucket_name=chat_config.ATTACHMENT_BUCKET_PENDING,
                     file_key=attachment.s3_key,
                     destination=local_path,
                     max_bytes=max_bytes,

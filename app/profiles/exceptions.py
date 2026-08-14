@@ -110,7 +110,7 @@ class AvatarSizeError(ApplicationError):
 
     @property
     def message(self) -> str:
-        return "Avatar must be image type(jpg, png, ...)"
+        return "Avatar size"
 
     @property
     def detail(self) -> dict:
@@ -118,3 +118,17 @@ class AvatarSizeError(ApplicationError):
             "current_size": self.current_size
         }
 
+@dataclass(kw_only=True)
+class AvatarFileKeyError(ApplicationError):
+    file_key: str
+
+    code: str = "AVATAR_FILE_KEY"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "Avatar file key is invalid"
+
+    @property
+    def detail(self) -> dict:
+        return {"file_key": self.file_key}
