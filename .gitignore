@@ -123,3 +123,7 @@ yarn-error.log*
 /playwright/.cache/
 
 .repowise/
+
+# loadtests/ (см. loadtests/README.md) — manifest.json генерируется loadtests/seed.py,
+# в репозиторий не кладём (содержит id реально созданных в БД тестовых пользователей/чатов)
+/loadtests/data/
