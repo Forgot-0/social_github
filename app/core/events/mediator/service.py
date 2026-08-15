@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass(eq=False)
 class MediatorEventBus(BaseEventBus):
-
-
     outbox_repository: OutboxRepository
 
     async def publish(self, events: Iterable[BaseEvent]) -> None:

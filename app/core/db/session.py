@@ -11,8 +11,8 @@ def create_engine() -> AsyncEngine:
         max_overflow = 0
     else:
         pool_class = AsyncAdaptedQueuePool
-        pool_size = 10
-        max_overflow = 15
+        pool_size = 15
+        max_overflow = 0
 
     return create_async_engine(
         str(app_config.postgres_url),

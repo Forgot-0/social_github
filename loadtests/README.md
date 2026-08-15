@@ -195,8 +195,7 @@ docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml up -d \
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm migrations
 
 # 4. Засеять данные (N/M/K и размеры — все аргументы командной строки, п.2 промпта)
-docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm loadtest-seed \
-    -- --users 6000 --direct-chats 1500 --group-chats 60 --supergroups 6 --channels 2
+docker compose   -f docker-compose.yaml   -f docker-compose.loadtest.yaml   run --rm loadtest-seed   python -m loadtests.seed   --users 6000   --direct-chats 1500   --group-chats 2000   --supergroups 6   --channels 2
 
 # 5a. Сценарий (a): REST throughput
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm \
@@ -218,7 +217,7 @@ docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm \
 
 # Уборка данных теста (по манифесту — трогает ТОЛЬКО то, что засеял seed.py)
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm loadtest-seed \
-    -- --cleanup
+    --cleanup
 ```
 
 Locust понимает свои опции (и любые кастомные, добавленные через

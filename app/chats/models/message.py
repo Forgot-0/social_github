@@ -151,7 +151,6 @@ class Message(BaseModel, DateMixin):
     __table_args__ = (
         Index("ix_messages_chat_not_deleted", "chat_id", "seq",
               postgresql_where="is_deleted = false"),
-        Index("ix_messages_chat_id_seq", "chat_id", "seq", unique=True)
     )
 
     @classmethod

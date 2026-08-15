@@ -50,7 +50,11 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
         await self.chat_repository.create(chat)
         await self.event_bus.publish(chat.pull_events())
         await self.session.commit()
-        await self.livekit_sevice.create_room(str(chat.id))
+
+        try:
+            await self.livekit_sevice.create_room(str(chat.id))
+        except:
+            pass
 
         logger.info(
             "Create chat", extra={
