@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlalchemy.ext.asyncio.session import AsyncSession, async_sessionmaker
 
 from app.core.configs.app import app_config
-from app.core.db.session import create_async_marker, create_engine
+from app.core.db.session import create_async_maker, create_engine
 from app.core.outbox.repository import OutboxRepository
 
 
@@ -20,14 +20,14 @@ class DBProvider(Provider):
         await engine.dispose(close=True)
 
     @provide(scope=Scope.APP)
-    async def get_marker(self, engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
-        return create_async_marker(engine=engine)
+    async def get_maker(self, engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+        return create_async_maker(engine=engine)
 
     @provide(scope=Scope.REQUEST)
     async def get_session(
-        self, marker: async_sessionmaker[AsyncSession]
+        self, maker: async_sessionmaker[AsyncSession]
     ) -> AsyncIterable[AsyncSession]:
-        async with marker() as session:
+        async with maker() as session:
             yield session
 
     @provide(scope=Scope.REQUEST)

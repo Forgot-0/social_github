@@ -26,7 +26,7 @@ def create_engine() -> AsyncEngine:
         future=True,
     )
 
-def create_async_marker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+def create_async_maker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(
             bind=engine,
             class_=AsyncSession,

@@ -18,7 +18,7 @@ class LoggingMiddleware:
         start_time = time.time()
 
         async def send_wrapper(message: Message) -> None:
-            if message["type"] == "http.response.start":
+            if message["type"] == "http.response.start" and scope["path"] != "/health":
                 processing_time = time.time() - start_time
                 logger.info("request", extra={
                     "method": scope["method"],
