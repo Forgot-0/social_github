@@ -18,14 +18,25 @@ subscribe/resume-команд. Если/когда промпт 1 будет в�
 --churn-rate выше серверного лимита — тогда тест начнёт честно измерять
 поведение приложения под RATE_LIMITED, а не собственный клиентский потолок
 (см. loadtests/README.md).
+
+WS_MAX_CONNECTIONS_PER_USER=2 (app/chats/config.py) — та же находка, что и
+в ws_fanout.py (см. его докстринг): при 3+ конкурентных соединениях одного
+user_id сервер молча закрывает САМОЕ СТАРОЕ. Для churn-сценария это не
+обязательно "баг измерения" (много переподключений с одним user_id — тоже
+реалистичный кейс, "два устройства одного аккаунта"), но чтобы не путать
+самонаведённые коллизии с реальной деградацией сервера, читатели внутри
+ОДНОГО чата разбираются round-robin по его участникам (а не rng.choice()
+с повторами) — см. _next_member_id. Если --users на чат всё равно больше
+2×участников, это осознанный выбор нагрузки, а не случайность.
 """
 from __future__ import annotations
 
 import random
 import time
+from collections import defaultdict
+from itertools import count
 
 import gevent
-import websocket
 from locust import User, constant, events, task
 
 from loadtests.common.acceptance import Threshold, add_threshold_arg, check_and_report
@@ -34,6 +45,7 @@ from loadtests.common.rate_limiter import TokenBucket
 from loadtests.common.settings import HTTP_BASE_URL, LOADTEST_MANIFEST_PATH
 from loadtests.common.tokens import mint_access_token
 from loadtests.common.ws_client import WSClient, build_ws_url
+from loadtests.common.ws_protocol import wait_for_subscribe_ack
 
 ACK_TIMEOUT_S = 10.0
 
@@ -69,6 +81,7 @@ def _setup(environment, **kwargs):
     environment.loadtest_manifest = load_manifest(opts.manifest)
     environment.loadtest_chat_kinds = [k.strip() for k in opts.chat_kinds.split(",") if k.strip()]
     environment.loadtest_bucket = TokenBucket(opts.churn_rate, burst=max(1, int(opts.churn_rate)))
+    environment.loadtest_member_index_by_chat = defaultdict(count)
 
 
 @events.quitting.add_listener
@@ -95,36 +108,11 @@ def _fire(environment, name: str, started: float, exception: Exception | None) -
     )
 
 
-def _wait_for_ack(client: WSClient, deadline_s: float) -> tuple[bool, int | None, str | None]:
-    """Ждём ws.subscribed (и, если пришла, ws.history) или ws.error. Возвращает
-    (успех, next_last_seq, код_ошибки)."""
-    remaining = deadline_s
-    last_seq: int | None = None
-    while remaining > 0:
-        started = time.monotonic()
-        try:
-            frame = client.recv_json(timeout=remaining)
-        except websocket.WebSocketTimeoutException:
-            return False, None, "TIMEOUT"
-        remaining -= time.monotonic() - started
-
-        frame_type = frame.get("type")
-        if frame_type == "ws.error":
-            return False, None, frame.get("code", "UNKNOWN_ERROR")
-        if frame_type == "ws.subscribed":
-            payload = frame.get("payload") or {}
-            if payload.get("last_seq") is not None:
-                last_seq = payload["last_seq"]
-            continue
-        if frame_type == "ws.history":
-            payload = frame.get("payload") or {}
-            last_seq = payload.get("next_last_seq", last_seq)
-            return True, last_seq, None
-        if frame_type == "ws.ready":
-            continue
-        # Прочие события (new_message и т.п.) во время ack-ожидания игнорируем.
-
-    return False, last_seq, "TIMEOUT"
+def _next_member_id(environment, chat) -> int:
+    """Round-robin по участникам ЭТОГО чата — см. докстринг модуля про
+    WS_MAX_CONNECTIONS_PER_USER=2 и самонаведённые коллизии."""
+    idx = next(environment.loadtest_member_index_by_chat[chat.id])
+    return chat.member_ids[idx % len(chat.member_ids)]
 
 
 class ChurnUser(User):
@@ -140,7 +128,7 @@ class ChurnUser(User):
         kind = rng.choice(kinds)
         chat = manifest.random_chat(kind, rng)
         self.chat = chat
-        self.user = manifest.user(rng.choice(chat.member_ids))
+        self.user = manifest.user(_next_member_id(self.environment, chat))
         self.last_seq = 0
         self.rng = rng
 
@@ -161,7 +149,7 @@ class ChurnUser(User):
             gevent.sleep(self.rng.uniform(opts.reconnect_gap_min_s, opts.reconnect_gap_max_s))
             return
 
-        ok, next_seq, error_code = _wait_for_ack(client, ACK_TIMEOUT_S)
+        ok, next_seq, error_code = wait_for_subscribe_ack(client, ACK_TIMEOUT_S)
         if ok:
             _fire(env, CONNECT_SUBSCRIBE_NAME, started, None)
             if next_seq is not None:
@@ -178,7 +166,7 @@ class ChurnUser(User):
         resume_started = time.monotonic()
         try:
             client.send_json({"op": "resume", "cursors": {self.chat.id: self.last_seq}})
-            ok, next_seq, error_code = _wait_for_ack(client, ACK_TIMEOUT_S)
+            ok, next_seq, error_code = wait_for_subscribe_ack(client, ACK_TIMEOUT_S)
         except Exception as exc:
             ok, next_seq, error_code = False, None, str(exc)
 

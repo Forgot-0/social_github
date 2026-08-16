@@ -22,12 +22,13 @@ x-loadtest-common: &loadtest-common
   build:
     context: .
     dockerfile: loadtests/Dockerfile
+  user: root
   env_file:
     - .env
   networks:
     - app-network
   volumes:
-  - ./loadtests/data:/app/loadtests/data
+    - loadtest_data:/app/loadtests/data
   depends_on:
     app:
       condition: service_healthy
@@ -36,9 +37,10 @@ services:
   loadtest-seed:
     <<: *loadtest-common
     container_name: loadtest-seed
+    entrypoint:
+    - python
+    - loadtests/seed.py
     command:
-      - python
-      - loadtests/seed.py
       - --users=${LOADTEST_USERS:-6000}
       - --direct-chats=${LOADTEST_DIRECT_CHATS:-1500}
       - --group-chats=${LOADTEST_GROUP_CHATS:-60}
@@ -88,3 +90,6 @@ services:
       LOCUST_CHAT_KINDS: "${LOADTEST_CHAT_KINDS:-group,supergroup}"
       LOCUST_CHURN_RATE: "${LOADTEST_CHURN_RATE:-5}"
     restart: "no"
+
+volumes:
+  loadtest_data:

@@ -1,3 +1,13 @@
+# Собирается ИЗ КОРНЯ РЕПО (docker-compose.loadtest.yaml: context: ., dockerfile: loadtests/Dockerfile),
+# намеренно НЕ трогая корневой Dockerfile/pyproject.toml/poetry.lock приложения.
+#
+# Первые два стейджа — буквальная копия python-base/builder-base из корневого
+# Dockerfile (тот же базовый образ, та же версия poetry, тот же poetry.lock),
+# чтобы app.core.services.auth.JWTManager/UserJWTData и app.chats.dtos.*,
+# которые loadtests/ импортирует напрямую (см. loadtests/README.md, п.1
+# промпта), гарантированно работали на тех же версиях зависимостей, что и
+# само приложение — без риска, что asyncpg/pydantic/sqlalchemy разъедутся
+# по версиям между app и loadtest-образом.
 FROM python:3.14-rc-slim AS python-base
 
 ENV PYTHONUNBUFFERED=1 \
@@ -43,6 +53,8 @@ RUN poetry check \
         --no-root \
         --no-ansi
 
+# Единственное отличие от production-стейджа основного Dockerfile: сюда
+# дополнительно ставится Locust + websocket-client (loadtests/requirements.txt).
 COPY loadtests/requirements.txt /tmp/loadtest-requirements.txt
 RUN $VENV_PATH/bin/pip install --no-cache-dir -r /tmp/loadtest-requirements.txt
 
@@ -58,6 +70,10 @@ COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
 WORKDIR /app
 
+# app/ копируем read-only ради переиспользования контрактов (JWTManager,
+# UserJWTData, MessageDTO, ChatConfig...) — loadtests/ ничего в app/ не пишет
+# и не импортирует ORM-сессии/DI-контейнер приложения, только чистые
+# dataclasses/pydantic-модели и чистые функции (см. loadtests/README.md).
 COPY app/ ./app/
 COPY loadtests/ ./loadtests/
 
@@ -65,6 +81,6 @@ RUN groupadd --system loadtest \
     && useradd --system --gid loadtest --create-home loadtest \
     && chown -R loadtest:loadtest /app $PYSETUP_PATH
 
-USER loadtest
+# USER loadtest
 ENV PATH="$VENV_PATH/bin:$PATH" \
     PYTHONPATH="/app"

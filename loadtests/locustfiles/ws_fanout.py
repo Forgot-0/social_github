@@ -15,43 +15,68 @@
 как просит промпт, "обе fanout-стратегии" отдельными прогонами.
 
 ────────────────────────────────────────────────────────────────────────────
-ВАЖНАЯ НАХОДКА, изменившая способ измерения (см. loadtests/README.md,
-раздел "Находка: ts в ws.new_message не то, чем кажется"):
+ДВЕ НАХОДКИ ИЗ ПЕРВОГО РЕАЛЬНОГО ПРОГОНА (не из статического чтения кода —
+из живого прогона на docker-compose, который показал delivery_fanout_on_read
+с нулём сэмплов при 597 успешных отправках и 1000 успешных WS-коннектах).
+Обе ниже — БАГИ ПРЕДЫДУЩЕЙ ВЕРСИИ ЭТОГО ФАЙЛА, не приложения; обе исправлены
+в текущей версии.
 
-Промпт предполагал мерить латентность как (время получения на клиенте) минус
-(ts из payload, который billed как "уже есть в build_ws_event"). Но
-build_ws_event действительно кладёт ts = event["created_at"] (app/chats/dtos/
-delivery.py), а вот WSConnection.try_send() (app/chats/dtos/websocket.py)
-БЕЗУСЛОВНО перезаписывает event["ts"] = now_utc().isoformat() прямо перед
-постановкой в очередь на отправку — то есть к моменту, когда фрейм уходит по
-сети, поле ts уже НЕ содержит исходное время события, а содержит время
-постановки в очередь НА КОНКРЕТНОМ gateway, уже после Kafka + delivery router
-+ Redis. Считать по этому полю — значит мерить только "хвост" пути (postavka
-в очередь -> сокет -> сеть -> клиент), а не весь fanout end-to-end.
+1) `payload["content"]` в событии не существует.
 
-Мы НЕ трогаем app-код (это отдельный промпт, не про измерение) — вместо этого
-тест сам встраивает временную метку отправки в тело сообщения
-(payload["content"] = JSON с полем lt_sent_at) и меряет реальный end-to-end
-delivery latency как (время получения на читателе) минус (lt_sent_at,
-записанный писателем непосредственно перед POST). Это ЕДИНСТВЕННЫЙ способ
-измерить честный end-to-end fanout latency без правки приложения — и именно
-он репортится под именами delivery_fanout_on_write/delivery_fanout_on_read,
-как просит п.3(b) промпта.
+   Предыдущая версия встраивала `lt_sent_at` в `content` сообщения и
+   рассчитывала на то, что `payload["content"]` дойдёт до читателя как есть.
+   Это было ошибкой: `SendedMessageEvent` (app/chats/models/message.py)
+   несёт только `message_id, chat_id, seq, sender_id, message_type` —
+   content в доменное событие вообще не попадает, а `build_ws_event`
+   (app/chats/dtos/delivery.py) строит `payload` буквально из полей события.
+   То есть WS-уведомление о новом сообщении — "тонкое": в нём НЕТ текста
+   сообщения вообще, только его id/seq/автор/тип. Это архитектурный факт
+   приложения (возможно, намеренный — клиент должен сам дозапросить контент,
+   а не полагаться на broadcast), а не баг, который стоит чинить в рамках
+   этой задачи — но он ЛОМАЛ измерение, построенное на предположении
+   "контент долетит как есть".
 
-Для сравнения (не для acceptance-порогов, а просто чтобы КОЛИЧЕСТВЕННО
-показать масштаб бага) тест ДОПОЛНИТЕЛЬНО репортит то же самое, но по
-буквально требуемой промптом формуле (receive_time - payload["ts"]), под
-именами delivery_ts_field_on_write/on_read — сравнение двух чисел в отчёте
-Locust наглядно показывает, сколько "хвоста" реально видно через сломанное
-поле ts.
+   Исправление: писатель после каждого успешного POST кладёт
+   `{message_id: sent_at}` в общий (для процесса) словарь
+   `environment.loadtest_sent_at` — читатель, получив `new_message`,
+   достаёт `payload["message_id"]`, ищет его в этом словаре и считает
+   `recv_time - sent_at`. Работает только для НЕ-distributed прогона
+   (--master/--worker в одном процессе не окажутся — см. предыдущую
+   версию докстринга про NTP; тут дополнительная причина того же вывода:
+   без общего процесса словарь не будет общим).
 
-Предположение о синхронизации часов: писатель и читатели меряют lt_sent_at/
-recv_time через time.time() СВОЕГО процесса. Для честного результата запускайте
-писателя и читателей в одном Locust-процессе на одной машине (стандартный
-`locust -f ...` без --master/--worker) — так и так рекомендуется для baseline.
-Для распределённого прогона (--master/--worker на разных хостах) потребуется
-NTP-синхронизация хостов, иначе рассинхрон часов подмешается в latency.
+2) Читатели должны занимать РАЗНЫЕ user_id, а не случайные с повторами.
+
+   `WS_MAX_CONNECTIONS_PER_USER=2` (app/chats/config.py). При превышении
+   `ChatConnectionManager.register` (app/chats/services/ws.py) не отклоняет
+   новое соединение, а молча закрывает САМОЕ СТАРОЕ соединение того же
+   user_id (close_code=1012). Предыдущая версия выбирала читателю
+   `rng.choice(chat.member_ids)` — то есть С ПОВТОРЕНИЯМИ: при --users,
+   заметно превышающем размер супергруппы, многие user_id раздавались
+   3+ читателям, и более ранние соединения этих же пользователей просто
+   отваливались посреди теста (а код это молча "чинил" реконнектом, без
+   единого проваленного request'а в статистике — отсюда и отсутствие
+   ошибок при отсутствии данных).
+
+   Исправление: читатели разбираются по member_ids РАВНОМЕРНО (round-robin
+   без повторов, пока участников хватает), и при старте теста явно
+   проверяется `--users <= 2 * len(chat.member_ids)` — иначе тест
+   немедленно завершается с понятной ошибкой вместо тихой деградации.
+   Заодно теперь читатель, прежде чем слушать, ЯВНО дожидается
+   ws.subscribed/ws.history (loadtests/common/ws_protocol.py) и репортит
+   это как отдельный WS-запрос "ws_subscribe" — если сервер пришлёт
+   ws.error (в т.ч. из-за конфликта лимита соединений), это будет видно
+   в отчёте как failure, а не тихо потеряно.
 ────────────────────────────────────────────────────────────────────────────
+
+Для сравнения с буквально требуемой промптом формулой (receive_time минус
+поле ts, которое, напомним, WSConnection.try_send безусловно перезаписывает
+временем постановки в очередь) тест по-прежнему дополнительно репортит
+delivery_ts_field_on_write/on_read.
+
+Предположение о синхронизации часов остаётся тем же: писатель и читатели
+меряют время через time.time() ОДНОГО процесса — гоняйте без
+--master/--worker для честного baseline (см. README).
 """
 from __future__ import annotations
 
@@ -59,6 +84,7 @@ import json
 import random
 import time
 from datetime import datetime
+from itertools import count
 from uuid import uuid4
 
 import gevent
@@ -77,8 +103,12 @@ from loadtests.common.settings import (
 )
 from loadtests.common.tokens import mint_access_token
 from loadtests.common.ws_client import WSClient, build_ws_url
+from loadtests.common.ws_protocol import wait_for_subscribe_ack
 
 KEEPALIVE_INTERVAL_S = 25  # < WS_HEARTBEAT_TIMEOUT (75s), см. app/chats/config.py
+RECV_POLL_TIMEOUT_S = 20  # редкие пробуждения по таймауту дешевле для gevent-хаба при тысячах читателей
+SUBSCRIBE_ACK_TIMEOUT_S = 10.0
+SENT_AT_TTL_S = 60.0  # сколько храним {message_id: sent_at} на случай недоставки
 
 FANOUT_NAME_BY_KIND = {
     "group": "delivery_fanout_on_write",
@@ -91,6 +121,7 @@ TS_FIELD_NAME_BY_KIND = {
     "channel": "delivery_ts_field_on_read",
 }
 WRITER_REQUEST_NAME = "[writer] POST /chats/{chat_id}/messages/"
+SUBSCRIBE_REQUEST_NAME = "ws_subscribe"
 
 
 @events.init_command_line_parser.add_listener
@@ -116,13 +147,26 @@ def _setup(environment, **kwargs):
     rng = random.Random()
     chat = manifest.random_chat(opts.chat_kind, rng)
 
+    max_readers = 2 * len(chat.member_ids)
+    if opts.num_users is not None and opts.num_users > max_readers:
+        raise RuntimeError(
+            f"--users={opts.num_users} превышает 2×участников выбранного чата "
+            f"({len(chat.member_ids)} участников, лимит WS_MAX_CONNECTIONS_PER_USER=2 "
+            f"на пользователя → максимум {max_readers} одновременных читателей на этот чат). "
+            f"Либо уменьшите --users, либо пересейдите чат покрупнее "
+            f"(loadtests/seed.py --supergroup-max-size ...)."
+        )
+
     environment.loadtest_manifest = manifest
     environment.loadtest_chat = chat
     environment.loadtest_stopping = gevent.event.Event()
+    environment.loadtest_sent_at = {}  # message_id -> sent_at, пишет только писатель, читает кто угодно
+    environment.loadtest_reader_index = count()
 
     print(
         f"[ws_fanout] цель: chat_id={chat.id} kind={opts.chat_kind} "
-        f"members={len(chat.member_ids)} writer_rate={opts.writer_rate}/s"
+        f"members={len(chat.member_ids)} writer_rate={opts.writer_rate}/s "
+        f"(лимит читателей на этот чат: {max_readers})"
     )
 
     environment.loadtest_writer_greenlet = gevent.spawn(_writer_loop, environment, chat, opts)
@@ -145,6 +189,13 @@ def _check_acceptance(environment, **kwargs):
     check_and_report(environment, thresholds)
 
 
+def _prune_sent_at(sent_at: dict[str, float]) -> None:
+    cutoff = time.time() - SENT_AT_TTL_S
+    stale = [mid for mid, t in sent_at.items() if t < cutoff]
+    for mid in stale:
+        sent_at.pop(mid, None)
+
+
 def _writer_loop(environment, chat, opts) -> None:
     """Единственный писатель. НЕ Locust User — обычный gevent-greenlet с requests.Session,
     репортит свои REST-запросы в статистику Locust вручную (events.request.fire),
@@ -159,17 +210,24 @@ def _writer_loop(environment, chat, opts) -> None:
     session = requests.Session()
     url = f"{HTTP_BASE_URL}{API_V1_STR}/chats/{chat.id}/messages/"
     period = 1.0 / max(opts.writer_rate, 0.001)
+    sent_at_map = environment.loadtest_sent_at
+    tick = 0
 
     while not environment.loadtest_stopping.is_set():
         started = time.monotonic()
-        sent_at = time.time()
-        body = {"content": json.dumps({"lt_sent_at": sent_at, "lt_msg_id": str(uuid4())})}
+        send_ts = time.time()
+        # Содержимое до читателей НЕ долетает (см. докстринг модуля, находка 1) —
+        # пишем что-то осмысленное только чтобы REST-ответ было легко узнать в логах.
+        body = {"content": f"loadtest {send_ts}"}
         req_headers = {**headers, "Idempotency-Key": str(uuid4())}
 
         try:
             resp = session.post(url, json=body, headers=req_headers, timeout=10)
             elapsed_ms = (time.monotonic() - started) * 1000
             if resp.status_code == 201:
+                message_id = resp.json().get("id")
+                if message_id:
+                    sent_at_map[message_id] = send_ts
                 environment.events.request.fire(
                     request_type="POST", name=WRITER_REQUEST_NAME, response_time=elapsed_ms,
                     response_length=len(resp.content), exception=None, context={},
@@ -187,18 +245,11 @@ def _writer_loop(environment, chat, opts) -> None:
                 response_length=0, exception=exc, context={},
             )
 
+        tick += 1
+        if tick % 20 == 0:
+            _prune_sent_at(sent_at_map)
+
         gevent.sleep(max(period - (time.monotonic() - started), 0))
-
-
-def _parse_lt_sent_at(content: str | None) -> float | None:
-    if not content:
-        return None
-    try:
-        data = json.loads(content)
-    except (json.JSONDecodeError, TypeError):
-        return None
-    value = data.get("lt_sent_at")
-    return float(value) if value is not None else None
 
 
 def _parse_ts_field(ts: str | None) -> float | None:
@@ -211,7 +262,9 @@ def _parse_ts_field(ts: str | None) -> float | None:
 
 
 class ReaderUser(User):
-    """K читателей, все подписаны на один и тот же chat_id (environment.loadtest_chat)."""
+    """K читателей на один и тот же chat_id (environment.loadtest_chat), по одному
+    строго различному member_id на читателя, пока участников хватает (см. докстринг
+    модуля, находка 2) — не rng.choice() с повторами."""
 
     host = HTTP_BASE_URL
     abstract = False
@@ -221,33 +274,47 @@ class ReaderUser(User):
         manifest = self.environment.loadtest_manifest
         opts = self.environment.parsed_options
 
-        rng = random.Random()
-        self.user = manifest.user(rng.choice(chat.member_ids))
+        idx = next(self.environment.loadtest_reader_index) % len(chat.member_ids)
+        self.user = manifest.user(chat.member_ids[idx])
         self.chat_id = chat.id
         self.fanout_name = FANOUT_NAME_BY_KIND[opts.chat_kind]
         self.ts_field_name = TS_FIELD_NAME_BY_KIND[opts.chat_kind]
 
-        token = mint_access_token(self.user.id, self.user.username)
-        url = build_ws_url(token, initial_chat_id=self.chat_id, initial_last_seq=0)
-
-        connect_started = time.monotonic()
-        try:
-            self.client = WSClient(url)
-        except Exception as exc:
-            self.environment.events.request.fire(
-                request_type="WS", name="ws_connect", response_time=(time.monotonic() - connect_started) * 1000,
-                response_length=0, exception=exc, context={},
-            )
-            raise
-
-        self.environment.events.request.fire(
-            request_type="WS", name="ws_connect", response_time=(time.monotonic() - connect_started) * 1000,
-            response_length=0, exception=None, context={},
-        )
+        self._connect_and_subscribe(initial=True)
 
         self._stopping = gevent.event.Event()
         self._recv_greenlet = gevent.spawn(self._recv_loop)
         self._keepalive_greenlet = gevent.spawn(self._keepalive_loop)
+
+    def _connect_and_subscribe(self, initial: bool) -> None:
+        token = mint_access_token(self.user.id, self.user.username)
+        url = build_ws_url(token, initial_chat_id=self.chat_id, initial_last_seq=0)
+
+        started = time.monotonic()
+        try:
+            self.client = WSClient(url)
+            ok, _next_seq, error_code = wait_for_subscribe_ack(self.client, SUBSCRIBE_ACK_TIMEOUT_S)
+        except Exception as exc:
+            self.environment.events.request.fire(
+                request_type="WS", name=SUBSCRIBE_REQUEST_NAME, response_time=(time.monotonic() - started) * 1000,
+                response_length=0, exception=exc, context={},
+            )
+            if initial:
+                raise
+            return
+
+        if ok:
+            self.environment.events.request.fire(
+                request_type="WS", name=SUBSCRIBE_REQUEST_NAME, response_time=(time.monotonic() - started) * 1000,
+                response_length=0, exception=None, context={},
+            )
+        else:
+            self.environment.events.request.fire(
+                request_type="WS", name=SUBSCRIBE_REQUEST_NAME, response_time=(time.monotonic() - started) * 1000,
+                response_length=0, exception=RuntimeError(error_code or "no ack"), context={},
+            )
+            if initial:
+                raise RuntimeError(f"initial subscribe failed: {error_code}")
 
     def _keepalive_loop(self) -> None:
         while not self._stopping.is_set():
@@ -260,13 +327,20 @@ class ReaderUser(User):
     def _recv_loop(self) -> None:
         while not self._stopping.is_set():
             try:
-                frame = self.client.recv_json(timeout=5)
+                frame = self.client.recv_json(timeout=RECV_POLL_TIMEOUT_S)
             except websocket.WebSocketTimeoutException:
                 continue
             except Exception:
                 if self._stopping.is_set():
                     return
-                self._reconnect()
+                # Соединение разорвано (в т.ч. возможная эвикция сервером, см.
+                # находку 2 в докстринге модуля) — это ДОЛЖНО быть видно в
+                # отчёте, а не тихо "починено" реконнектом без следа.
+                self.environment.events.request.fire(
+                    request_type="WS", name="ws_unexpected_disconnect", response_time=0,
+                    response_length=0, exception=RuntimeError("connection lost, reconnecting"), context={},
+                )
+                self._connect_and_subscribe(initial=False)
                 continue
 
             self._handle_frame(frame)
@@ -277,7 +351,9 @@ class ReaderUser(User):
         recv_time = time.time()
         payload = frame.get("payload") or {}
 
-        sent_at = _parse_lt_sent_at(payload.get("content"))
+        message_id = payload.get("message_id")
+
+        sent_at = self.environment.loadtest_sent_at.get(message_id) if message_id else None
         if sent_at is not None:
             self.environment.events.request.fire(
                 request_type="WS", name=self.fanout_name, response_time=(recv_time - sent_at) * 1000,
@@ -290,19 +366,6 @@ class ReaderUser(User):
                 request_type="WS", name=self.ts_field_name, response_time=(recv_time - ts_value) * 1000,
                 response_length=0, exception=None, context={},
             )
-
-    def _reconnect(self) -> None:
-        token = mint_access_token(self.user.id, self.user.username)
-        url = build_ws_url(token, initial_chat_id=self.chat_id, initial_last_seq=0)
-        for attempt in range(5):
-            if self._stopping.is_set():
-                return
-            try:
-                self.client.close()
-                self.client = WSClient(url)
-                return
-            except Exception:
-                gevent.sleep(min(2**attempt, 10))
 
     def on_stop(self) -> None:
         self._stopping.set()

@@ -7,15 +7,18 @@ Baseline-измерение msg/sec, WS fanout latency (p50/p95/p99) и пове
 num_requests). Ни одна метрика, Gauge/Histogram, файл `app/consumers.py`,
 `app/core/outbox/metrics.py` и т.п. не менялись.
 
-> **Статус на момент написания: код готов и самопроверен статически (структура
-> запросов/протокола сверена построчно с исходниками приложения), но реально
-> прогнан на живом docker-compose стенде НЕ БЫЛ.** Окружение, в котором
-> выполнялась эта задача, не имеет ни Docker, ни сетевого доступа к Docker Hub
-> (только к PyPI/npm/GitHub) — поднять полный стек (Postgres, Redis, Kafka,
-> Debezium, MinIO, сам app) физически негде. Раздел
-> ["Baseline-числа"](#baseline-числа-первый-прогон) поэтому пуст — это
-> заготовка с точными командами; впишите туда цифры первого реального
-> прогона на своей машине.
+> **Статус:** код прогнан вживую на реальном docker-compose стенде (не только
+> статически). Первый живой прогон `ws_fanout.py --chat-kind supergroup`
+> вскрыл два реальных бага в ПРЕДЫДУЩЕЙ версии теста (не в приложении) —
+> `delivery_fanout_on_read` показывал 0 сэмплов при 597 успешных отправках и
+> 1000 успешных WS-коннектах. Оба исправлены и локально перепроверены на
+> протокольно точном fake-сервере (см.
+> ["Находки, изменившие дизайн теста"](#находки-изменившие-дизайн-теста),
+> пункты "`payload` не содержит `content`" и "читатели должны занимать разные
+> user_id"). Раздел ["Baseline-числа"](#baseline-числа-первый-прогон) ниже
+> по-прежнему пуст — впишите туда цифры первого прогона С ИСПРАВЛЕННОЙ
+> версией на своём стенде.
+
 
 ## Оглавление
 
@@ -143,6 +146,46 @@ delivery latency, репортится под именами `delivery_fanout_on
 одного и того же пользователя; `seed.py` создаёт супергруппы/группы с
 достаточным запасом участников для этого.
 
+### `payload` в `ws.new_message` не содержит `content` — событие "тонкое"
+
+Обнаружено живым прогоном (`delivery_fanout_on_read` = 0 сэмплов при 597
+успешных отправках), не статическим чтением кода — предыдущая версия теста
+предполагала, что `payload["content"]` дойдёт до читателя, и встраивала туда
+временную метку для замера honest end-to-end latency. Это было неверно:
+`SendedMessageEvent` (`app/chats/models/message.py`) несёт только
+`message_id, chat_id, seq, sender_id, message_type` — контента в доменном
+событии просто нет, и `build_ws_event` (`app/chats/dtos/delivery.py`) строит
+`payload` буквально из полей события. WS-уведомление о новом сообщении —
+тонкое: клиент, получив его, не видит текста, только id/seq/автора/тип, и
+должен бы (в реальном клиенте) дозапрашивать содержимое отдельно. Это факт
+архитектуры приложения (возможно, намеренный), но он ломал предыдущую версию
+измерения. Исправлено: `ws_fanout.py` теперь коррелирует по `message_id`
+через словарь `{message_id: sent_at}`, который пишет писатель сразу после
+201-го ответа (там `id` реального сообщения есть) — общий на процесс, не
+per-connection.
+
+### Читателей нельзя раздавать со `rng.choice()` — `WS_MAX_CONNECTIONS_PER_USER=2` эвиктит СТАРОЕ соединение
+
+Тоже обнаружено живым прогоном. `ChatConnectionManager.register`
+(`app/chats/services/ws.py`) при превышении лимита в 2 одновременных
+соединения на `user_id` не отклоняет НОВОЕ соединение — он молча закрывает
+САМОЕ СТАРОЕ (`close_code=1012`). Предыдущая версия `ws_fanout.py` выбирала
+читателю `rng.choice(chat.member_ids)` — с повторами. При `--users`, заметно
+превышающем размер супергруппы (как в первом прогоне: 1000 читателей против
+меньшего числа участников), многие `user_id` доставались 3+ читателям, и
+более ранние соединения этих же пользователей отваливались посреди теста —
+без единого проваленного запроса в статистике, потому что реконнект "тихо
+чинил" симптом, ничего не репортя. Исправлено: читатели теперь разбираются
+по `member_ids` round-robin (по одному различному участнику на читателя,
+пока хватает), при старте теста явно проверяется
+`--users <= 2 × len(участников)` (иначе `RuntimeError` с понятным текстом
+вместо тихой деградации), и добавлено явное ожидание `ws.subscribed`/
+`ws.history` (`loadtests/common/ws_protocol.py`) с репортингом как
+отдельного WS-запроса `ws_subscribe` — если сервер всё же пришлёт
+`ws.error`, это будет видно как failure, а не потеряно молча. Неожиданный
+разрыв уже установленного соединения тоже теперь репортится отдельным
+failure-событием `ws_unexpected_disconnect` перед попыткой переподключения.
+
 ### `RATE_LIMITER_ENABLED` — мёртвый флаг
 
 `app_config.RATE_LIMITER_ENABLED` объявлен (`app/core/configs/app.py`), но
@@ -163,6 +206,7 @@ loadtests/
 │   ├── tokens.py                   # минтинг JWT через JWTManager/UserJWTData приложения
 │   ├── manifest.py                 # чтение manifest.json, который пишет seed.py
 │   ├── ws_client.py                 # тонкая обёртка над websocket-client под протокол ws.py
+│   ├── ws_protocol.py               # ожидание ws.subscribed/ws.history-ack (ws_fanout.py + ws_churn.py)
 │   ├── net.py                      # синтетический X-Forwarded-For на пользователя
 │   ├── rate_limiter.py             # клиентский token bucket для сценария (c)
 │   └── acceptance.py               # acceptance-критерии как код, поверх Locust stats API
@@ -195,7 +239,8 @@ docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml up -d \
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm migrations
 
 # 4. Засеять данные (N/M/K и размеры — все аргументы командной строки, п.2 промпта)
-docker compose   -f docker-compose.yaml   -f docker-compose.loadtest.yaml   run --rm loadtest-seed   python -m loadtests.seed   --users 6000   --direct-chats 1500   --group-chats 2000   --supergroups 6   --channels 2
+docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm loadtest-seed \
+    --users 6000 --direct-chats 1500 --group-chats 2000 --supergroups 6 --channels 2
 
 # 5a. Сценарий (a): REST throughput
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm \
@@ -203,6 +248,10 @@ docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm \
     loadtest-rest-throughput
 
 # 5b. Сценарий (b): WS fanout latency — прогнать ОБА варианта отдельно
+# ВАЖНО: --users не может превышать 2×(число участников выбранного чата) —
+# тест сам это проверит при старте и упадёт с понятной ошибкой, если
+# засеянная супергруппа слишком мала для запрошенного числа читателей
+# (см. "Находки" — WS_MAX_CONNECTIONS_PER_USER=2).
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm \
     -e LOCUST_CHAT_KIND=group -e LOCUST_USERS=400 -e LOCUST_WRITER_RATE=2 -e LOCUST_RUN_TIME=5m \
     loadtest-ws-fanout
@@ -217,7 +266,7 @@ docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm \
 
 # Уборка данных теста (по манифесту — трогает ТОЛЬКО то, что засеял seed.py)
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml run --rm loadtest-seed \
-    --cleanup
+    -- --cleanup
 ```
 
 Locust понимает свои опции (и любые кастомные, добавленные через
