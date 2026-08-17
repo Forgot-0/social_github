@@ -1,5 +1,4 @@
 import logging
-import re
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 

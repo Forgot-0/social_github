@@ -3,6 +3,7 @@ import logging
 from dataclasses import dataclass
 
 import magic
+import pyvips
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -52,8 +53,8 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
             raise AvatarNotImageTypeError(type_avatar=mime)
 
         img: pyvips.Image = pyvips.Image.new_from_buffer(data, "", access="sequential") # type: ignore
-        if img.width <= 0 or img.height <= 0 or img.width * img.height > profile_config.AVATAR_MAX_PIXELS:
-            raise AvatarSizeError(current_size=img.width * img.height)
+        if img.width <= 0 or img.height <= 0 or img.width * img.height > profile_config.AVATAR_MAX_PIXELS: # type: ignore
+            raise AvatarSizeError(current_size=img.width * img.height) # type: ignore
 
         versions = {}
 

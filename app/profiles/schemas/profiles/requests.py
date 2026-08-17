@@ -1,10 +1,9 @@
 from datetime import date
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from app.core.api.filter_mapper import FilterMapper
 from app.core.filters.pagination import Pagination
-from app.profiles.exceptions import AvatarNotImageTypeError
 from app.profiles.filters.profiles import ProfileFilter
 
 

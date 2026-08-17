@@ -38,21 +38,20 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                 with_role=False
             )
             if member is None or member.is_banned:
-                event = {
+                command.conn.try_send({
                     "type": "ws.error",
                     "code": "NOT_CHAT_MEMBER",
                     "detail": "You are not a member of this chat"
-                }
-                command.conn.try_send(event)
+                })
                 return
 
             await self.manager.subscribe_chat(command.conn, chat_id)
-            event = {
+            command.conn.try_send({
                 "type": "ws.subscribed",
                 "chat_id": chat_id,
                 "payload": {"last_seq": cursor_seq},
-            }
-            command.conn.try_send(event)
+            })
+
             limit = chat_config.WS_REPLAY_BATCH_SIZE
             cursor_seq = max(0, cursor_seq)
             messages = await self.message_repository.get_chat_messages_after_seq(
@@ -60,6 +59,7 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                 last_seq=cursor_seq,
                 limit=limit,
             )
+
             batch = messages[:limit]
             next_last_seq = batch[-1].seq if batch else cursor_seq
             command.conn.last_seq_by_chat[chat_id] = next_last_seq

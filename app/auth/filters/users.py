@@ -56,7 +56,7 @@ class UserFilter(BaseFilter):
             operator = FilterOperator.IS_NOT_NULL_FROM if self.has_sessions else FilterOperator.IS_NULL_FROM
             self.add_condition("sessions", operator, None)
 
-        self.add_condition("roles.name", FilterOperator.IN, self.role_names)
+        self.add_condition("roles.name", FilterOperator.ALL, self.role_names)
 
         self.add_condition("permissions.name", FilterOperator.IN, self.permission_names)
 

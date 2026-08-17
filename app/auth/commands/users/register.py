@@ -37,7 +37,6 @@ class RegisterCommandHandler(BaseCommandHandler[RegisterCommand, UserDTO]):
             raise DuplicateUserError(field="email", value=command.email)
 
         username_user = await self.user_repository.get_by_username(command.username)
-
         if username_user is not None:
             raise DuplicateUserError(field="username", value=command.username)
 

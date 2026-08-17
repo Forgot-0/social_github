@@ -15,9 +15,9 @@ class PingCommand(BaseCommand):
 @dataclass(frozen=True)
 class PingCommandHandler(BaseCommandHandler[PingCommand, None]):
     async def handle(self, command: PingCommand) -> None:
-        event = {"type": "ws.pong", "payload": {}}
-        event.setdefault("ts", now_utc().isoformat())
-        command.conn.try_send(event)
-
-
+        command.conn.try_send({
+            "type": "ws.pong",
+            "payload": {},
+            "ts": now_utc().isoformat()
+        })
 

@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
-from app.core.services.storage.dtos import ContentTypeFilter, UploadFilePost
 from app.core.services.storage.service import StorageService
 from app.profiles.config import profile_config
 from app.profiles.dtos.profiles import AvatarPresign

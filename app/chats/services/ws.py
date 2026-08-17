@@ -329,7 +329,6 @@ class ChatConnectionManager:
             except Exception:
                 logger.exception("WebSocket route refresh failed")
 
-
     async def _consume_gateway_stream_loop(self) -> None:
         consecutive_errors = 0
         try:

@@ -238,7 +238,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             )
 
         result = await self.session.execute(stmt)
-        return list(result.all())  # type: ignore[return-value]
+        return list(result.tuples())
 
     def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
         return stmt

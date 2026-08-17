@@ -1,9 +1,11 @@
 import logging
+from contextlib import suppress
 from dataclasses import dataclass, field
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.dtos.chats import ChatDTO
+from app.chats.exceptions import LiveKitServiceError
 from app.chats.models.chat import Chat, ChatType
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.livekit_service import LiveKitService
@@ -51,10 +53,8 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
         await self.event_bus.publish(chat.pull_events())
         await self.session.commit()
 
-        try:
+        with suppress(LiveKitServiceError):
             await self.livekit_sevice.create_room(str(chat.id))
-        except:
-            pass
 
         logger.info(
             "Create chat", extra={

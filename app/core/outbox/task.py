@@ -31,7 +31,7 @@ class OutboxCleanupTask(BaseTask):
     async def run(
         outbox_repository: FromDishka[OutboxRepository],
         retention_days: int | None = None,
-    ) -> int:
+    ) -> None:
         total_deleted = 0
         for _ in range(MAX_CLEANUP_BATCHES_PER_RUN):
             deleted = await outbox_repository.cleanup_older_than(
@@ -51,4 +51,3 @@ class OutboxCleanupTask(BaseTask):
                 "retention_days": retention_days or app_config.OUTBOX_RETENTION_DAYS,
             },
         )
-        return total_deleted

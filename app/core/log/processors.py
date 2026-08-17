@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -20,7 +21,7 @@ ProcessorType = Callable[
 
 
 def additionally_serialize(obj: object) -> Any:
-    if isinstance(obj, UUID | set):
+    if isinstance(obj, UUID | set | datetime):
         return str(obj)
 
     logger.warning("Not serializable: %s", type(obj), extra={"obj": repr(obj)})

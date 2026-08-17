@@ -35,21 +35,19 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
         )
 
         if member is None or member.is_banned:
-            event = {
+            command.conn.try_send({
                 "type": "ws.error",
                 "code": "NOT_CHAT_MEMBER",
                 "detail": "You are not a member of this chat"
-            }
-            command.conn.try_send(event)
+            })
             return
 
         await self.manager.subscribe_chat(command.conn, command.chat_id)
-        event = {
+        command.conn.try_send({
             "type": "ws.subscribed",
             "chat_id": str(chat_id),
             "payload": {"last_seq": command.last_seq},
-        }
-        command.conn.try_send(event)
+        })
 
         if command.last_seq is not None:
             limit = chat_config.WS_REPLAY_BATCH_SIZE

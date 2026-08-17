@@ -1,5 +1,4 @@
 from collections.abc import Iterable, Iterator
-from datetime import UTC, datetime
 from typing import Any
 
 from app.chats.schemas.ws import WSEventType

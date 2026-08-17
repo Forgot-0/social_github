@@ -7,7 +7,7 @@ from app.core.exceptions import ApplicationError
 class StorageError(ApplicationError):
     code: str = "STORAGE_UNKNOW_ERROR"
     status: int = 500
-    
+
 
 @dataclass(kw_only=True)
 class ObjectNotFoundError(StorageError):
