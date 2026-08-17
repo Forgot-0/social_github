@@ -32,9 +32,9 @@ class RoleRepository(IRepository[Role]):
     async def create(self, role: Role) -> None:
         self.session.add(role)
 
-    def apply_relationship_filters(self, stmt: Select, filters: RoleFilter) -> Select:
-        if filters.permission_names:
-            stmt = stmt.where(Role.permissions.any(Permission.name.in_(filters.permission_names)))
+    def apply_relationship_filters(self, stmt: Select, _filters: RoleFilter) -> Select:
+        if _filters.permission_names:
+            stmt = stmt.where(Role.permissions.any(Permission.name.in_(_filters.permission_names)))
 
         return stmt
 

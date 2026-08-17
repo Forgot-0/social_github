@@ -216,7 +216,7 @@ class Profile(BaseModel, DateMixin, SoftDeleteMixin):
         )
 
     @validates("skills")
-    def validate_skills(self, key: Any, value: list[str]) -> list[str]:
+    def validate_skills(self, _key: Any, value: list[str]) -> list[str]:
 
         if len(value) != len(set(value)):
             raise ValueError("Duplicate skills are not allowed")

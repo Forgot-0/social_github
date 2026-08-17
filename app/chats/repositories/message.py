@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import Select, and_, select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import selectinload
 
 from app.chats.models.message import Message
 from app.core.db.repository import IRepository
-from app.core.filters.base import BaseFilter
 
 
 def _message_load_options() -> list:
@@ -119,6 +118,3 @@ class MessageRepository(IRepository[Message]):
         combined = list(older_res.scalars().all()) + list(newer_res.scalars().all())
 
         return combined
-
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        return stmt

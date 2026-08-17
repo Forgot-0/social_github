@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
-from sqlalchemy import Select, func, select, update
+from sqlalchemy import func, select, update
 
 from app.core.db.repository import CacheRepository, IRepository
-from app.notifications.filters.notifications import NotificationFilter
 from app.notifications.models.notification import Notification
 
 
@@ -35,6 +34,3 @@ class NotificationRepository(IRepository[Notification], CacheRepository):
             .execution_options(synchronize_session=False)
         )
         return 0
-
-    def apply_relationship_filters(self, stmt: Select, filters: NotificationFilter) -> Select:
-        return stmt

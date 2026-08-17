@@ -23,10 +23,10 @@ operators_map = {
     FilterOperator.ANY: lambda a, v: a.overlap(v),
     FilterOperator.STARTS_WITH: lambda a, v: a.ilike(f"{v}%"),
     FilterOperator.ENDS_WITH: lambda a, v: a.ilike(f"%{v}"),
-    FilterOperator.IS_NULL: lambda a, v: a.is_(None),
-    FilterOperator.IS_NOT_NULL: lambda a, v: a.is_not(None),
-    FilterOperator.IS_NULL_FROM: lambda a, v: ~a.any(),
-    FilterOperator.IS_NOT_NULL_FROM: lambda a, v: a.any(),
+    FilterOperator.IS_NULL: lambda a, _v: a.is_(None),
+    FilterOperator.IS_NOT_NULL: lambda a, _v: a.is_not(None),
+    FilterOperator.IS_NULL_FROM: lambda a, _v: ~a.any(),
+    FilterOperator.IS_NOT_NULL_FROM: lambda a, _v: a.any(),
 }
 
 strategy_map = {

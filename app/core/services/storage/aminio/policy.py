@@ -37,7 +37,7 @@ class Policy(enum.Enum):
         return pol
 
 
-def _none(bucket_name: str) -> dict[str, Any]:
+def _none(_bucket_name: str) -> dict[str, Any]:
     return {"Version": "2012-10-17", "Statement": []}
 
 

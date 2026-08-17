@@ -214,7 +214,7 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         return None
 
     @validates("tags")
-    def validate_tags(self, key: str, value: list[str]) -> list[str]:
+    def validate_tags(self, _key: str, value: list[str]) -> list[str]:
 
         if len(value) != len(set(value)):
             raise ValueError("Duplicate skills are not allowed")

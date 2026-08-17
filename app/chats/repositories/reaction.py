@@ -2,12 +2,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID, uuid7
 
-from sqlalchemy import Select, func, select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from app.chats.models.reaction import MessageReaction, MessageReactionCounter
 from app.core.db.repository import IRepository
-from app.core.filters.base import BaseFilter
 from app.core.utils import now_utc
 
 SET_REACTION_SQL = text(
@@ -193,6 +192,3 @@ class MessageReactionRepository(IRepository[MessageReaction]):
 
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
-
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        return stmt

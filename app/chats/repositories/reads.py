@@ -1,19 +1,14 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import Select
 from sqlalchemy.dialects.postgresql import insert
 
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import IRepository
-from app.core.filters.base import BaseFilter
 
 
 @dataclass
 class ReadReceiptRepository(IRepository[ReadReceipt]):
-
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        return stmt
 
     async def mark_read(self, user_id: int, chat_id: UUID, message_seq: int) -> None:
         stmt = insert(ReadReceipt).values({

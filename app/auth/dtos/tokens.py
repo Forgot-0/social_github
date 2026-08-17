@@ -8,7 +8,7 @@ from app.auth.models.oauth import OAuthProviderEnum
 class TokenType(StrEnum):
     ACCESS = "access"
     REFRESH = "refresh"
-    PASSWORD_RESET = "password_reset"
+    PASSWORD_RESET = "password_reset" # noqa: S105
     EMAIL_CHANGE = "email_change_token"
     OAUTH_CONNECT = "oauth_connect_state"
 

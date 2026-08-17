@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from redis.asyncio import Redis
-from sqlalchemy import Select, select, update
+from sqlalchemy import select, update
 
 from app.auth.config import auth_config
 from app.auth.models.session import Session
 from app.core.db.repository import IRepository
-from app.core.filters.base import BaseFilter
 from app.core.utils import fromtimestamp, now_utc
 
 
@@ -39,8 +38,6 @@ class SessionRepository(IRepository[Session]):
     async def create(self, session: Session) -> None:
         self.session.add(session)
 
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        return stmt
 
 @dataclass
 class TokenBlacklistRepository:

@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
-from sqlalchemy import Select, select
+from sqlalchemy import select
 
 from app.core.db.repository import IRepository
-from app.core.filters.base import BaseFilter
 from app.projects.models.role import ProjectRole
 
 
@@ -23,6 +22,3 @@ class ProjectRoleRepository(IRepository[ProjectRole]):
 
     async def create(self, project_role: ProjectRole) -> None:
         self.session.add(project_role)
-
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        return stmt

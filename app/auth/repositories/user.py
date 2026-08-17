@@ -65,12 +65,12 @@ class UserRepository(IRepository[User], CacheRepository):
         if user:
             user.soft_delete()
 
-    def apply_relationship_filters(self, stmt: Select, filters: UserFilter) -> Select:
+    def apply_relationship_filters(self, stmt: Select, _filters: UserFilter) -> Select:
 
-        if filters.role_names:
-            stmt = stmt.join(User.roles).where(User.roles.contains(filters.role_names))
+        if _filters.role_names:
+            stmt = stmt.join(User.roles).where(User.roles.contains(_filters.role_names))
 
-        if filters.permission_names:
-            stmt = stmt.join(User.permissions).where(Permission.name.in_(filters.permission_names))
+        if _filters.permission_names:
+            stmt = stmt.join(User.permissions).where(Permission.name.in_(_filters.permission_names))
 
         return stmt

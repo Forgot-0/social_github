@@ -18,14 +18,14 @@ setup_dishka(container=container, broker=broker)
 configure_logging()
 
 @broker.on_event(TaskiqEvents.WORKER_STARTUP)
-async def startup(state: TaskiqState) -> None:
+async def startup(_state: TaskiqState) -> None:
     message_broker = await container.get(BaseMessageBroker)
     await message_broker.start()
     logger.info("Startup task iq")
 
 
 @broker.on_event(TaskiqEvents.WORKER_SHUTDOWN)
-async def shutdown(state: TaskiqState) -> None:
+async def shutdown(_state: TaskiqState) -> None:
     message_broker = await container.get(BaseMessageBroker)
     await message_broker.close()
     logger.info("Shutdown task iq")

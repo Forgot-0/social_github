@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 
-from sqlalchemy import Select, and_, func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.core.db.repository import CacheRepository, IRepository, PageResult
-from app.core.filters.base import BaseFilter
 from app.projects.models.member import MembershipStatus, ProjectMembership
 from app.projects.models.project import Project
 
@@ -82,6 +81,3 @@ class ProjectRepository(IRepository[Project], CacheRepository):
         items = result.scalars().all()
 
         return PageResult(items=list(items), total=total, page=page, page_size=page_size)
-
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        return stmt

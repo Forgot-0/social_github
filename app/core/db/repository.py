@@ -1,5 +1,5 @@
 import hashlib
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, ParamSpec, TypeVar
@@ -99,9 +99,12 @@ class IRepository[T](ABC):
         result = await self.session.execute(stmt)
         return result.scalar_one()
 
-    @abstractmethod
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        ...
+    def apply_relationship_filters(
+        self,
+        stmt: Select,
+        _filters: BaseFilter,
+    ) -> Select:
+        return stmt
 
 B = TypeVar("B", bound=BaseModel)
 

@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Select, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert
 
 from app.chats.models.profile import ChatUserProfile
 from app.core.db.repository import CacheRepository, IRepository
-from app.core.filters.base import BaseFilter
 from app.core.utils import now_utc
 
 
@@ -75,6 +74,3 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
         )
         result = await self.session.execute(stmt)
         return result.scalar() is not None
-
-    def apply_relationship_filters(self, stmt: Select, filters: BaseFilter) -> Select:
-        return stmt
