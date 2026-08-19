@@ -30,9 +30,11 @@ class PresenceService:
     async def get_online_status(self, user_ids: list[int]) -> dict[int, bool]:
         if not user_ids:
             return {}
+
         now_ts = now_utc().timestamp()
         members = [str(uid) for uid in user_ids]
         scores = await self.redis.zmscore(ChatKeys.presence_last_seen_zset(), members)
+
         return {
             uid: self._is_fresh_score(score, now_ts)
             for uid, score in zip(user_ids, scores, strict=False)

@@ -53,12 +53,11 @@ class RoleInvalidateRepository:
 
     async def get_role_invalidation_time(self, role_name: str) -> str | None:
         key = f"invalid_role:{role_name}"
-        return await self.client.get(key)
+        return await self.client.get(key) # pyright: ignore[reportReturnType]
 
     async def get_max_invalidation_time(self, role_names: list[str]) -> datetime:
         keys = [f"invalid_role:{permission_name}" for permission_name in role_names]
         values = await self.client.mget(*keys)
-        if values is None:
-            return fromtimestamp(0.00)
-        max_date = max(values, key=lambda x: fromtimestamp(float(x)))
-        return fromtimestamp(float(max_date))
+
+        max_date = max(values, key=lambda x: fromtimestamp(float(x))) # pyright: ignore[reportArgumentType]
+        return fromtimestamp(float(max_date)) # pyright: ignore[reportArgumentType]

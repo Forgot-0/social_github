@@ -44,7 +44,7 @@ class OAuthCodeRepository:
         )
 
     async def get_state(self, state: str) -> int | None:
-        state = await self.client.get(f"state:{state}")
+        state = await self.client.get(f"state:{state}") # pyright: ignore[reportAssignmentType]
         if state is None:
             return None
 

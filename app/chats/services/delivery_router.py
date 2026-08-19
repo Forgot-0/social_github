@@ -131,7 +131,7 @@ class ChatDeliveryRouter:
             parsed = parse_active_subscription_route(route)
             if parsed is None:
                 with contextlib.suppress(Exception):
-                    await self.redis.srem(key, route) # type: ignore
+                    await self.redis.srem(key, route)
                 continue
 
             batch.append(parsed)
@@ -162,7 +162,7 @@ class ChatDeliveryRouter:
 
         if stale:
             asyncio.create_task(
-                self.redis.srem(subscription_key, *stale),  # type: ignore[arg-type]
+                self.redis.srem(subscription_key, *stale), # pyright: ignore[reportArgumentType]
                 name="ws:sub:cleanup:stale",
             )
 

@@ -129,7 +129,7 @@ class MessageService:
             )
             await self.redis.set(key, url, ex=chat_config.DOWNLOAD_URL_TTL-30)
 
-        return url
+        return url # pyright: ignore[reportReturnType]
 
     async def get_chat_profile_url_by_key(self, s3_key: str) -> str:
         key = f"chat:profile:{s3_key}"
@@ -142,4 +142,4 @@ class MessageService:
             )
             await self.redis.set(key, url, ex=chat_config.DOWNLOAD_URL_TTL-30)
 
-        return url
+        return url # pyright: ignore[reportReturnType]

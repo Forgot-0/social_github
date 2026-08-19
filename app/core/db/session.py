@@ -1,10 +1,12 @@
-from sqlalchemy import AsyncAdaptedQueuePool, NullPool
+from sqlalchemy import AsyncAdaptedQueuePool, NullPool, Pool
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.configs.app import app_config
 
 
 def create_engine() -> AsyncEngine:
+    pool_class: type[Pool]
+
     if app_config.ENVIRONMENT == "testing":
         pool_class = NullPool
         pool_size = 0

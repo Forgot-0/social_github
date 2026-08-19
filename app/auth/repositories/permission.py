@@ -42,13 +42,12 @@ class PermissionInvalidateRepository:
 
     async def get_permission_invalidation_time(self, permission_name: str) -> str | None:
         key = f"invalid_permission:{permission_name}"
-        return await self.client.get(key)
+        return await self.client.get(key) # pyright: ignore[reportReturnType]
 
     async def get_max_invalidation_time(self, permission_names: list[str]) -> datetime:
         keys = [f"invalid_permission:{permission_name}" for permission_name in permission_names]
         values = await self.client.mget(*keys)
-        if values is None:
-            return fromtimestamp(0.00)
-        max_date = max(values, key=lambda x: fromtimestamp(float(x)))
-        return fromtimestamp(float(max_date))
+
+        max_date = max(values, key=lambda x: fromtimestamp(float(x))) # pyright: ignore[reportArgumentType]
+        return fromtimestamp(float(max_date)) # pyright: ignore[reportArgumentType]
 

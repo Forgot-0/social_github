@@ -24,7 +24,7 @@ _LOCAL_SEND_BATCH_SIZE = 1_024
 @dataclass(slots=True)
 class ChatConnectionManager:
     redis: Redis
-    gateway_id: str = field(default_factory=lambda: os.getenv("GATEWAY_ID") or os.getenv("HOSTNAME", "local-gateway"))
+    gateway_id: str = field(default_factory=lambda: os.getenv("GATEWAY_ID", "") or os.getenv("HOSTNAME", "local-gateway"))
     connections_by_id: dict[str, WSConnection] = field(default_factory=dict)
     connections_by_user: dict[int, set[str]] = field(default_factory=lambda: defaultdict(set))
     subscriptions_by_chat: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
@@ -69,11 +69,11 @@ class ChatConnectionManager:
 
         gateway_connections = await self.redis.smembers(
             WebsocketKeys.gateway_route_key(self.gateway_id)
-        )  # type: ignore[misc]
+        )
         if gateway_connections:
             pipe = self.redis.pipeline(transaction=False)
             for cid in gateway_connections:
-                pipe.delete(WebsocketKeys.connection_key(cid))
+                pipe.delete(WebsocketKeys.connection_key(cid)) # pyright: ignore[reportArgumentType]
             pipe.delete(WebsocketKeys.gateway_route_key(self.gateway_id))
             await pipe.execute()
 
@@ -359,7 +359,7 @@ class ChatConnectionManager:
                 tasks = [
                     self._process_gateway_stream_entry(message_id, fields)
                     for _stream_name, stream_messages in messages
-                    for message_id, fields in stream_messages
+                    for message_id, fields in stream_messages # pyright: ignore[reportGeneralTypeIssues]
                 ]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 ack_ids: list[Any] = []
@@ -421,7 +421,10 @@ class ChatConnectionManager:
         )
 
     async def _enqueue_user_stream_delivery(self, user_id: int, event: dict[str, Any]) -> None:
-        routes: set[str] = await self.redis.smembers(WebsocketKeys.user_route_key(user_id))  # type: ignore[misc]
+        routes: set[str] = await self.redis.smembers(
+            WebsocketKeys.user_route_key(user_id)
+        ) # pyright: ignore[reportAssignmentType]
+
         gateways: set[str] = set()
         for raw in routes or ():
             gateway_id, _sep, connection_id = raw.partition(":")

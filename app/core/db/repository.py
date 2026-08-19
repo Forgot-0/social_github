@@ -148,10 +148,11 @@ class CacheRepository:
         data = await self.redis.get(key)
 
         if data is None:
-            data = await func(*args, **kwargs)
-            cached_data = data.model_dump_json()
+            data_dto = await func(*args, **kwargs)
+            cached_data = data_dto.model_dump_json()
             await self.redis.setex(key, time=ttl, value=cached_data)
-            return data
+            return data_dto
+
         return type_model.model_validate_json(data)
 
     async def cache(
@@ -177,16 +178,17 @@ class CacheRepository:
         **kwargs: P.kwargs,
     ) -> PageResult[B]:
         data = await self.redis.get(key)
+
         if data is None:
-            data = await func(*args, **kwargs)
+            data_dto = await func(*args, **kwargs)
             payload = {
-                "items": [item.model_dump_json() for item in data.items],
-                "total": data.total,
-                "page": data.page,
-                "page_size": data.page_size
+                "items": [item.model_dump_json() for item in data_dto.items],
+                "total": data_dto.total,
+                "page": data_dto.page,
+                "page_size": data_dto.page_size
             }
             await self.redis.setex(key, time=ttl, value=orjson.dumps(payload))
-            return data
+            return data_dto
 
         data = orjson.loads(data)
         return PageResult(
