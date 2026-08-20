@@ -14,6 +14,7 @@ from app.chats.dtos.delivery import build_ws_event, chunks, is_chat_domain_event
 from app.chats.keys import WebsocketKeys
 from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.repositories.chat import ChatRepository
+from app.core.consumers.event import DictEventDTO
 from app.core.utils import now_utc
 
 logger = logging.getLogger(__name__)
@@ -27,27 +28,27 @@ class ChatDeliveryRouter:
     redis: Redis
     chat_repository: ChatRepository
 
-    async def route_broker_message(self, message: dict[str, Any]) -> None:
-        if message is None or not is_chat_domain_event(message):
+    async def route_broker_message(self, event: DictEventDTO) -> None:
+        if event is None or not is_chat_domain_event(event.event_name):
             return
 
-        chat_id = message.get("chat_id")
+        chat_id = event.payload.get("chat_id")
         if not chat_id:
             logger.warning(
                 "Skipping chat event without chat_id",
-                extra={"event_name": message.get("event_name"), "event_id": message.get("event_id")},
+                extra={"event_name": event.event_name, "event_id": str(event.event_id)},
             )
             return
 
         try:
-            await self.route_chat_event(chat_id=str(chat_id), event=message)
+            await self.route_chat_event(chat_id=str(chat_id), event=event)
         except Exception:
             logger.exception(
                 "Failed to route chat event",
-                extra={"chat_id": chat_id, "event_id": message.get("event_id")},
+                extra={"chat_id": chat_id, "event_id": str(event.event_id)},
             )
 
-    async def route_chat_event(self, chat_id: str, event: dict[str, Any]) -> None:
+    async def route_chat_event(self, chat_id: str, event: DictEventDTO) -> None:
         ws_event = build_ws_event(event)
 
         chat = await self.chat_repository.get_by_id(UUID(chat_id))

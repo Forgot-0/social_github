@@ -108,7 +108,7 @@ async def send_message(
             )
         )
         if cache_key:
-            await redis.setex(cache_key, 86_400, result.model_dump_json())
+            await redis.set(cache_key, result.model_dump_json(), 86_400)
         return result
     finally:
         if lock_key:

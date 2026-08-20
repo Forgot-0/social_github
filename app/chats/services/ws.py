@@ -179,10 +179,10 @@ class ChatConnectionManager:
         pipe.expire(WebsocketKeys.active_subscription_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
         pipe.sadd(WebsocketKeys.active_subscription_gateways_key(chat_id), self.gateway_id)
         pipe.expire(WebsocketKeys.active_subscription_gateways_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
-        pipe.setex(
+        pipe.set(
             WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
-            chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
             route,
+            ex=chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
         )
         await pipe.execute()
 
@@ -268,9 +268,8 @@ class ChatConnectionManager:
         pipe.expire(WebsocketKeys.user_route_key(conn.user_id), chat_config.WS_REDIS_CONNECTION_TTL)
         pipe.sadd(WebsocketKeys.gateway_route_key(self.gateway_id), conn.connection_id)
         pipe.expire(WebsocketKeys.gateway_route_key(self.gateway_id), chat_config.WS_REDIS_CONNECTION_TTL)
-        pipe.setex(
+        pipe.set(
             WebsocketKeys.connection_key(conn.connection_id),
-            chat_config.WS_REDIS_CONNECTION_TTL,
             orjson.dumps(
                 {
                     "user_id": conn.user_id,
@@ -279,6 +278,7 @@ class ChatConnectionManager:
                     "connected_at": conn.connected_at.isoformat(),
                 }
             ),
+            ex=chat_config.WS_REDIS_CONNECTION_TTL,
         )
         await pipe.execute()
 
@@ -318,10 +318,10 @@ class ChatConnectionManager:
                                 WebsocketKeys.active_subscription_gateways_key(chat_id),
                                 chat_config.WS_ACTIVE_SUBSCRIPTION_TTL
                             )
-                            pipe.setex(
+                            pipe.set(
                                 WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
-                                chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
                                 route,
+                                ex=chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
                             )
                         await pipe.execute()
             except asyncio.CancelledError:

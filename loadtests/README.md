@@ -232,7 +232,7 @@ docker-compose.loadtest.yaml        # п.5 промпта
 docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml build loadtest-seed
 
 # 2. Поднять сам стенд (без бесконечных restart-сервисов очередей/scheduler — не нужны для теста)
-docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml up -d \
+docker compose -f docker-compose.yaml -f docker-compose.loadtest.yaml up -d --build \
     db redis kafka minio debezium debezium_connector app consumers
 
 # 3. Прогнать миграции + init_data (роли/chat_roles — без них seed.py упадёт с понятной ошибкой)

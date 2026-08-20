@@ -220,6 +220,7 @@ services:
       - "127.0.0.1:29092:29092"
     volumes:
       - kafka_data:/var/lib/kafka/data
+      - kafka_secrets:/etc/kafka/secrets
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "kafka:9092", "--list"]
       interval: 10s
@@ -319,7 +320,9 @@ volumes:
   postgres_data:
   redis-data:
   kafka_data:
+  kafka_secrets:
   miniodata:
+
 
 networks:
   app-network:
