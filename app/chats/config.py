@@ -30,8 +30,13 @@ class ChatConfig(BaseConfig):
     WS_MAX_CLIENT_FRAME_BYTES: int = 65_536
     RATE_LIMIT_MESSAGES_PER_SECOND: int = 10
 
+    WS_PRESENCE_TTL: int = 90
+    WS_PRESENCE_CLEANUP_EVERY_TICKS: int = 10
+
     CHAT_TOPIC: str = "chats"
     PROFILE_TOPIC: str= "profiles"
+
+    CHAT_OFFLINE_DELIVERY_TOPIC: str = "chats.offline-delivery"
 
     DELIVERY_ROUTER_GROUP_ID: str = "delivery-router"
     DELIVERY_ROUTER_CLIENT_ID: str = "delivery-router"
@@ -43,6 +48,10 @@ class ChatConfig(BaseConfig):
     WS_GATEWAY_STREAM_READ_COUNT: int = 200
     WS_GATEWAY_STREAM_BLOCK_MS: int = 5_000
     WS_GATEWAY_STREAM_USERS_PER_ENTRY: int = 1_000
+    WS_GATEWAY_STREAM_CLAIM_MIN_IDLE_MS: int = 60_000
+    WS_GATEWAY_STREAM_CLAIM_COUNT: int = 100
+    WS_GATEWAY_STREAM_CLAIM_INTERVAL: int = 30
+    WS_GATEWAY_STREAM_METRICS_INTERVAL: int = 15
 
     LIVEKIT_URL: str = "ws://localhost:7880"
     LIVEKIT_API_KEY: str = ""

@@ -12,9 +12,15 @@ from redis.asyncio import Redis
 from app.chats.config import chat_config
 from app.chats.dtos.delivery import build_ws_event, chunks, is_chat_domain_event
 from app.chats.keys import WebsocketKeys
+from app.chats.metrics import (
+    DELIVERY_ROUTER_OFFLINE_RECIPIENTS,
+    DELIVERY_ROUTER_OFFLINE_SIGNALS,
+    DELIVERY_ROUTER_STREAM_ENTRIES,
+)
 from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.repositories.chat import ChatRepository
 from app.core.consumers.event import DictEventDTO
+from app.core.message_brokers.base import BaseMessageBroker
 from app.core.utils import now_utc
 
 logger = logging.getLogger(__name__)
@@ -22,11 +28,14 @@ logger = logging.getLogger(__name__)
 RouteMap = dict[str, set[int]]
 ActiveSubscriptionRoute = tuple[int, str, str, str]
 
+OFFLINE_SIGNAL_EVENT_NAMES: frozenset[str] = frozenset({"chats.message.sent"})
+
 
 @dataclass(slots=True)
 class ChatDeliveryRouter:
     redis: Redis
     chat_repository: ChatRepository
+    broker: BaseMessageBroker
 
     async def route_broker_message(self, event: DictEventDTO) -> None:
         if event is None or not is_chat_domain_event(event.event_name):
@@ -64,6 +73,7 @@ class ChatDeliveryRouter:
                 chat_repo=self.chat_repository,
                 chat_id=UUID(chat_id),
                 ws_event=ws_event,
+                event=event,
             )
             return
 
@@ -74,6 +84,7 @@ class ChatDeliveryRouter:
         chat_repo: ChatRepository,
         chat_id: UUID,
         ws_event: dict[str, Any],
+        event: DictEventDTO | None = None,
     ) -> None:
         async for member_ids in chat_repo.iter_member_ids(
             chat_id=chat_id,
@@ -81,6 +92,15 @@ class ChatDeliveryRouter:
         ):
             for lookup_batch in chunks(member_ids, chat_config.DELIVERY_ROUTER_ROUTE_LOOKUP_BATCH_SIZE):
                 routes = await self._lookup_online_routes(lookup_batch)
+
+                await self._publish_offline_signal(
+                    chat_id=chat_id,
+                    ws_event=ws_event,
+                    event=event,
+                    lookup_batch=lookup_batch,
+                    routes=routes,
+                )
+
                 await self._enqueue_gateway_deliveries(
                     routes,
                     ws_event,
@@ -94,6 +114,61 @@ class ChatDeliveryRouter:
                 ws_event,
                 require_subscription=True,
             )
+
+    async def _publish_offline_signal(
+        self,
+        chat_id: UUID,
+        ws_event: dict[str, Any],
+        event: DictEventDTO | None,
+        lookup_batch: Iterable[int],
+        routes: RouteMap,
+    ) -> None:
+        event_name = str(ws_event.get("event_name") or (event.event_name if event else ""))
+        if event_name not in OFFLINE_SIGNAL_EVENT_NAMES:
+            return
+
+        online_user_ids: set[int] = set()
+        for gateway_users in routes.values():
+            online_user_ids |= gateway_users
+
+        offline_user_ids = sorted(set(lookup_batch) - online_user_ids)
+        if not offline_user_ids:
+            return
+
+        payload = ws_event.get("payload") or {}
+        message_id = payload.get("message_id")
+        sender_id = payload.get("sender_id")
+
+        data = {
+            "event_id": str(ws_event.get("event_id") or (event.event_id if event else "")),
+            "event_name": event_name,
+            "chat_id": str(chat_id),
+            "message_id": str(message_id) if message_id is not None else None,
+            "sender_id": int(sender_id) if sender_id is not None else None,
+            "offline_user_ids": offline_user_ids,
+            "occurred_at": str(ws_event.get("ts") or ""),
+        }
+
+        try:
+            await self.broker.send_data(
+                key=str(chat_id),
+                topic=chat_config.CHAT_OFFLINE_DELIVERY_TOPIC,
+                data=data,
+            )
+        except Exception:
+            DELIVERY_ROUTER_OFFLINE_SIGNALS.labels(result="error").inc()
+            logger.exception(
+                "Failed to publish offline delivery signal",
+                extra={
+                    "chat_id": str(chat_id),
+                    "event_id": data["event_id"],
+                    "offline_recipients": len(offline_user_ids),
+                },
+            )
+            return
+
+        DELIVERY_ROUTER_OFFLINE_SIGNALS.labels(result="ok").inc()
+        DELIVERY_ROUTER_OFFLINE_RECIPIENTS.inc(len(offline_user_ids))
 
     async def _lookup_online_routes(self, user_ids: Iterable[int]) -> RouteMap:
         ids = [int(user_id) for user_id in user_ids]
@@ -180,6 +255,7 @@ class ChatDeliveryRouter:
             return
 
         ts = ws_event.get("ts") or now_utc().isoformat()
+        strategy = str(ws_event.get("fanout_strategy") or "unknown")
         pipe = self.redis.pipeline(transaction=False)
         enqueued = 0
 
@@ -215,6 +291,8 @@ class ChatDeliveryRouter:
             )
             raise
 
+        DELIVERY_ROUTER_STREAM_ENTRIES.labels(strategy=strategy).inc(enqueued)
+
     async def _cleanup_stale_user_routes(self, stale_routes_by_user: list[tuple[int, str]]) -> None:
         pipe = self.redis.pipeline(transaction=False)
         for user_id, route in stale_routes_by_user:
@@ -232,3 +310,4 @@ def parse_active_subscription_route(route: str) -> ActiveSubscriptionRoute | Non
         return int(user_id_str), gateway_id, connection_id, route
     except ValueError:
         return None
+

@@ -10,6 +10,7 @@ from fastapi import WebSocket
 from starlette.websockets import WebSocketState
 
 from app.chats.config import chat_config
+from app.chats.metrics import EVICTION_REASON_HEARTBEAT_TIMEOUT, WS_CONNECTION_EVICTIONS
 from app.core.utils import now_utc
 
 
@@ -84,6 +85,10 @@ class WSConnection:
                 idle = (now_utc() - self.last_seen_at).total_seconds()
 
                 if idle > chat_config.WS_HEARTBEAT_TIMEOUT:
+                    WS_CONNECTION_EVICTIONS.labels(
+                        gateway_id=self.gateway_id,
+                        reason=EVICTION_REASON_HEARTBEAT_TIMEOUT,
+                    ).inc()
                     await self.close(code=1001, reason="heartbeat timeout")
                     return
 
@@ -103,10 +108,13 @@ class WSConnection:
         self.last_seen_at = now_utc()
 
     def try_send(self, event: dict[str, Any]) -> bool:
+
         if self.closed:
             return False
+
+        event["enqueued_at"] = now_utc().isoformat()
+
         try:
-            event["ts"] = now_utc().isoformat()
             self.send_queue.put_nowait(orjson.dumps(event))
         except asyncio.QueueFull:
             return False

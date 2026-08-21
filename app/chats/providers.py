@@ -58,8 +58,8 @@ from app.core.mediators.base import CommandRegistry, QueryRegistry
 
 class ChatModuleProvider(Provider):
     @provide(scope=Scope.APP)
-    def chat_connection_manager(self, redis: Redis) -> ChatConnectionManager:
-        return ChatConnectionManager(redis=redis)
+    def chat_connection_manager(self, redis: Redis, presence_service: PresenceService) -> ChatConnectionManager:
+        return ChatConnectionManager(redis=redis, presence_service=presence_service)
 
     @provide(scope=Scope.REQUEST)
     def livekit_service(self) -> LiveKitService:
