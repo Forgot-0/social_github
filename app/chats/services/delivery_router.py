@@ -2,15 +2,14 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncIterator, Iterable
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import asdict, dataclass
 from uuid import UUID
 
 import orjson
 from redis.asyncio import Redis
 
 from app.chats.config import chat_config
-from app.chats.dtos.delivery import build_ws_event, chunks, is_chat_domain_event
+from app.chats.dtos.delivery import WsEvent, chunks, is_chat_domain_event
 from app.chats.keys import WebsocketKeys
 from app.chats.metrics import (
     DELIVERY_ROUTER_OFFLINE_RECIPIENTS,
@@ -21,7 +20,6 @@ from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.repositories.chat import ChatRepository
 from app.core.consumers.event import DictEventDTO
 from app.core.message_brokers.base import BaseMessageBroker
-from app.core.utils import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -58,22 +56,19 @@ class ChatDeliveryRouter:
             )
 
     async def route_chat_event(self, chat_id: str, event: DictEventDTO) -> None:
-        ws_event = build_ws_event(event)
 
         chat = await self.chat_repository.get_by_id(UUID(chat_id))
         if chat is None:
             logger.warning("Skipping event for unknown chat", extra={"chat_id": chat_id})
             return
 
-        strategy = chat.fanout_strategy
-        ws_event["fanout_strategy"] = strategy.value
+        ws_event = WsEvent.build(event, fanout_strategy=chat.fanout_strategy)
 
-        if strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
+        if ws_event.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
             await self._route_fanout_on_write(
                 chat_repo=self.chat_repository,
                 chat_id=UUID(chat_id),
                 ws_event=ws_event,
-                event=event,
             )
             return
 
@@ -83,8 +78,7 @@ class ChatDeliveryRouter:
         self,
         chat_repo: ChatRepository,
         chat_id: UUID,
-        ws_event: dict[str, Any],
-        event: DictEventDTO | None = None,
+        ws_event: WsEvent,
     ) -> None:
         async for member_ids in chat_repo.iter_member_ids(
             chat_id=chat_id,
@@ -96,7 +90,6 @@ class ChatDeliveryRouter:
                 await self._publish_offline_signal(
                     chat_id=chat_id,
                     ws_event=ws_event,
-                    event=event,
                     lookup_batch=lookup_batch,
                     routes=routes,
                 )
@@ -107,7 +100,7 @@ class ChatDeliveryRouter:
                     require_subscription=False,
                 )
 
-    async def _route_to_active_subscribers(self, chat_id: str, ws_event: dict[str, Any]) -> None:
+    async def _route_to_active_subscribers(self, chat_id: str, ws_event: WsEvent) -> None:
         async for routes_by_gateway in self._iter_active_subscriber_routes(chat_id):
             await self._enqueue_gateway_deliveries(
                 routes_by_gateway,
@@ -118,13 +111,11 @@ class ChatDeliveryRouter:
     async def _publish_offline_signal(
         self,
         chat_id: UUID,
-        ws_event: dict[str, Any],
-        event: DictEventDTO | None,
+        ws_event: WsEvent,
         lookup_batch: Iterable[int],
         routes: RouteMap,
     ) -> None:
-        event_name = str(ws_event.get("event_name") or (event.event_name if event else ""))
-        if event_name not in OFFLINE_SIGNAL_EVENT_NAMES:
+        if ws_event.event_name not in OFFLINE_SIGNAL_EVENT_NAMES:
             return
 
         online_user_ids: set[int] = set()
@@ -135,18 +126,18 @@ class ChatDeliveryRouter:
         if not offline_user_ids:
             return
 
-        payload = ws_event.get("payload") or {}
+        payload = ws_event.payload
         message_id = payload.get("message_id")
         sender_id = payload.get("sender_id")
 
         data = {
-            "event_id": str(ws_event.get("event_id") or (event.event_id if event else "")),
-            "event_name": event_name,
+            "event_id": ws_event.event_id,
+            "event_name": ws_event.event_name,
             "chat_id": str(chat_id),
             "message_id": str(message_id) if message_id is not None else None,
             "sender_id": int(sender_id) if sender_id is not None else None,
             "offline_user_ids": offline_user_ids,
-            "occurred_at": str(ws_event.get("ts") or ""),
+            "occurred_at": ws_event.ts,
         }
 
         try:
@@ -247,15 +238,13 @@ class ChatDeliveryRouter:
     async def _enqueue_gateway_deliveries(
         self,
         routes_by_gateway: RouteMap,
-        ws_event: dict[str, Any],
+        ws_event: WsEvent,
         *,
         require_subscription: bool,
     ) -> None:
         if not routes_by_gateway:
             return
 
-        ts = ws_event.get("ts") or now_utc().isoformat()
-        strategy = str(ws_event.get("fanout_strategy") or "unknown")
         pipe = self.redis.pipeline(transaction=False)
         enqueued = 0
 
@@ -263,8 +252,8 @@ class ChatDeliveryRouter:
             stream_key = WebsocketKeys.gateway_stream_key(gateway_id)
             for user_chunk in chunks(sorted(user_ids), chat_config.WS_GATEWAY_STREAM_USERS_PER_ENTRY):
                 stream_event = {
-                    **ws_event,
-                    "ts": ts,
+                    **asdict(ws_event),
+                    "ts": ws_event.ts,
                     "require_subscription": require_subscription,
                 }
                 pipe.xadd(
@@ -272,7 +261,7 @@ class ChatDeliveryRouter:
                     fields={
                         "event": orjson.dumps(stream_event),
                         "user_ids": orjson.dumps(user_chunk),
-                        "chat_id": str(ws_event.get("chat_id") or ""),
+                        "chat_id": str(ws_event.chat_id),
                     },
                     maxlen=chat_config.WS_GATEWAY_STREAM_MAXLEN,
                     approximate=True,
@@ -291,7 +280,7 @@ class ChatDeliveryRouter:
             )
             raise
 
-        DELIVERY_ROUTER_STREAM_ENTRIES.labels(strategy=strategy).inc(enqueued)
+        DELIVERY_ROUTER_STREAM_ENTRIES.labels(strategy=ws_event.fanout_strategy.value).inc(enqueued)
 
     async def _cleanup_stale_user_routes(self, stale_routes_by_user: list[tuple[int, str]]) -> None:
         pipe = self.redis.pipeline(transaction=False)

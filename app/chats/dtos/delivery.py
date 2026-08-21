@@ -1,6 +1,9 @@
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 from typing import Any
+from uuid import UUID
 
+from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.schemas.ws import WSEventType
 from app.core.consumers.event import DictEventDTO
 
@@ -31,28 +34,30 @@ def is_chat_domain_event(event_name: str) -> bool:
     return event_name.startswith(CHAT_DOMAIN_EVENT_PREFIX)
 
 
-def build_ws_event(event: DictEventDTO) -> dict[str, Any]:
-    chat_id = event.payload.get("chat_id")
+@dataclass
+class WsEvent:
+    type: str
+    event_name: str
+    event_id: str
+    chat_id: UUID
+    payload: dict[str, Any]
+    ts: str
+    seq: int | None
+    fanout_strategy: ChatFanoutStrategy
 
-    payload = {
-        key: value
-        for key, value in event.payload.items()
-        if key not in _ENVELOPE_FIELDS and key != "chat_id"
-    }
+    @classmethod
+    def build(cls, event: DictEventDTO, fanout_strategy: ChatFanoutStrategy) -> WsEvent:
+        return WsEvent(
+            type=CHAT_EVENT_TO_WS_TYPE.get(event.event_name, event.event_name),
+            event_id=str(event.event_id),
+            event_name=event.event_name,
+            payload=event.payload,
+            ts=str(event.created_at),
+            seq=event.payload.get("seq"),
+            chat_id = UUID(event.payload["chat_id"]),
+            fanout_strategy=fanout_strategy
+        )
 
-    ws_event: dict[str, Any] = {
-        "type": CHAT_EVENT_TO_WS_TYPE.get(event.event_name, event.event_name),
-        "event_name": event.event_name,
-        "event_id": str(event.event_id),
-        "chat_id": str(chat_id) if chat_id is not None else None,
-        "payload": payload,
-        "ts": str(event.payload.get("created_at") or ""),
-    }
-
-    if "seq" in event.payload:
-        ws_event["seq"] = event.payload["seq"]
-
-    return ws_event
 
 
 def chunks(items: Iterable[int], size: int) -> Iterator[list[int]]:
