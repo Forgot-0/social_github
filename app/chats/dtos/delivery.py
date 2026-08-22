@@ -7,8 +7,6 @@ from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.schemas.ws import WSEventType
 from app.core.consumers.event import DictEventDTO
 
-CHAT_DOMAIN_EVENT_PREFIX = "chats."
-
 CHAT_EVENT_TO_WS_TYPE: dict[str, str] = {
     "chats.message.sent": WSEventType.NEW_MESSAGE.value,
     "chats.message.modified": WSEventType.MESSAGE_EDITED.value,
@@ -22,16 +20,6 @@ CHAT_EVENT_TO_WS_TYPE: dict[str, str] = {
     "chats.chat.updated": WSEventType.CHAT_UPDATED.value,
     "chats.message.reaction_updated": WSEventType.REACTION_UPDATED.value,
 }
-
-_ENVELOPE_FIELDS = {
-    "event_id",
-    "event_name",
-    "created_at",
-}
-
-
-def is_chat_domain_event(event_name: str) -> bool:
-    return event_name.startswith(CHAT_DOMAIN_EVENT_PREFIX)
 
 
 @dataclass

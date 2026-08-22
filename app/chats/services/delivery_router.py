@@ -9,7 +9,7 @@ import orjson
 from redis.asyncio import Redis
 
 from app.chats.config import chat_config
-from app.chats.dtos.delivery import WsEvent, chunks, is_chat_domain_event
+from app.chats.dtos.delivery import WsEvent, chunks
 from app.chats.keys import WebsocketKeys
 from app.chats.metrics import (
     DELIVERY_ROUTER_OFFLINE_RECIPIENTS,
@@ -36,23 +36,12 @@ class ChatDeliveryRouter:
     broker: BaseMessageBroker
 
     async def route_broker_message(self, event: DictEventDTO) -> None:
-        if event is None or not is_chat_domain_event(event.event_name):
-            return
-
-        chat_id = event.payload.get("chat_id")
-        if not chat_id:
-            logger.warning(
-                "Skipping chat event without chat_id",
-                extra={"event_name": event.event_name, "event_id": str(event.event_id)},
-            )
-            return
-
         try:
-            await self.route_chat_event(chat_id=str(chat_id), event=event)
+            await self.route_chat_event(chat_id=str(event.payload["chat_id"]), event=event)
         except Exception:
             logger.exception(
                 "Failed to route chat event",
-                extra={"chat_id": chat_id, "event_id": str(event.event_id)},
+                extra={"chat_id": str(event.payload["chat_id"]), "event_id": str(event.event_id)},
             )
 
     async def route_chat_event(self, chat_id: str, event: DictEventDTO) -> None:
