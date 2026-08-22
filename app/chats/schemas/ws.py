@@ -1,7 +1,8 @@
 from enum import StrEnum
 from typing import Any
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WSEventType(StrEnum):
@@ -63,3 +64,13 @@ class AttachmentSuccessPayload(BaseModel):
     user_id: int
     chat_id: str
     tokens: list[str]
+
+
+class ChatEventPayload(BaseModel):
+    chat_id: UUID
+    message_id: UUID
+    sender_id: int | None = None
+
+    model_config = ConfigDict(extra="allow")
+
+

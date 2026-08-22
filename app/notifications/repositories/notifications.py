@@ -26,11 +26,11 @@ class NotificationRepository(IRepository[Notification], CacheRepository):
         )
         return result.scalar_one()
 
-    async def mark_all_as_read(self, user_id: int) -> int:
+    async def mark_all_as_read(self, user_id: int) -> None:
         await self.session.execute(
             update(Notification)
             .where(Notification.user_id == user_id, Notification.is_read.is_(False))
             .values(is_read=True)
             .execution_options(synchronize_session=False)
         )
-        return 0
+

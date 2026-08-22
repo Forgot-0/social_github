@@ -27,13 +27,23 @@ def _message_load_options() -> list:
 @dataclass
 class MessageRepository(IRepository[Message]):
 
-    async def get_by_id(self, message_id: UUID, with_attachment: bool = False) -> Message | None:
+    async def get_by_id(
+        self,
+        message_id: UUID,
+        with_attachment: bool = False,
+        for_offline: bool = False,
+    ) -> Message | None:
         stmt = select(Message).where(
             Message.id == message_id,
             Message.is_deleted.is_(False),
         )
         if with_attachment:
             stmt = stmt.options(*_message_load_options())
+
+        if for_offline:
+            stmt = stmt.options(
+                selectinload(Message.profile),
+            )
 
         result = await self.session.execute(stmt)
         return result.scalar()

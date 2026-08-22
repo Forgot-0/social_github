@@ -1,11 +1,10 @@
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Any
 from uuid import UUID
 
 from app.chats.models.chat import ChatFanoutStrategy
-from app.chats.schemas.ws import WSEventType
-from app.core.consumers.event import DictEventDTO
+from app.chats.schemas.ws import ChatEventPayload, WSEventType
+from app.core.consumers.event import TypedEventDTO
 
 CHAT_EVENT_TO_WS_TYPE: dict[str, str] = {
     "chats.message.sent": WSEventType.NEW_MESSAGE.value,
@@ -28,24 +27,21 @@ class WsEvent:
     event_name: str
     event_id: str
     chat_id: UUID
-    payload: dict[str, Any]
+    payload: ChatEventPayload
     ts: str
-    seq: int | None
     fanout_strategy: ChatFanoutStrategy
 
     @classmethod
-    def build(cls, event: DictEventDTO, fanout_strategy: ChatFanoutStrategy) -> WsEvent:
+    def build(cls, event: TypedEventDTO[ChatEventPayload], fanout_strategy: ChatFanoutStrategy) -> WsEvent:
         return WsEvent(
-            type=CHAT_EVENT_TO_WS_TYPE.get(event.event_name, event.event_name),
+            type=CHAT_EVENT_TO_WS_TYPE[event.event_name],
             event_id=str(event.event_id),
             event_name=event.event_name,
             payload=event.payload,
             ts=str(event.created_at),
-            seq=event.payload.get("seq"),
-            chat_id = UUID(event.payload["chat_id"]),
+            chat_id = event.payload.chat_id,
             fanout_strategy=fanout_strategy
         )
-
 
 
 def chunks(items: Iterable[int], size: int) -> Iterator[list[int]]:

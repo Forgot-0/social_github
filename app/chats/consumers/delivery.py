@@ -4,13 +4,15 @@ from dishka.integrations.faststream import FromDishka, inject
 from faststream.kafka import KafkaRouter
 
 from app.chats.config import chat_config
+from app.chats.schemas.ws import ChatEventPayload
 from app.chats.services.delivery_router import ChatDeliveryRouter
-from app.core.consumers.event import DictEventDTO
+from app.core.consumers.event import TypedEventDTO
 from app.core.consumers.idempotency import EventIdempotencyGuard
 
 logger = logging.getLogger(__name__)
 
 router = KafkaRouter()
+
 
 
 @router.subscriber(
@@ -19,7 +21,7 @@ router = KafkaRouter()
 )
 @inject
 async def route_chat_delivery_event(
-    event: DictEventDTO,
+    event: TypedEventDTO[ChatEventPayload],
     delivery_router: FromDishka[ChatDeliveryRouter],
     idempotency_guard: FromDishka[EventIdempotencyGuard],
 ) -> None:

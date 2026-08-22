@@ -54,7 +54,7 @@ async def mark_notification_as_read(
 async def mark_all_notifications_as_read(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: CurrentUserJWTData,
-) -> int:
-    return await mediator.handle_command(
+) -> None:
+    await mediator.handle_command(
         MarkAllNotificationsAsReadCommand(user_jwt_data=user_jwt_data)
     )

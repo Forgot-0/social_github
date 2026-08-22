@@ -32,6 +32,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         )
         if with_for_update:
             stmt = stmt.with_for_update()
+
         if with_members:
             stmt = stmt.options(
                 selectinload(Chat.members).selectinload(ChatMember.role),
