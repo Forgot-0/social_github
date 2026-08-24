@@ -130,16 +130,12 @@ class ChatDeliveryRouter:
         data = {
             "event_id": ws_event.event_id,
             "event_name": ws_event.event_name,
-            "chat_id": str(chat_id),
-            "message_id": str(ws_event.payload.message_id),
-            "sender_id": (
-                int(ws_event.payload.sender_id)
-                if ws_event.payload.sender_id is not None else None
-            ),
-            "offline_user_ids": offline_user_ids,
-            "occurred_at": ws_event.ts,
-            "message": message.model_dump(mode="json"),
-            "chat": chat.model_dump(mode="json")
+            "payload": {
+                "offline_user_ids": offline_user_ids,
+                "occurred_at": ws_event.ts,
+                "message": message.model_dump(mode="json"),
+                "chat": chat.model_dump(mode="json")
+            }
         }
 
         try:
