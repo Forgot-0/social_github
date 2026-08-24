@@ -2,6 +2,10 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from uuid import UUID
 
+from pydantic import BaseModel
+
+from app.chats.dtos.chats import ChatDTO
+from app.chats.dtos.messages import MessageDTO
 from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.schemas.ws import ChatEventPayload, WSEventType
 from app.core.consumers.event import TypedEventDTO
@@ -38,10 +42,26 @@ class WsEvent:
             event_id=str(event.event_id),
             event_name=event.event_name,
             payload=event.payload,
-            ts=str(event.created_at),
+            ts=event.created_at.isoformat(),
             chat_id = event.payload.chat_id,
             fanout_strategy=fanout_strategy
         )
+
+
+class DeliveryData(BaseModel):
+    require_subscription: bool
+    recipients: list[int]
+    gateway_id: str
+
+
+class DeliveryDTO(BaseModel):
+    type: str
+    event_id: str
+    event_name: str
+    chat: ChatDTO
+    message: MessageDTO
+    delivery: DeliveryData
+    ts: str
 
 
 def chunks(items: Iterable[int], size: int) -> Iterator[list[int]]:

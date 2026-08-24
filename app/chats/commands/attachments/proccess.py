@@ -155,9 +155,9 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
                     chat_id=command.chat_id,
                     tokens=successful_tokens,
                 )
-                await self.connection_manager.publish(
-                    ChatKeys.user_channel(command.user_id),
-                    payload={
+                await self.connection_manager.send_user_payload(
+                    command.user_id,
+                    event={
                         "type": WSEventType.ATTACHMENT_SUCCESS,
                         "payload": payload.model_dump(),
                     },

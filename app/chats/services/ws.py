@@ -13,6 +13,7 @@ from redis.asyncio import Redis
 from redis.exceptions import ResponseError
 
 from app.chats.config import chat_config
+from app.chats.dtos.delivery import DeliveryDTO
 from app.chats.dtos.websocket import WSConnection
 from app.chats.keys import WebsocketKeys
 from app.chats.metrics import (
@@ -32,8 +33,6 @@ from app.core.utils import now_utc
 
 logger = logging.getLogger(__name__)
 
-_CHAT_CHANNEL_RE = re.compile(r"^chat:v\d+:chat:(?P<chat_id>[^:]+):channel$")
-_USER_CHANNEL_RE = re.compile(r"^chat:v\d+:user:(?P<user_id>\d+):channel$")
 _LOCAL_SEND_BATCH_SIZE = 1_024
 _CLAIM_START_ID = "0-0"
 
@@ -242,33 +241,30 @@ class ChatConnectionManager:
 
     async def send_to_users_local(
         self,
-        user_ids: set[int],
-        event: dict[str, Any],
-        *,
-        chat_id: str | None = None,
-        require_subscription: bool = False,
+        event: DeliveryDTO,
     ) -> None:
         async with self._lock:
             conns = [
                 conn
-                for uid in user_ids
+                for uid in event.delivery.recipients
                 for conn_id in tuple(self.connections_by_user.get(uid, ()))
                 if (conn := self.connections_by_id.get(conn_id)) is not None
-                and (not require_subscription or not chat_id or chat_id in conn.subscriptions)
+                and (not event.delivery.require_subscription or str(event.chat.id) in conn.subscriptions)
             ]
 
         await self._send_to_connections(conns, event)
 
-    async def send_to_chat_local(self, chat_id: str, event: dict[str, Any]) -> None:
+    async def send_to_chat_local(self, event: DeliveryDTO) -> None:
         async with self._lock:
-            conn_ids = tuple(self.subscriptions_by_chat.get(str(chat_id), ()))
+            conn_ids = tuple(self.subscriptions_by_chat.get(str(event.chat.id), ()))
             conns = [self.connections_by_id[cid] for cid in conn_ids if cid in self.connections_by_id]
 
         await self._send_to_connections(conns, event)
 
-    async def _send_to_connections(self, conns: list[WSConnection], event: dict[str, Any]) -> None:
+    async def _send_to_connections(self, conns: list[WSConnection], event: DeliveryDTO) -> None:
         if not conns:
             return
+
         for start in range(0, len(conns), _LOCAL_SEND_BATCH_SIZE):
             batch = conns[start:start + _LOCAL_SEND_BATCH_SIZE]
             await asyncio.gather(
@@ -276,21 +272,8 @@ class ChatConnectionManager:
                 return_exceptions=False,
             )
 
-    async def publish(self, channel: str, payload: dict[str, Any]) -> None:
-        event = {**payload, "ts": payload.get("ts") or now_utc().isoformat()}
-
-        if match := _USER_CHANNEL_RE.match(channel):
-            await self._enqueue_user_stream_delivery(int(match.group("user_id")), event)
-            return
-
-        if match := _CHAT_CHANNEL_RE.match(channel):
-            await self.send_to_chat_local(match.group("chat_id"), event)
-            return
-
-        logger.warning("Unsupported websocket publish channel", extra={"channel": channel})
-
-    async def _send_or_unregister(self, conn: WSConnection, event: dict[str, Any]) -> None:
-        if conn.try_send(event):
+    async def _send_or_unregister(self, conn: WSConnection, event: DeliveryDTO) -> None:
+        if conn.try_send(event.message.model_dump()):
             self._observe_delivery_latency(event)
             return
 
@@ -306,14 +289,8 @@ class ChatConnectionManager:
             name=f"ws:drop:{conn.connection_id}",
         )
 
-    def _observe_delivery_latency(self, event: dict[str, Any]) -> None:
-        raw_ts = event.get("ts")
-        if not raw_ts or "enqueued_at" in event:
-            return
-
-        event_ts = _parse_iso_datetime(str(raw_ts))
-        if event_ts is None:
-            return
+    def _observe_delivery_latency(self, event: DeliveryDTO) -> None:
+        event_ts = datetime.fromisoformat(event.ts)
 
         latency = (now_utc() - event_ts).total_seconds()
         if latency < 0:
@@ -570,27 +547,18 @@ class ChatConnectionManager:
         return message_id
 
     async def _handle_gateway_stream_message(self, fields: dict[Any, Any]) -> None:
-        event = orjson.loads(fields["event"])
-        chat_id = event.get("chat_id") or fields.get("chat_id")
-        if isinstance(chat_id, bytes):
-            chat_id = chat_id.decode()
+        event = DeliveryDTO.model_validate_json(fields["event"])
 
-        broadcast_to_chat = event.pop("broadcast_to_chat", False)
-        require_subscription = event.pop("require_subscription", False)
+        broadcast_to_chat = False
         if broadcast_to_chat:
-            await self.send_to_chat_local(str(chat_id), event)
+            await self.send_to_chat_local(event)
             return
 
-        user_ids = {int(uid) for uid in orjson.loads(fields["user_ids"])}
-
         await self.send_to_users_local(
-            user_ids,
             event,
-            chat_id=chat_id,
-            require_subscription=require_subscription,
         )
 
-    async def _enqueue_user_stream_delivery(self, user_id: int, event: dict[str, Any]) -> None:
+    async def send_user_payload(self, user_id: int, event: dict[str, Any]) -> None:
         routes: set[str] = await self.redis.smembers(
             WebsocketKeys.user_route_key(user_id)
         ) # pyright: ignore[reportAssignmentType]
@@ -650,13 +618,4 @@ def _decode(value: Any) -> str:
         return value.decode()
     return str(value) if value is not None else ""
 
-
-def _parse_iso_datetime(raw: str) -> datetime | None:
-    try:
-        parsed = datetime.fromisoformat(raw)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        return None
-    return parsed
 

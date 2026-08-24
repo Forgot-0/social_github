@@ -16,13 +16,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
+from app.chats.models.chat_roles import ChatRole
 from app.chats.models.profile import ChatUserProfile
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.utils import now_utc
 
 if TYPE_CHECKING:
     from app.chats.models.chat import Chat
-    from app.chats.models.chat_roles import ChatRole
 
 
 class ChatMember(BaseModel, DateMixin):

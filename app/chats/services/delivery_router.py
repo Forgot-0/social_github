@@ -10,7 +10,7 @@ from redis.asyncio import Redis
 
 from app.chats.config import chat_config
 from app.chats.dtos.chats import ChatDTO
-from app.chats.dtos.delivery import WsEvent, chunks
+from app.chats.dtos.delivery import DeliveryDTO, DeliveryData, WsEvent, chunks
 from app.chats.dtos.messages import MessageDTO
 from app.chats.keys import WebsocketKeys
 from app.chats.metrics import (
@@ -253,28 +253,23 @@ class ChatDeliveryRouter:
         for gateway_id, user_ids in routes_by_gateway.items():
             stream_key = WebsocketKeys.gateway_stream_key(gateway_id)
             for user_chunk in chunks(sorted(user_ids), chat_config.WS_GATEWAY_STREAM_USERS_PER_ENTRY):
-                stream_event = {
-                    "type": ws_event.type,
-                    "event_id": ws_event.event_id,
-                    "event_name": ws_event.event_name,
-                    "chat": chat.model_dump(
-                        mode="json", exclude_none=True
+                stream_event = DeliveryDTO(
+                    type=ws_event.type,
+                    event_id=ws_event.event_id,
+                    event_name=ws_event.event_name,
+                    chat=chat,
+                    message=message,
+                    delivery=DeliveryData(
+                        require_subscription=require_subscription,
+                        recipients=user_chunk,
+                        gateway_id=gateway_id
                     ),
-                    "message": message.model_dump(
-                        mode="json", exclude_none=True,
-                    ),
-                    "delivery": {
-                        "require_subscription": require_subscription,
-                        "recipients": user_chunk,
-                        "gateway_id": gateway_id,
-                    },
-                }
+                    ts=ws_event.ts
+                )
                 pipe.xadd(
                     stream_key,
                     fields={
-                        "event": orjson.dumps(stream_event),
-                        "user_ids": orjson.dumps(user_chunk),
-                        "chat_id": str(ws_event.chat_id),
+                        "event": stream_event.model_dump_json()
                     },
                     maxlen=chat_config.WS_GATEWAY_STREAM_MAXLEN,
                     approximate=True,
