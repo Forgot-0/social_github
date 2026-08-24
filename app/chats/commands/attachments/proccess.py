@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
 from app.chats.exceptions import AccessDeniedChatError, AttachmentMediaValidationError
-from app.chats.keys import ChatKeys
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
 from app.chats.services.attachment_media import AttachmentMediaValidator

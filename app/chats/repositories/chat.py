@@ -9,7 +9,6 @@ from sqlalchemy.orm import aliased, contains_eager, selectinload
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.message import Message
-from app.chats.models.permission import ChatRolesEnum
 from app.chats.models.profile import ChatUserProfile
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import CacheRepository, IRepository

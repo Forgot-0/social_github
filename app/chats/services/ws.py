@@ -36,16 +36,14 @@ _LOCAL_SEND_BATCH_SIZE = 1_024
 _CLAIM_START_ID = "0-0"
 
 
+
 @dataclass(slots=True)
 class ChatConnectionManager:
     redis: Redis
     presence_service: PresenceService
-    gateway_id: str = field(
-        default_factory=lambda: os.getenv("GATEWAY_ID", "") or os.getenv("HOSTNAME", "local-gateway")
-    )
+    gateway_id: str = field(default_factory=lambda: os.getenv("GATEWAY_ID", "") or os.getenv("HOSTNAME", "local-gateway"))
     connections_by_id: dict[str, WSConnection] = field(default_factory=dict)
     connections_by_user: dict[int, set[str]] = field(default_factory=lambda: defaultdict(set))
-    subscriptions_by_chat: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _shutdown_event: asyncio.Event = field(default_factory=asyncio.Event)
 
@@ -85,19 +83,23 @@ class ChatConnectionManager:
             conns = list(self.connections_by_id.values())
 
         for conn in conns:
-            WS_CONNECTION_EVICTIONS.labels(gateway_id=self.gateway_id, reason=EVICTION_REASON_SHUTDOWN).inc()
+            WS_CONNECTION_EVICTIONS.labels(
+                gateway_id=self.gateway_id, reason=EVICTION_REASON_SHUTDOWN
+            ).inc()
             await self.unregister(conn, close_code=1001, close_reason="server shutdown")
 
-        gateway_connections = await self.redis.smembers(WebsocketKeys.gateway_route_key(self.gateway_id))
+        gateway_connections = await self.redis.smembers(
+            WebsocketKeys.gateway_route_key(self.gateway_id)
+        )
         if gateway_connections:
             pipe = self.redis.pipeline(transaction=False)
             for cid in gateway_connections:
-                pipe.delete(WebsocketKeys.connection_key(cid))  # pyright: ignore[reportArgumentType]
+                pipe.delete(WebsocketKeys.connection_key(cid)) # pyright: ignore[reportArgumentType]
             pipe.delete(WebsocketKeys.gateway_route_key(self.gateway_id))
             await pipe.execute()
 
         self._export_state_metrics()
-        logger.info("ChatConnectionManager shut down", extra={"gateway_id": self.gateway_id})
+        logger.info("ChatConnectionManager shut down")
 
     async def register(self, conn: WSConnection) -> None:
         conn.gateway_id = self.gateway_id
@@ -112,9 +114,12 @@ class ChatConnectionManager:
             overflow = len(user_conns) - chat_config.WS_MAX_CONNECTIONS_PER_USER
             if overflow > 0:
                 stale_to_close.extend(
-                    sorted(
-                        (self.connections_by_id[cid] for cid in user_conns if cid in self.connections_by_id),
-                        key=lambda c: c.connected_at,
+                    sorted((
+                        self.connections_by_id[cid]
+                        for cid in user_conns
+                        if cid in self.connections_by_id
+                    ),
+                    key=lambda c: c.connected_at,
                     )[:overflow]
                 )
 
@@ -127,13 +132,19 @@ class ChatConnectionManager:
         for stale in stale_to_close:
             if stale.connection_id == conn.connection_id:
                 continue
-            WS_CONNECTION_EVICTIONS.labels(gateway_id=self.gateway_id, reason=EVICTION_REASON_CONNECTION_LIMIT).inc()
+            WS_CONNECTION_EVICTIONS.labels(
+                gateway_id=self.gateway_id, reason=EVICTION_REASON_CONNECTION_LIMIT
+            ).inc()
             asyncio.create_task(
                 self.unregister(stale, close_code=1012, close_reason="connection limit exceeded"),
                 name=f"ws:evict:{stale.connection_id}",
             )
 
         self._export_state_metrics()
+        logger.debug(
+            "WebSocket registered",
+            extra={"connection_id": conn.connection_id, "user_id": conn.user_id},
+        )
 
     async def unregister(
         self,
@@ -151,11 +162,8 @@ class ChatConnectionManager:
                     self.connections_by_user.pop(conn.user_id, None)
 
             subscribed_chats = set(conn.subscriptions)
-            gateway_chats_to_remove: list[str] = []
             for chat_id in subscribed_chats:
                 self._unsubscribe_chat_in_memory(conn, chat_id)
-                if not self._chat_has_local_subscribers(chat_id):
-                    gateway_chats_to_remove.append(chat_id)
 
         route_value = f"{self.gateway_id}:{conn.connection_id}"
         sub_route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
@@ -178,20 +186,26 @@ class ChatConnectionManager:
         await conn.close(code=close_code, reason=close_reason)
 
         self._export_state_metrics()
+        logger.debug(
+            "WebSocket unregistered",
+            extra={
+                "connection_id": conn.connection_id,
+                "user_id": conn.user_id,
+                "subscriptions": len(subscribed_chats),
+                "remaining_routes": remaining_routes,
+            },
+        )
 
     async def subscribe_chat(self, conn: WSConnection, chat_id: str) -> None:
         chat_id = str(chat_id)
 
         async with self._lock:
             conn.subscriptions.add(chat_id)
-            self.subscriptions_by_chat[chat_id].add(conn.connection_id)
 
         route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
         pipe = self.redis.pipeline(transaction=False)
         pipe.sadd(WebsocketKeys.active_subscription_key(chat_id), route)
         pipe.expire(WebsocketKeys.active_subscription_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
-        pipe.sadd(WebsocketKeys.active_subscription_gateways_key(chat_id), self.gateway_id)
-        pipe.expire(WebsocketKeys.active_subscription_gateways_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
         pipe.set(
             WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
             route,
@@ -203,14 +217,11 @@ class ChatConnectionManager:
     async def unsubscribe_chat(self, conn: WSConnection, chat_id: str) -> None:
         async with self._lock:
             self._unsubscribe_chat_in_memory(conn, chat_id)
-            remove_gateway_route = not self._chat_has_local_subscribers(chat_id)
 
         route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
         pipe = self.redis.pipeline(transaction=False)
         pipe.srem(WebsocketKeys.active_subscription_key(chat_id), route)
         pipe.delete(WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id))
-        if remove_gateway_route:
-            pipe.srem(WebsocketKeys.active_subscription_gateways_key(chat_id), self.gateway_id)
         await pipe.execute()
         self._export_state_metrics()
 
@@ -234,7 +245,7 @@ class ChatConnectionManager:
             return
 
         for start in range(0, len(conns), _LOCAL_SEND_BATCH_SIZE):
-            batch = conns[start : start + _LOCAL_SEND_BATCH_SIZE]
+            batch = conns[start:start + _LOCAL_SEND_BATCH_SIZE]
             await asyncio.gather(
                 *(self._send_or_unregister(conn, event) for conn in batch),
                 return_exceptions=False,
@@ -245,7 +256,9 @@ class ChatConnectionManager:
             self._observe_delivery_latency(event)
             return
 
-        WS_CONNECTION_EVICTIONS.labels(gateway_id=self.gateway_id, reason=EVICTION_REASON_SLOW_CONSUMER).inc()
+        WS_CONNECTION_EVICTIONS.labels(
+            gateway_id=self.gateway_id, reason=EVICTION_REASON_SLOW_CONSUMER
+        ).inc()
         logger.warning(
             "Dropping slow WebSocket consumer",
             extra={"connection_id": conn.connection_id, "user_id": conn.user_id},
@@ -309,19 +322,13 @@ class ChatConnectionManager:
 
                     subscriptions = subs_snapshot.get(conn.connection_id, set())
                     if subscriptions:
-                        route = WebsocketKeys.active_subscription_route(
-                            conn.user_id, self.gateway_id, conn.connection_id
-                        )
+                        route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
                         pipe = self.redis.pipeline(transaction=False)
                         for chat_id in subscriptions:
                             pipe.sadd(WebsocketKeys.active_subscription_key(chat_id), route)
                             pipe.expire(
-                                WebsocketKeys.active_subscription_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL
-                            )
-                            pipe.sadd(WebsocketKeys.active_subscription_gateways_key(chat_id), self.gateway_id)
-                            pipe.expire(
-                                WebsocketKeys.active_subscription_gateways_key(chat_id),
-                                chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
+                                WebsocketKeys.active_subscription_key(chat_id),
+                                chat_config.WS_ACTIVE_SUBSCRIPTION_TTL
                             )
                             pipe.set(
                                 WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
@@ -382,7 +389,7 @@ class ChatConnectionManager:
                 entries = [
                     (message_id, fields)
                     for _stream_name, stream_messages in messages
-                    for message_id, fields in stream_messages  # pyright: ignore[reportGeneralTypeIssues]
+                    for message_id, fields in stream_messages # pyright: ignore[reportGeneralTypeIssues]
                 ]
                 await self._process_entries(entries)
 
@@ -394,7 +401,6 @@ class ChatConnectionManager:
                 logger.exception(
                     "WebSocket gateway stream consumer error; retrying in %.1fs",
                     backoff,
-                    extra={"gateway_id": self.gateway_id},
                 )
                 await asyncio.sleep(backoff)
 
@@ -412,10 +418,7 @@ class ChatConnectionManager:
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception(
-                    "Failed to claim pending gateway stream entries",
-                    extra={"gateway_id": self.gateway_id},
-                )
+                logger.exception("Failed to claim pending gateway stream entries")
 
     async def _claim_pending_entries(self) -> int:
         await self._ensure_stream_group()
@@ -442,6 +445,11 @@ class ChatConnectionManager:
             if not cursor or cursor == _CLAIM_START_ID or not entries:
                 break
 
+        if claimed_total:
+            logger.info(
+                "Reclaimed pending websocket gateway stream entries",
+                extra={"claimed": claimed_total},
+            )
         return claimed_total
 
     async def _process_entries(self, entries: list[Any]) -> None:
@@ -454,15 +462,15 @@ class ChatConnectionManager:
         )
 
         ack_ids: list[Any] = []
-        for result in results:
+        for (message_id, _fields), result in zip(entries, results, strict=True):
             if isinstance(result, BaseException):
                 logger.error(
                     "Failed to process websocket gateway stream message",
                     exc_info=result,
+                    extra={"stream_id": message_id},
                 )
                 continue
-            if result is not None:
-                ack_ids.append(result)
+            ack_ids.append(message_id)
 
         if ack_ids:
             await self.redis.xack(self.stream_key, self.stream_group, *ack_ids)
@@ -481,10 +489,7 @@ class ChatConnectionManager:
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception(
-                    "Failed to export websocket gateway stream metrics",
-                    extra={"gateway_id": self.gateway_id},
-                )
+                logger.exception("Failed to export websocket gateway stream metrics")
 
     async def export_stream_metrics(self) -> None:
         length = await self.redis.xlen(self.stream_key)
@@ -497,23 +502,15 @@ class ChatConnectionManager:
 
         self._export_state_metrics()
 
-    async def _process_gateway_stream_entry(self, message_id: Any, fields: dict[Any, Any]) -> Any | None:
-        try:
-            await self._handle_gateway_stream_message(fields)
-        except Exception:
-            logger.exception(
-                "Failed to process websocket gateway stream message",
-                extra={"stream_id": message_id},
-            )
-            return None
-        return message_id
-
-    async def _handle_gateway_stream_message(self, fields: dict[Any, Any]) -> None:
+    async def _process_gateway_stream_entry(self, message_id: Any, fields: dict[Any, Any]) -> Any:
         event = DeliveryDTO.model_validate_json(fields["event"])
         await self.send_to_users_local(event)
+        return message_id
 
     async def send_user_payload(self, user_id: int, event: dict[str, Any]) -> None:
-        routes: set[str] = await self.redis.smembers(WebsocketKeys.user_route_key(user_id))  # pyright: ignore[reportAssignmentType]
+        routes: set[str] = await self.redis.smembers(
+            WebsocketKeys.user_route_key(user_id)
+        ) # pyright: ignore[reportAssignmentType]
 
         gateways: set[str] = set()
         for raw in routes or ():
@@ -542,27 +539,18 @@ class ChatConnectionManager:
     def _export_state_metrics(self) -> None:
         WS_ACTIVE_CONNECTIONS.labels(gateway_id=self.gateway_id).set(len(self.connections_by_id))
         WS_ACTIVE_SUBSCRIPTIONS.labels(gateway_id=self.gateway_id).set(
-            sum(len(conn_ids) for conn_ids in self.subscriptions_by_chat.values())
+            sum(len(conn.subscriptions) for conn in self.connections_by_id.values())
         )
 
     @staticmethod
     def _as_int(value: Any) -> int:
         try:
             return int(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return 0
 
     def _unsubscribe_chat_in_memory(self, conn: WSConnection, chat_id: str) -> None:
         conn.subscriptions.discard(chat_id)
-        chat_conns = self.subscriptions_by_chat.get(chat_id)
-        if chat_conns is None:
-            return
-        chat_conns.discard(conn.connection_id)
-        if len(chat_conns) == 0:
-            self.subscriptions_by_chat.pop(chat_id, None)
-
-    def _chat_has_local_subscribers(self, chat_id: str) -> bool:
-        return bool(self.subscriptions_by_chat.get(str(chat_id)))
 
 
 def _decode(value: Any) -> str:
