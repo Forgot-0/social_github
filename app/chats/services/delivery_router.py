@@ -1,16 +1,14 @@
 import asyncio
 import contextlib
-import logging
 from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass
 from uuid import UUID
 
-import orjson
 from redis.asyncio import Redis
 
 from app.chats.config import chat_config
 from app.chats.dtos.chats import ChatDTO
-from app.chats.dtos.delivery import DeliveryDTO, DeliveryData, WsEvent, chunks
+from app.chats.dtos.delivery import DeliveryData, DeliveryDTO, WsEvent, chunks
 from app.chats.dtos.messages import MessageDTO
 from app.chats.keys import WebsocketKeys
 from app.chats.metrics import (
@@ -24,8 +22,6 @@ from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import ChatEventPayload
 from app.core.consumers.event import TypedEventDTO
 from app.core.message_brokers.base import BaseMessageBroker
-
-logger = logging.getLogger(__name__)
 
 RouteMap = dict[str, set[int]]
 ActiveSubscriptionRoute = tuple[int, str, str, str]
@@ -47,24 +43,18 @@ class ChatDeliveryRouter:
             return
 
         ws_event = WsEvent.build(event, fanout_strategy=chat.fanout_strategy)
-        message = await self.message_repository.get_by_id(
-            ws_event.payload.message_id, for_offline=True
-        )
+        message = await self.message_repository.get_by_id(ws_event.payload.message_id, for_offline=True)
         if message is None:
             return
 
         if ws_event.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
             await self._route_fanout_on_write(
-                chat=ChatDTO.model_validate(chat),
-                ws_event=ws_event,
-                message=MessageDTO.model_validate(message)
+                chat=ChatDTO.model_validate(chat), ws_event=ws_event, message=MessageDTO.model_validate(message)
             )
             return
 
         await self._route_to_active_subscribers(
-            chat=ChatDTO.model_validate(chat),
-            ws_event=ws_event,
-            message=MessageDTO.model_validate(message)
+            chat=ChatDTO.model_validate(chat), ws_event=ws_event, message=MessageDTO.model_validate(message)
         )
 
     async def _route_fanout_on_write(
@@ -86,7 +76,7 @@ class ChatDeliveryRouter:
                     lookup_batch=lookup_batch,
                     routes=routes,
                     message=message,
-                    chat=chat
+                    chat=chat,
                 )
 
                 await self._enqueue_gateway_deliveries(
@@ -114,7 +104,7 @@ class ChatDeliveryRouter:
         lookup_batch: Iterable[int],
         routes: RouteMap,
         message: MessageDTO,
-        chat: ChatDTO
+        chat: ChatDTO,
     ) -> None:
         if ws_event.event_name not in OFFLINE_SIGNAL_EVENT_NAMES:
             return
@@ -134,27 +124,15 @@ class ChatDeliveryRouter:
                 "offline_user_ids": offline_user_ids,
                 "occurred_at": ws_event.ts,
                 "message": message.model_dump(mode="json"),
-                "chat": chat.model_dump(mode="json")
-            }
+                "chat": chat.model_dump(mode="json"),
+            },
         }
 
-        try:
-            await self.broker.send_data(
-                key=str(chat_id),
-                topic=chat_config.CHAT_OFFLINE_DELIVERY_TOPIC,
-                data=data,
-            )
-        except Exception:
-            DELIVERY_ROUTER_OFFLINE_SIGNALS.labels(result="error").inc()
-            logger.exception(
-                "Failed to publish offline delivery signal",
-                extra={
-                    "chat_id": str(chat_id),
-                    "event_id": data["event_id"],
-                    "offline_recipients": len(offline_user_ids),
-                },
-            )
-            return
+        await self.broker.send_data(
+            key=str(chat_id),
+            topic=chat_config.CHAT_OFFLINE_DELIVERY_TOPIC,
+            data=data,
+        )
 
         DELIVERY_ROUTER_OFFLINE_SIGNALS.labels(result="ok").inc()
         DELIVERY_ROUTER_OFFLINE_RECIPIENTS.inc(len(offline_user_ids))
@@ -229,7 +207,7 @@ class ChatDeliveryRouter:
 
         if stale:
             asyncio.create_task(
-                self.redis.srem(subscription_key, *stale), # pyright: ignore[reportArgumentType]
+                self.redis.srem(subscription_key, *stale),  # pyright: ignore[reportArgumentType]
                 name="ws:sub:cleanup:stale",
             )
 
@@ -260,17 +238,13 @@ class ChatDeliveryRouter:
                     chat=chat,
                     message=message,
                     delivery=DeliveryData(
-                        require_subscription=require_subscription,
-                        recipients=user_chunk,
-                        gateway_id=gateway_id
+                        require_subscription=require_subscription, recipients=user_chunk, gateway_id=gateway_id
                     ),
-                    ts=ws_event.ts
+                    ts=ws_event.ts,
                 )
                 pipe.xadd(
                     stream_key,
-                    fields={
-                        "event": stream_event.model_dump_json()
-                    },
+                    fields={"event": stream_event.model_dump_json()},
                     maxlen=chat_config.WS_GATEWAY_STREAM_MAXLEN,
                     approximate=True,
                 )
@@ -279,15 +253,7 @@ class ChatDeliveryRouter:
         if not enqueued:
             return
 
-        try:
-            await pipe.execute()
-        except Exception:
-            logger.exception(
-                "Failed to enqueue websocket gateway deliveries",
-                extra={"gateways": list(routes_by_gateway), "enqueued": enqueued},
-            )
-            raise
-
+        await pipe.execute()
         DELIVERY_ROUTER_STREAM_ENTRIES.labels(strategy=ws_event.fanout_strategy.value).inc(enqueued)
 
     async def _cleanup_stale_user_routes(self, stale_routes_by_user: list[tuple[int, str]]) -> None:
@@ -307,4 +273,3 @@ def parse_active_subscription_route(route: str) -> ActiveSubscriptionRoute | Non
         return int(user_id_str), gateway_id, connection_id, route
     except ValueError:
         return None
-
