@@ -31,12 +31,6 @@ if TYPE_CHECKING:
     from app.chats.models.chat import Chat
 
 
-class MessageStatus(StrEnum):
-    sent = "sent"
-    delivered = "delivered"
-    read = "read"
-
-
 class MessageType(StrEnum):
     TEXT = "text"
     IMAGE = "image"

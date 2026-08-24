@@ -7,10 +7,7 @@ class ChatConfig(BaseConfig):
     MAX_SUPERGROUP_MEMBERS: int = 1_000_000
     MAX_CHANNEL_SUBSCRIBERS: int = 10_000_000
     MAX_MESSAGE_LENGTH: int = 4_096
-    MAX_EDIT_WINDOW_HOURS: int = 48
-    MAX_EDIT_HISTORY: int = 20
     MAX_REACTIONS_PER_MESSAGE: int = 20
-    MAX_SEARCH_RESULTS: int = 50
     MAX_BULK_ADD_MEMBERS: int = 100
 
     FAN_OUT_WRITE_THRESHOLD: int = 500
@@ -39,7 +36,6 @@ class ChatConfig(BaseConfig):
     CHAT_OFFLINE_DELIVERY_TOPIC: str = "chats.offline-delivery"
 
     DELIVERY_ROUTER_GROUP_ID: str = "delivery-router"
-    DELIVERY_ROUTER_CLIENT_ID: str = "delivery-router"
     DELIVERY_ROUTER_MEMBER_BATCH_SIZE: int = 2_000
     DELIVERY_ROUTER_ROUTE_LOOKUP_BATCH_SIZE: int = 500
     DELIVERY_ROUTER_ACTIVE_SUBSCRIBER_SCAN_BATCH_SIZE: int = 1_000

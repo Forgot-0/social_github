@@ -212,14 +212,6 @@ class TestChatModel:
         with pytest.raises(AccessDeniedChatError):
             chat.ban_member(target=1, requester_id=1, ban=True)
 
-    def test_update_last_activity_sets_timestamp(self) -> None:
-        chat = make_direct_chat()
-        timestamp = now_utc()
-
-        chat.update_last_activity(message_date=timestamp)
-
-        assert chat.last_activity_at == timestamp
-
     def test_fanout_strategy_by_chat_type_and_size(self) -> None:
         direct = Chat(id=None, created_by=1, type=ChatType.DIRECT, member_count=2, permissions={}, name=None, description=None, is_public=False, admin_only=False, slow_mode_seconds=0)
         group_small = Chat(id=None, created_by=1, type=ChatType.GROUP, member_count=chat_config.FAN_OUT_WRITE_THRESHOLD, permissions={}, name=None, description=None, is_public=False, admin_only=False, slow_mode_seconds=0)

@@ -346,9 +346,6 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             ban=ban,
         ))
 
-    def update_last_activity(self, message_date: datetime) -> None:
-        self.last_activity_at = message_date
-
     @staticmethod
     def _validate_slow_mode(slow_mode_seconds: int) -> None:
         if slow_mode_seconds < 0 or slow_mode_seconds > chat_config.MAX_SLOW_MODE_SECONDS:

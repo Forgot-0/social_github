@@ -95,10 +95,3 @@ class ConfirmAttachmentUploadRequest(BaseModel):
 class MuteParticipantRequest(BaseModel):
     muted: bool = True
 
-
-class PresenceBatchRequest(BaseModel):
-    user_ids: list[int] = Field(min_length=1, max_length=500)
-
-
-class BulkResult(BaseModel):
-    processed: int

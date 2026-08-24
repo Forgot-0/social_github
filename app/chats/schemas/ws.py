@@ -39,25 +39,11 @@ class WSClientOp(StrEnum):
     RESUME = "resume"
 
 
-class WSEvent(BaseModel):
-    type: WSEventType | str
-    chat_id: str | None = None
-    payload: dict[str, Any] = Field(default_factory=dict)
-    ts: str = ""
-
-
 class WSClientCommand(BaseModel):
     op: WSClientOp
     chat_id: str | None = None
     last_seq: int | None = None
     cursors: dict[str, int] = Field(default_factory=dict)
-
-
-class WSReadyPayload(BaseModel):
-    connection_id: str
-    gateway_id: str
-    heartbeat_interval: int
-    heartbeat_timeout: int
 
 
 class AttachmentSuccessPayload(BaseModel):

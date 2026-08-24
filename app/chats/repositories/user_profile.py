@@ -21,10 +21,6 @@ class ChatUserProfileRepository(IRepository[ChatUserProfile], CacheRepository):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_map_by_ids(self, user_ids: list[int]) -> dict[int, ChatUserProfile]:
-        profiles = await self.get_by_ids(user_ids)
-        return {profile.user_id: profile for profile in profiles}
-
     async def get_by_id(self, user_id: int) -> ChatUserProfile | None:
         stmt = select(ChatUserProfile).where(ChatUserProfile.user_id == user_id)
         result = await self.session.execute(stmt)

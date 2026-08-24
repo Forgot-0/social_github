@@ -138,51 +138,6 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             yield [int(uid) for uid in user_ids]
             last_user_id = int(user_ids[-1])
 
-    async def iter_channel_subscriber_ids(
-        self, chat_id: UUID, batch_size: int = 2_000
-    ) -> AsyncIterator[list[int]]:
-        async for batch in self.iter_member_ids(
-            chat_id=chat_id,
-            batch_size=batch_size,
-            role_ids=ChatRolesEnum.channel_subscriber_role_ids(),
-        ):
-            yield batch
-
-    async def iter_channel_staff_ids(
-        self, chat_id: UUID, batch_size: int = 2_000
-    ) -> AsyncIterator[list[int]]:
-        async for batch in self.iter_member_ids(
-            chat_id=chat_id,
-            batch_size=batch_size,
-            role_ids=ChatRolesEnum.channel_staff_role_ids(),
-        ):
-            yield batch
-
-    async def get_public_chats(
-        self,
-        limit: int,
-        cursor_last_activity_at: datetime | None = None,
-        cursor_chat_id: UUID | None = None,
-    ) -> list[Chat]:
-        stmt = (
-            select(Chat)
-            .where(Chat.is_public.is_(True), Chat.deleted_at.is_(None))
-            .order_by(Chat.last_activity_at.desc().nullslast(), Chat.id.desc())
-            .limit(limit + 1)
-        )
-        if cursor_last_activity_at is not None and cursor_chat_id is not None:
-            stmt = stmt.where(
-                or_(
-                    Chat.last_activity_at < cursor_last_activity_at,
-                    and_(
-                        Chat.last_activity_at == cursor_last_activity_at,
-                        Chat.id < cursor_chat_id,
-                    ),
-                )
-            )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
-
     async def get_chats(
         self,
         user_id: int,
