@@ -19,6 +19,7 @@ from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import ChatEventPayload
+from app.chats.services.messages import MessageService
 from app.core.consumers.event import TypedEventDTO
 from app.core.message_brokers.base import BaseMessageBroker
 
@@ -33,6 +34,7 @@ class ChatDeliveryRouter:
     redis: Redis
     chat_repository: ChatRepository
     message_repository: MessageRepository
+    message_service: MessageService
     broker: BaseMessageBroker
 
     async def route_broker_message(self, event: TypedEventDTO[ChatEventPayload]) -> None:
@@ -46,14 +48,17 @@ class ChatDeliveryRouter:
         if message is None:
             return
 
+        message_dto = MessageDTO.model_validate(message)
+        await self.message_service.attach_profile_urls([message_dto.profile])
+
         if ws_event.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
             await self._route_fanout_on_write(
-                chat=ChatDTO.model_validate(chat), ws_event=ws_event, message=MessageDTO.model_validate(message)
+                chat=ChatDTO.model_validate(chat), ws_event=ws_event, message=message_dto
             )
             return
 
         await self._route_to_active_subscribers(
-            chat=ChatDTO.model_validate(chat), ws_event=ws_event, message=MessageDTO.model_validate(message)
+            chat=ChatDTO.model_validate(chat), ws_event=ws_event, message=message_dto
         )
 
     async def _route_fanout_on_write(

@@ -252,7 +252,12 @@ class ChatConnectionManager:
             )
 
     async def _send_or_unregister(self, conn: WSConnection, event: DeliveryDTO) -> None:
-        if conn.try_send(event.payload):
+        if conn.try_send({
+            "type": event.type,
+            "chat_id": event.chat_id,
+            "payload": event.payload,
+            "ts": event.ts
+        }):
             self._observe_delivery_latency(event)
             return
 
