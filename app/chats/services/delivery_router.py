@@ -44,12 +44,16 @@ class ChatDeliveryRouter:
             return
 
         ws_event = WsEvent.build(event, fanout_strategy=chat.fanout_strategy)
-        message = await self.message_repository.get_by_id(ws_event.payload.message_id, for_offline=True)
-        if message is None:
-            return
 
-        message_dto = MessageDTO.model_validate(message)
-        await self.message_service.attach_profile_urls([message_dto.profile])
+        message_dto: MessageDTO | None = None
+        if event.payload.message_id:
+            message = await self.message_repository.get_by_id(event.payload.message_id, for_offline=True)
+            if message is None:
+                return
+
+            message_dto = MessageDTO.model_validate(message)
+            await self.message_service.attach_profile_urls([message_dto.profile])
+
 
         if ws_event.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
             await self._route_fanout_on_write(
@@ -65,7 +69,7 @@ class ChatDeliveryRouter:
         self,
         chat: ChatDTO,
         ws_event: WsEvent,
-        message: MessageDTO,
+        message: MessageDTO | None=None,
     ) -> None:
         async for member_ids in self.chat_repository.iter_member_ids(
             chat_id=chat.id,
@@ -90,14 +94,19 @@ class ChatDeliveryRouter:
                     require_subscription=False,
                 )
 
-    async def _route_to_active_subscribers(self, chat: ChatDTO, ws_event: WsEvent, message: MessageDTO) -> None:
+    async def _route_to_active_subscribers(
+        self,
+        chat: ChatDTO,
+        ws_event: WsEvent,
+        message: MessageDTO | None=None
+    ) -> None:
         async for routes_by_gateway in self._iter_active_subscriber_routes(str(chat.id)):
             await self._enqueue_gateway_deliveries(
                 routes_by_gateway,
                 ws_event,
-                message,
                 chat,
                 require_subscription=True,
+                message=message,
             )
 
     async def _publish_offline_signal(
@@ -105,8 +114,8 @@ class ChatDeliveryRouter:
         ws_event: WsEvent,
         lookup_batch: Iterable[int],
         routes: RouteMap,
-        message: MessageDTO,
         chat: ChatDTO,
+        message: MessageDTO | None,
     ) -> None:
         if ws_event.event_name not in OFFLINE_SIGNAL_EVENT_NAMES:
             return
@@ -125,7 +134,7 @@ class ChatDeliveryRouter:
             "payload": {
                 "offline_user_ids": offline_user_ids,
                 "occurred_at": ws_event.ts,
-                "message": message.model_dump(mode="json"),
+                "message": message.model_dump(mode="json") if message else None,
                 "chat": chat.model_dump(mode="json"),
             },
         }
@@ -219,10 +228,10 @@ class ChatDeliveryRouter:
         self,
         routes_by_gateway: RouteMap,
         ws_event: WsEvent,
-        message: MessageDTO,
         chat: ChatDTO,
         *,
         require_subscription: bool,
+        message: MessageDTO | None=None,
     ) -> None:
         if not routes_by_gateway:
             return

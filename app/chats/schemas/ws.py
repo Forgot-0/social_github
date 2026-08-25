@@ -53,7 +53,7 @@ class AttachmentSuccessPayload(BaseModel):
 
 class ChatEventPayload(BaseModel):
     chat_id: UUID
-    message_id: UUID
+    message_id: UUID | None = None
     sender_id: int | None = None
 
     model_config = ConfigDict(extra="allow")

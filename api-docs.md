@@ -1047,26 +1047,30 @@ interface MessageReactionsDTO {
 
 #### 6.7.5 WS-событие
 
-Доменное событие `chats.message.reaction_updated` (класс `ReactionUpdatedEvent`):
+Доменное событие `chats.message.reaction_updated` маппится в WS-тип `reaction_update`. В текущей delivery-цепочке исходный payload события с `emoji/count/changed_by` не передаётся клиенту напрямую: `ChatDeliveryRouter` подтягивает актуальные `ChatDTO` и `MessageDTO`, затем кладёт их в `MessagePayloadWS`.
+
 ```ts
 {
-  type: "reaction_update",   // ⚠️ НЕ короткий алиас — маппинга в CHAT_EVENT_TO_WS_TYPE нет
-  event_name: "chats.message.reaction_updated",
-  event_id: string, chat_id: string, ts: string,
+  type: "reaction_update",
+  chat_id: string,
+  ts: string,
   payload: {
-    message_id: string;
-    emoji: string;
-    count: number;        // АБСОЛЮТНОЕ новое значение счётчика, не дельта
-    changed_by: number;   // user_id того, кто изменил
+    chat: ChatDTO;
+    message: MessageDTO; // сообщение уже содержит актуальный reactions
+  },
+  delivery: {
+    require_subscription: boolean;
+    recipients: number[];
   }
 }
 ```
-Обработка: найти сообщение по `payload.message_id`, найти чипс по `payload.emoji`, выставить `count` в абсолютное значение; если `count == 0` — удалить чипс. Если `changed_by == myUserId` — не трогать локальный `reacted_by_me` (уже выставлен оптимистично).
+
+Обработка: заменить/обновить локальное сообщение из `payload.message` целиком. Отдельные поля `emoji`, `count` и `changed_by` в WS-payload сейчас не приходят.
 
 
 ## 7. Чаты — WebSocket
 
-⚠️ Это самый важный раздел документа для реализации чата на Flutter — в предыдущей версии доков он был описан на 5% от реального объёма (были упомянуты только `ws.ready` и `ws.error`). Ниже — полный протокол, вычитанный построчно из `app/chats/routes/v1/ws.py`, `app/chats/commands/websockets/*.py`, `app/chats/dtos/delivery.py`, `app/chats/models/{chat,message}.py`.
+⚠️ Это самый важный раздел документа для реализации чата на Flutter — в предыдущей версии доков он был описан на 5% от реального объёма (были упомянуты только `ws.ready` и `ws.error`). Ниже — полный протокол, вычитанный построчно из `app/chats/routes/v1/ws.py`, `app/chats/commands/websockets/*.py`, `app/chats/dtos/delivery.py`, `app/chats/services/delivery_router.py`, `app/chats/models/{chat,message}.py`.
 
 ### 7.1 Подключение
 
@@ -1125,39 +1129,47 @@ interface WSClientCommand {
 
 ### 7.4 События сервер → клиент
 
-Общий конверт для доменных событий:
+Общий конверт для событий, доставляемых через Redis stream на WS-gateway:
 ```ts
-interface WSEvent {
-  type: string;                        // см. таблицу ниже
-  event_name?: string;                 // внутреннее имя события бэкенда, например "chats.message.sent"
-  event_id?: string;
-  chat_id: string | null;
-  payload: Record<string, unknown>;
-  ts: string;                          // ISO datetime
-  seq?: number;                        // продублирован и в payload, и на верхнем уровне (если применимо)
+interface DeliveryData {
+  require_subscription: boolean;        // gateway дополнительно проверяет активную подписку на чат
+  recipients: number[];                 // user_id получателей внутри конкретной stream-записи
+}
+
+interface MessagePayloadWS {
+  chat: ChatDTO;                        // актуальный DTO чата
+  message: MessageDTO;                  // полный DTO сообщения с profile/attachments/reactions
+}
+
+interface DeliveryDTO {
+  type: string;                         // см. таблицу ниже
+  chat_id: string;
+  payload: MessagePayloadWS | AttachmentSuccessPayload;
+  delivery: DeliveryData;
+  ts: string;                           // ISO datetime
 }
 ```
-Служебные протокольные события (`ws.*`) имеют собственную, не всегда идентичную форму — см. подраздел "Служебные события" ниже.
+
+⚠️ Для доменных событий из брокера (`chats.*`) наружу уходит именно `DeliveryDTO`: в `payload` лежит `MessagePayloadWS { chat, message }`, а не исходный минимальный payload доменного события с `message_id`/`seq`/`changed_by`. Это актуально для `new_message`, `message_edited`, `message_deleted`, `messages_read`, member/chat-событий и `reaction_update`, если они были маршрутизированы через `ChatDeliveryRouter`. `event_name` и `event_id` в клиентский WS-конверт сейчас не попадают. Служебные протокольные события (`ws.*`) имеют собственную форму — см. подраздел "Служебные события" ниже.
 
 #### Доменные события (`type`) и точная форма `payload`
 
 | `type` | Когда | `payload` |
 |---|---|---|
-| `new_message` | Новое сообщение в чате | `{ message_id: string; seq: number; sender_id: number \| null; message_type: string }` ⚠️ **контента сообщения тут НЕТ** — только идентификаторы. Чтобы получить текст/вложения, либо взять из локального REST-запроса `POST /chats/{id}/messages/` (если это твоё же сообщение), либо запросить `GET /chats/{chat_id}/messages/{message_id}/`, либо просто дозапросить последние сообщения через `GET /chats/{chat_id}/messages/`. |
-| `message_edited` | Сообщение отредактировано | `{ message_id: string; seq: number; modified_by: number }` — контента тоже нет, перезапросить сообщение |
-| `message_deleted` | Сообщение удалено | `{ message_id: string; seq: number; deleted_by: number }` |
-| `messages_read` | Кто-то прочитал сообщения до seq X | `{ chat_id: string; seq: number; reader_id: number }` |
-| `member_joined` | Новый участник добавлен/вступил | `{ chat_id: string; user_id: number; role_id: number }` |
-| `member_left` | Участник вышел сам | `{ chat_id: string; user_id: number }` |
-| `member_kick` | Участника кикнули | `{ chat_id: string; requester_id: number; target_user_id: number }` |
-| `member_banned` | Участника забанили/разбанили | `{ chat_id: string; requester_id: number; target_user_id: number; ban: boolean }` |
-| `chat_created` | Чат создан (актуально для группового добавления сразу нескольких участников — все получат событие) | `{ chat_id: string; created_by: number; name: string \| null; member_ids: number[]; chat_type: string; member_count: number }` |
-| `chat_updated` | Изменены настройки чата | `{ chat_id: string; updated_by: number; name: string \| null; description: string \| null; is_public: boolean; admin_only: boolean; slow_mode_seconds: number; permissions: Record<string, boolean> }` |
-| `attachment_success` | Вложение(я) успешно обработаны после `confirm/` (шлётся лично пользователю-загрузчику, не всей подписке чата) | `{ user_id: number; chat_id: string; tokens: string[] }` — список готовых `upload_token` |
-| `chat_deleted` | Чат удалён | `{ chat_id: string; deleted_by: number }` |
-| `reaction_update` | Поставил/изменил реакцию на сообщении  `{message_id: string; emoji: string; count: number; changed_by: number}` | 
+| `new_message` | Новое сообщение в чате | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` — контент, вложения, профиль и реакции уже внутри `message`. |
+| `message_edited` | Сообщение отредактировано | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` — заменить локальное сообщение по `message.id`/`message.seq`. |
+| `message_deleted` | Сообщение удалено | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` — ориентироваться на состояние/поля удалённого сообщения в DTO. |
+| `messages_read` | Кто-то прочитал сообщения до seq X | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` (текущая реализация delivery-router всё равно требует `message_id` и подтягивает сообщение). |
+| `member_joined` | Новый участник добавлен/вступил | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
+| `member_left` | Участник вышел сам | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
+| `member_kick` | Участника кикнули | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
+| `member_banned` | Участника забанили/разбанили | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
+| `chat_created` | Чат создан | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
+| `chat_updated` | Изменены настройки чата | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
+| `reaction_update` | Поставили/изменили реакцию на сообщении | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` — обновить сообщение целиком; отдельные `emoji/count/changed_by` в WS-payload сейчас не передаются. |
+| `attachment_success` | Вложение(я) успешно обработаны после `confirm/` (шлётся лично пользователю-загрузчику, не всей подписке чата) | `AttachmentSuccessPayload { user_id: number; chat_id: string; tokens: string[] }` — список готовых `upload_token`; `delivery.require_subscription=false`, `recipients=[user_id]`. |
 
-**Определены, но реально нигде не публикуются** (есть в `WSEventType`, но `grep` по кодовой базе не находит ни одного места, где они реально отправляются): `typing_start`, `typing_stop`, `call_started`, `call_ended`, `call_joined`, `call_left`. Не полагайтесь на их получение — заложить обработку на будущее можно, но сейчас бэкенд их не шлёт.
+**Определены, но реально нигде не публикуются** (есть в `WSEventType`, но `rg` по кодовой базе не находит ни одного места, где они реально отправляются): `typing_start`, `typing_stop`, `call_started`, `call_ended`, `call_joined`, `call_left`. `chat_deleted` в `WSEventType` сейчас не определён. Не полагайтесь на их получение — заложить обработку на будущее можно, но сейчас бэкенд их не шлёт.
 
 #### Служебные события (`ws.*`)
 
@@ -1175,7 +1187,7 @@ interface WSEvent {
 
 1. Установить соединение с `?token=...`. Слушать `ws.ready`, сохранить `heartbeat_interval`/`heartbeat_timeout`.
 2. На каждый экран чата — слать `{"op": "subscribe", "chat_id": "...", "last_seq": <последний известный seq из локального кэша>}`.
-3. При получении `new_message`/`message_edited`/`message_deleted` — НЕ пытаться отрисовать `payload` напрямую как сообщение; использовать его как триггер "перезапроси/обнови" (дозапросить конкретное сообщение по `message_id`, либо, для полностью нового сообщения, дописать в локальный стор данные, полученные при отправке через REST, если это своё сообщение).
+3. При получении `new_message`/`message_edited`/`message_deleted`/`reaction_update` — брать готовое сообщение из `payload.message` и актуальные данные чата из `payload.chat`; отдельного минимального payload с `message_id`/`seq` сейчас нет.
 4. На `ws.ping` отвечать `{"op": "pong"}`.
 5. При разрыве соединения — переподключиться с экспоненциальным backoff, затем отправить `resume` с курсорами по всем открытым в UI чатам (≤20).
 6. При закрытии с кодом `1012` — значит открыто больше 2 соединений на аккаунт; просто переподключиться нормально (не ошибка, а следствие лимита).

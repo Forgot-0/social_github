@@ -56,7 +56,7 @@ class DeliveryData(BaseModel):
 
 class MessagePayloadWS(BaseModel):
     chat: ChatDTO
-    message: MessageDTO
+    message: MessageDTO | None = None
 
 
 class DeliveryDTO(BaseModel):
