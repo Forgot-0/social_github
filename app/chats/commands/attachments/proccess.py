@@ -6,6 +6,7 @@ import magic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
+from app.chats.dtos.delivery import DeliveryData, DeliveryDTO
 from app.chats.exceptions import AccessDeniedChatError, AttachmentMediaValidationError
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
@@ -149,17 +150,21 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
         try:
             successful_tokens = [t for t in command.upload_tokens if t not in failed_tokens]
             if successful_tokens:
-                payload = AttachmentSuccessPayload(
-                    user_id=command.user_id,
-                    chat_id=command.chat_id,
-                    tokens=successful_tokens,
-                )
                 await self.connection_manager.send_user_payload(
-                    command.user_id,
-                    event={
-                        "type": WSEventType.ATTACHMENT_SUCCESS,
-                        "payload": payload.model_dump(),
-                    },
+                    event=DeliveryDTO(
+                        type=WSEventType.ATTACHMENT_SUCCESS,
+                        chat_id=command.chat_id,
+                        payload=AttachmentSuccessPayload(
+                            user_id=command.user_id,
+                            chat_id=command.chat_id,
+                            tokens=successful_tokens,
+                        ),
+                        delivery=DeliveryData(
+                            require_subscription=False,
+                            recipients=[command.user_id],
+                        ),
+                        ts=slot.created_at.isoformat()
+                    )
                 )
             if failed_tokens:
                 logger.warning(

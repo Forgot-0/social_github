@@ -235,7 +235,7 @@ class ChatConnectionManager:
                 for uid in event.delivery.recipients
                 for conn_id in tuple(self.connections_by_user.get(uid, ()))
                 if (conn := self.connections_by_id.get(conn_id)) is not None
-                and (not event.delivery.require_subscription or str(event.chat.id) in conn.subscriptions)
+                and (not event.delivery.require_subscription or event.chat_id in conn.subscriptions)
             ]
 
         await self._send_to_connections(conns, event)
@@ -252,7 +252,7 @@ class ChatConnectionManager:
             )
 
     async def _send_or_unregister(self, conn: WSConnection, event: DeliveryDTO) -> None:
-        if conn.try_send(event.message.model_dump()):
+        if conn.try_send(event.payload.model_dump()):
             self._observe_delivery_latency(event)
             return
 
@@ -507,9 +507,9 @@ class ChatConnectionManager:
         await self.send_to_users_local(event)
         return message_id
 
-    async def send_user_payload(self, user_id: int, event: dict[str, Any]) -> None:
+    async def send_user_payload(self, event: DeliveryDTO) -> None:
         routes: set[str] = await self.redis.smembers(
-            WebsocketKeys.user_route_key(user_id)
+            WebsocketKeys.user_route_key(event.delivery.recipients[0])
         ) # pyright: ignore[reportAssignmentType]
 
         gateways: set[str] = set()
@@ -521,15 +521,12 @@ class ChatConnectionManager:
         if not gateways:
             return
 
-        stream_event = {**event, "require_subscription": False}
         pipe = self.redis.pipeline(transaction=False)
         for gateway_id in gateways:
             pipe.xadd(
                 WebsocketKeys.gateway_stream_key(gateway_id),
                 fields={
-                    "event": orjson.dumps(stream_event),
-                    "user_ids": orjson.dumps([user_id]),
-                    "chat_id": str(stream_event.get("chat_id") or ""),
+                    "event": event.model_dump_json(),
                 },
                 maxlen=chat_config.WS_GATEWAY_STREAM_MAXLEN,
                 approximate=True,

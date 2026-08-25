@@ -2,13 +2,12 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass
-from uuid import UUID
 
 from redis.asyncio import Redis
 
 from app.chats.config import chat_config
 from app.chats.dtos.chats import ChatDTO
-from app.chats.dtos.delivery import DeliveryData, DeliveryDTO, WsEvent, chunks
+from app.chats.dtos.delivery import DeliveryData, DeliveryDTO, MessagePayloadWS, WsEvent, chunks
 from app.chats.dtos.messages import MessageDTO
 from app.chats.keys import WebsocketKeys
 from app.chats.metrics import (
@@ -71,7 +70,6 @@ class ChatDeliveryRouter:
                 routes = await self._lookup_online_routes(lookup_batch)
 
                 await self._publish_offline_signal(
-                    chat_id=chat.id,
                     ws_event=ws_event,
                     lookup_batch=lookup_batch,
                     routes=routes,
@@ -99,7 +97,6 @@ class ChatDeliveryRouter:
 
     async def _publish_offline_signal(
         self,
-        chat_id: UUID,
         ws_event: WsEvent,
         lookup_batch: Iterable[int],
         routes: RouteMap,
@@ -129,7 +126,7 @@ class ChatDeliveryRouter:
         }
 
         await self.broker.send_data(
-            key=str(chat_id),
+            key=str(ws_event.chat_id),
             topic=chat_config.CHAT_OFFLINE_DELIVERY_TOPIC,
             data=data,
         )
@@ -233,14 +230,15 @@ class ChatDeliveryRouter:
             for user_chunk in chunks(sorted(user_ids), chat_config.WS_GATEWAY_STREAM_USERS_PER_ENTRY):
                 stream_event = DeliveryDTO(
                     type=ws_event.type,
-                    event_id=ws_event.event_id,
-                    event_name=ws_event.event_name,
-                    chat=chat,
-                    message=message,
+                    payload=MessagePayloadWS(
+                        chat=chat,
+                        message=message,
+                    ),
                     delivery=DeliveryData(
-                        require_subscription=require_subscription, recipients=user_chunk, gateway_id=gateway_id
+                        require_subscription=require_subscription, recipients=user_chunk
                     ),
                     ts=ws_event.ts,
+                    chat_id=str(ws_event.chat_id)
                 )
                 pipe.xadd(
                     stream_key,

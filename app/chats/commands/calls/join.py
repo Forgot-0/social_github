@@ -58,7 +58,7 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
             raise NotFoundChatError(chat_id=str(command.chat_id))
 
         msg = Message.create(
-            sender_id=None,
+            sender_id=int(command.user_jwt_data.id),
             chat_id=chat.id,
             seq=next_seq,
             content=f"📞 {username} joined the call",

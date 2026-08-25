@@ -51,15 +51,17 @@ class WsEvent:
 class DeliveryData(BaseModel):
     require_subscription: bool
     recipients: list[int]
-    gateway_id: str
+
+
+class MessagePayloadWS(BaseModel):
+    chat: ChatDTO
+    message: MessageDTO
 
 
 class DeliveryDTO(BaseModel):
     type: str
-    event_id: str
-    event_name: str
-    chat: ChatDTO
-    message: MessageDTO
+    chat_id: str
+    payload: BaseModel
     delivery: DeliveryData
     ts: str
 
