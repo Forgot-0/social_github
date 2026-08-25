@@ -1,5 +1,6 @@
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -61,7 +62,7 @@ class MessagePayloadWS(BaseModel):
 class DeliveryDTO(BaseModel):
     type: str
     chat_id: str
-    payload: BaseModel
+    payload: dict[str, Any]
     delivery: DeliveryData
     ts: str
 

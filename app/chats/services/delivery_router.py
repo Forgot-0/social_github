@@ -233,7 +233,7 @@ class ChatDeliveryRouter:
                     payload=MessagePayloadWS(
                         chat=chat,
                         message=message,
-                    ),
+                    ).model_dump(),
                     delivery=DeliveryData(
                         require_subscription=require_subscription, recipients=user_chunk
                     ),

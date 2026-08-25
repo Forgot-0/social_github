@@ -158,7 +158,7 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
                             user_id=command.user_id,
                             chat_id=command.chat_id,
                             tokens=successful_tokens,
-                        ),
+                        ).model_dump(),
                         delivery=DeliveryData(
                             require_subscription=False,
                             recipients=[command.user_id],
