@@ -1143,7 +1143,7 @@ interface MessagePayloadWS {
 
 interface DeliveryDTO {
   type: string;                         // см. таблицу ниже
-  chat_id: string;
+  channel: string;
   payload: MessagePayloadWS | AttachmentSuccessPayload;
   delivery: DeliveryData;
   ts: string;                           // ISO datetime
