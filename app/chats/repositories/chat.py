@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import aliased, contains_eager, selectinload
 
-from app.chats.models.chat import Chat
+from app.chats.models.chat import Chat, ChatType
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.message import Message
 from app.chats.models.profile import ChatUserProfile
@@ -38,6 +38,22 @@ class ChatRepository(IRepository[Chat], CacheRepository):
                 selectinload(Chat.members).selectinload(ChatMember.profile),
             )
 
+        result = await self.session.execute(stmt)
+        return result.scalar()
+
+    async def get_direct_chat(self, user_id: int, other_user_id: int) -> Chat | None:
+        member_a = aliased(ChatMember)
+        member_b = aliased(ChatMember)
+ 
+        stmt = (
+            select(Chat)
+            .join(member_a, and_(member_a.chat_id == Chat.id, member_a.user_id == user_id))
+            .join(member_b, and_(member_b.chat_id == Chat.id, member_b.user_id == other_user_id))
+            .where(
+                Chat.type == ChatType.DIRECT,
+                Chat.is_public == False,
+            )
+        )
         result = await self.session.execute(stmt)
         return result.scalar()
 

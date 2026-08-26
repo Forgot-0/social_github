@@ -13,7 +13,6 @@ from app.chats.models.chat import (
     LeftChatMemberEvent,
     UpdatedChatEvent,
 )
-from app.core.utils import now_utc
 
 
 def make_direct_chat(created_by: int = 1, other_member: int = 2) -> Chat:

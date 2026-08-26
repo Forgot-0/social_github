@@ -49,6 +49,17 @@ class CreateChatCommandHandler(BaseCommandHandler[CreateChatCommand, ChatDTO]):
             slow_mode_seconds=command.slow_mode_seconds,
             permissions=command.permissions,
         )
+        if chat.type == ChatType.DIRECT:
+            other_user_id = next(
+                user_id for user_id in command.member_ids
+                if user_id != created_by
+            )
+            direct_chat = await self.chat_repository.get_direct_chat(
+                user_id=created_by, other_user_id=other_user_id
+            )
+            if direct_chat is not None:
+                return ChatDTO.model_validate(direct_chat)
+
         await self.chat_repository.create(chat)
         await self.event_bus.publish(chat.pull_events())
         await self.session.commit()

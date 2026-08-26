@@ -198,7 +198,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         if created_by in members_ids:
             members_ids.remove(created_by)
 
-        if chat_type == ChatType.DIRECT and len(members_ids) != 1:
+        if chat_type == ChatType.DIRECT and (len(members_ids) != 1 or created_by == members_ids[0]):
             raise MemberLimitExceededError(limit=2)
 
         participant_count = len(members_ids) + 1
