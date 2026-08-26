@@ -61,7 +61,7 @@ class MessagePayloadWS(BaseModel):
 
 class DeliveryDTO(BaseModel):
     type: str
-    chat_id: str
+    channel: str
     payload: dict[str, Any]
     delivery: DeliveryData
     ts: str

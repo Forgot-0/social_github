@@ -45,7 +45,7 @@ class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
                 })
                 return
 
-            await self.manager.subscribe_chat(command.conn, chat_id)
+            await self.manager.subscribe_channel(command.conn, chat_id)
             command.conn.try_send({
                 "type": "ws.subscribed",
                 "chat_id": chat_id,

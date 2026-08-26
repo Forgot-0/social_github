@@ -42,7 +42,7 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
             })
             return
 
-        await self.manager.subscribe_chat(command.conn, command.chat_id)
+        await self.manager.subscribe_channel(command.conn, command.chat_id)
         command.conn.try_send({
             "type": "ws.subscribed",
             "chat_id": str(chat_id),

@@ -99,7 +99,7 @@ class ChatConnectionManager:
             await pipe.execute()
 
         self._export_state_metrics()
-        logger.info("ChatConnectionManager shut down")
+        logger.info("ChannelConnectionManager shut down")
 
     async def register(self, conn: WSConnection) -> None:
         conn.gateway_id = self.gateway_id
@@ -161,9 +161,9 @@ class ChatConnectionManager:
                 if not user_conns:
                     self.connections_by_user.pop(conn.user_id, None)
 
-            subscribed_chats = set(conn.subscriptions)
-            for chat_id in subscribed_chats:
-                self._unsubscribe_chat_in_memory(conn, chat_id)
+            subscribed_channels = set(conn.subscriptions)
+            for channel in subscribed_channels:
+                self._unsubscribe_channel_in_memory(conn, channel)
 
         route_value = f"{self.gateway_id}:{conn.connection_id}"
         sub_route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
@@ -172,9 +172,9 @@ class ChatConnectionManager:
         pipe.srem(WebsocketKeys.user_route_key(conn.user_id), route_value)
         pipe.srem(WebsocketKeys.gateway_route_key(self.gateway_id), conn.connection_id)
         pipe.delete(WebsocketKeys.connection_key(conn.connection_id))
-        for chat_id in subscribed_chats:
-            pipe.srem(WebsocketKeys.active_subscription_key(chat_id), sub_route)
-            pipe.delete(WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id))
+        for channel in subscribed_channels:
+            pipe.srem(WebsocketKeys.active_subscription_key(channel), sub_route)
+            pipe.delete(WebsocketKeys.connection_subscription_key(conn.connection_id, channel))
 
         pipe.scard(WebsocketKeys.user_route_key(conn.user_id))
         results = await pipe.execute()
@@ -191,37 +191,35 @@ class ChatConnectionManager:
             extra={
                 "connection_id": conn.connection_id,
                 "user_id": conn.user_id,
-                "subscriptions": len(subscribed_chats),
+                "subscriptions": len(subscribed_channels),
                 "remaining_routes": remaining_routes,
             },
         )
 
-    async def subscribe_chat(self, conn: WSConnection, chat_id: str) -> None:
-        chat_id = str(chat_id)
-
+    async def subscribe_channel(self, conn: WSConnection, channel: str) -> None:
         async with self._lock:
-            conn.subscriptions.add(chat_id)
+            conn.subscriptions.add(channel)
 
         route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
         pipe = self.redis.pipeline(transaction=False)
-        pipe.sadd(WebsocketKeys.active_subscription_key(chat_id), route)
-        pipe.expire(WebsocketKeys.active_subscription_key(chat_id), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
+        pipe.sadd(WebsocketKeys.active_subscription_key(channel), route)
+        pipe.expire(WebsocketKeys.active_subscription_key(channel), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
         pipe.set(
-            WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
+            WebsocketKeys.connection_subscription_key(conn.connection_id, channel),
             route,
             ex=chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
         )
         await pipe.execute()
         self._export_state_metrics()
 
-    async def unsubscribe_chat(self, conn: WSConnection, chat_id: str) -> None:
+    async def unsubscribe_channel(self, conn: WSConnection, channel: str) -> None:
         async with self._lock:
-            self._unsubscribe_chat_in_memory(conn, chat_id)
+            self._unsubscribe_channel_in_memory(conn, channel)
 
         route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
         pipe = self.redis.pipeline(transaction=False)
-        pipe.srem(WebsocketKeys.active_subscription_key(chat_id), route)
-        pipe.delete(WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id))
+        pipe.srem(WebsocketKeys.active_subscription_key(channel), route)
+        pipe.delete(WebsocketKeys.connection_subscription_key(conn.connection_id, channel))
         await pipe.execute()
         self._export_state_metrics()
 
@@ -235,7 +233,7 @@ class ChatConnectionManager:
                 for uid in event.delivery.recipients
                 for conn_id in tuple(self.connections_by_user.get(uid, ()))
                 if (conn := self.connections_by_id.get(conn_id)) is not None
-                and (not event.delivery.require_subscription or event.chat_id in conn.subscriptions)
+                and (not event.delivery.require_subscription or event.channel in conn.subscriptions)
             ]
 
         await self._send_to_connections(conns, event)
@@ -254,7 +252,7 @@ class ChatConnectionManager:
     async def _send_or_unregister(self, conn: WSConnection, event: DeliveryDTO) -> None:
         if conn.try_send({
             "type": event.type,
-            "chat_id": event.chat_id,
+            "channel": event.channel,
             "payload": event.payload,
             "ts": event.ts
         }):
@@ -329,14 +327,14 @@ class ChatConnectionManager:
                     if subscriptions:
                         route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
                         pipe = self.redis.pipeline(transaction=False)
-                        for chat_id in subscriptions:
-                            pipe.sadd(WebsocketKeys.active_subscription_key(chat_id), route)
+                        for channel in subscriptions:
+                            pipe.sadd(WebsocketKeys.active_subscription_key(channel), route)
                             pipe.expire(
-                                WebsocketKeys.active_subscription_key(chat_id),
+                                WebsocketKeys.active_subscription_key(channel),
                                 chat_config.WS_ACTIVE_SUBSCRIPTION_TTL
                             )
                             pipe.set(
-                                WebsocketKeys.connection_subscription_key(conn.connection_id, chat_id),
+                                WebsocketKeys.connection_subscription_key(conn.connection_id, channel),
                                 route,
                                 ex=chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
                             )
@@ -551,8 +549,8 @@ class ChatConnectionManager:
         except (TypeError, ValueError):
             return 0
 
-    def _unsubscribe_chat_in_memory(self, conn: WSConnection, chat_id: str) -> None:
-        conn.subscriptions.discard(chat_id)
+    def _unsubscribe_channel_in_memory(self, conn: WSConnection, channel: str) -> None:
+        conn.subscriptions.discard(channel)
 
 
 def _decode(value: Any) -> str:

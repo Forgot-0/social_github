@@ -54,7 +54,6 @@ class ChatDeliveryRouter:
             message_dto = MessageDTO.model_validate(message)
             await self.message_service.attach_profile_urls([message_dto.profile])
 
-
         if ws_event.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
             await self._route_fanout_on_write(
                 chat=ChatDTO.model_validate(chat), ws_event=ws_event, message=message_dto
@@ -82,16 +81,16 @@ class ChatDeliveryRouter:
                     ws_event=ws_event,
                     lookup_batch=lookup_batch,
                     routes=routes,
-                    message=message,
                     chat=chat,
+                    message=message,
                 )
 
                 await self._enqueue_gateway_deliveries(
                     routes,
                     ws_event,
-                    message=message,
                     chat=chat,
                     require_subscription=False,
+                    message=message
                 )
 
     async def _route_to_active_subscribers(
@@ -115,7 +114,7 @@ class ChatDeliveryRouter:
         lookup_batch: Iterable[int],
         routes: RouteMap,
         chat: ChatDTO,
-        message: MessageDTO | None,
+        message: MessageDTO | None=None,
     ) -> None:
         if ws_event.event_name not in OFFLINE_SIGNAL_EVENT_NAMES:
             return
@@ -252,7 +251,7 @@ class ChatDeliveryRouter:
                         require_subscription=require_subscription, recipients=user_chunk
                     ),
                     ts=ws_event.ts,
-                    chat_id=str(ws_event.chat_id)
+                    channel=str(ws_event.chat_id)
                 )
                 pipe.xadd(
                     stream_key,

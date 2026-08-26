@@ -18,7 +18,7 @@ class UnsubscribeCommandHandler(BaseCommandHandler[UnsubscribeCommand, None]):
     manager: ChatConnectionManager
 
     async def handle(self, command: UnsubscribeCommand) -> None:
-        await self.manager.unsubscribe_chat(command.conn, command.chat_id)
+        await self.manager.unsubscribe_channel(command.conn, command.chat_id)
         command.conn.try_send({
             "type": "ws.unsubscribed",
             "chat_id": command.chat_id,

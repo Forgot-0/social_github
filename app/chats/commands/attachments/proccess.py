@@ -153,7 +153,7 @@ class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCo
                 await self.connection_manager.send_user_payload(
                     event=DeliveryDTO(
                         type=WSEventType.ATTACHMENT_SUCCESS,
-                        chat_id=command.chat_id,
+                        channel=command.chat_id,
                         payload=AttachmentSuccessPayload(
                             user_id=command.user_id,
                             chat_id=command.chat_id,
