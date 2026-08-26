@@ -9,8 +9,8 @@ import orjson
 from fastapi import WebSocket
 from starlette.websockets import WebSocketState
 
-from app.chats.config import chat_config
-from app.chats.metrics import EVICTION_REASON_HEARTBEAT_TIMEOUT, WS_CONNECTION_EVICTIONS
+from app.core.configs.app import app_config
+from app.core.metrics import EVICTION_REASON_HEARTBEAT_TIMEOUT, WS_CONNECTION_EVICTIONS
 from app.core.utils import now_utc
 
 
@@ -26,7 +26,7 @@ class WSConnection:
     subscriptions: set[str] = field(default_factory=set)
     last_seq_by_chat: dict[str, int] = field(default_factory=dict)
     send_queue: asyncio.Queue[bytes] = field(
-        default_factory=lambda: asyncio.Queue(maxsize=chat_config.WS_SEND_QUEUE_SIZE)
+        default_factory=lambda: asyncio.Queue(maxsize=app_config.WS_SEND_QUEUE_SIZE)
     )
     writer_task: asyncio.Task[None] | None = field(default=None)
     heartbeat_task: asyncio.Task[None] | None = field(default=None)
@@ -78,13 +78,13 @@ class WSConnection:
                 not self.closed
                 and self.websocket.application_state == WebSocketState.CONNECTED
             ):
-                await asyncio.sleep(chat_config.WS_HEARTBEAT_INTERVAL)
+                await asyncio.sleep(app_config.WS_HEARTBEAT_INTERVAL)
                 if self.closed:
                     return
 
                 idle = (now_utc() - self.last_seen_at).total_seconds()
 
-                if idle > chat_config.WS_HEARTBEAT_TIMEOUT:
+                if idle > app_config.WS_HEARTBEAT_TIMEOUT:
                     WS_CONNECTION_EVICTIONS.labels(
                         gateway_id=self.gateway_id,
                         reason=EVICTION_REASON_HEARTBEAT_TIMEOUT,

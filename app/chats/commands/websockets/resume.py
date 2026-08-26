@@ -3,14 +3,14 @@ from uuid import UUID
 
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO
-from app.chats.dtos.websocket import WSConnection
 from app.chats.exceptions import MaxLimitCursorError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import WSClientOp
 from app.chats.services.messages import MessageService
-from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.websocket.manager import ConnectionManager
+from app.core.websocket.websocket import WSConnection
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class ResumeCommand(BaseCommand):
 
 @dataclass(frozen=True)
 class ResumeCommandHandler(BaseCommandHandler[ResumeCommand, None]):
-    manager: ChatConnectionManager
+    manager: ConnectionManager
     chat_repository: ChatRepository
     message_repository: MessageRepository
     message_service: MessageService

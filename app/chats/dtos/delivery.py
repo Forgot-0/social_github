@@ -1,6 +1,5 @@
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -49,22 +48,9 @@ class WsEvent:
         )
 
 
-class DeliveryData(BaseModel):
-    require_subscription: bool
-    recipients: list[int]
-
-
 class MessagePayloadWS(BaseModel):
     chat: ChatDTO
     message: MessageDTO | None = None
-
-
-class DeliveryDTO(BaseModel):
-    type: str
-    channel: str
-    payload: dict[str, Any]
-    delivery: DeliveryData
-    ts: str
 
 
 def chunks(items: Iterable[int], size: int) -> Iterator[list[int]]:

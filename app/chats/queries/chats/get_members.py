@@ -5,9 +5,9 @@ from app.chats.dtos.members import ListMembers, MemberChatDTO, MemberPresenceDTO
 from app.chats.exceptions import NotChatMemberError, NotFoundChatError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.messages import MessageService
-from app.chats.services.presence import PresenceService
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
+from app.core.websocket.presence import PresenceService
 
 
 @dataclass(frozen=True, kw_only=True)

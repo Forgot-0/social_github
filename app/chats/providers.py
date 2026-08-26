@@ -1,5 +1,4 @@
 from dishka import Provider, Scope, decorate, provide, provide_all
-from redis.asyncio import Redis
 
 from app.chats.commands.attachments.proccess import ProccessAttachmentsCommand, ProccessAttachmentsCommandHandler
 from app.chats.commands.attachments.request_upload import (
@@ -50,17 +49,11 @@ from app.chats.services.attachment_media import AttachmentMediaValidator
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.messages import MessageService
-from app.chats.services.presence import PresenceService
-from app.chats.services.ws import ChatConnectionManager
 from app.core.events.event import EventRegistry
 from app.core.mediators.base import CommandRegistry, QueryRegistry
 
 
 class ChatModuleProvider(Provider):
-    @provide(scope=Scope.APP)
-    def chat_connection_manager(self, redis: Redis, presence_service: PresenceService) -> ChatConnectionManager:
-        return ChatConnectionManager(redis=redis, presence_service=presence_service)
-
     @provide(scope=Scope.REQUEST)
     def livekit_service(self) -> LiveKitService:
         return LiveKitService(
@@ -122,7 +115,6 @@ class ChatModuleProvider(Provider):
 
     service = provide_all(
         MessageService,
-        PresenceService,
         ChatAccessService,
         AttachmentMediaValidator,
         scope=Scope.APP

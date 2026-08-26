@@ -14,13 +14,14 @@ from app.chats.commands.websockets.resume import ResumeCommand
 from app.chats.commands.websockets.subscribe import SubscribeCommand
 from app.chats.commands.websockets.unsubscribe import UnsubscribeCommand
 from app.chats.config import chat_config
-from app.chats.dtos.websocket import WSConnection
 from app.chats.schemas.ws import WSClientCommand, WSClientOp
-from app.chats.services.ws import ChatConnectionManager
 from app.core.api.utils import get_ws_access_token
+from app.core.configs.app import app_config
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager
+from app.core.websocket.manager import ConnectionManager
+from app.core.websocket.websocket import WSConnection
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ async def websocket_gateway(
     await websocket.accept(subprotocol=_select_subprotocol(websocket))
 
     async with container() as request_container:
-        manager = await request_container.get(ChatConnectionManager)
+        manager = await request_container.get(ConnectionManager)
 
         conn = WSConnection(
             websocket=websocket,
@@ -92,8 +93,8 @@ async def websocket_gateway(
                 "payload": {
                     "connection_id": conn.connection_id,
                     "gateway_id": conn.gateway_id,
-                    "heartbeat_interval": chat_config.WS_HEARTBEAT_INTERVAL,
-                    "heartbeat_timeout": chat_config.WS_HEARTBEAT_TIMEOUT,
+                    "heartbeat_interval": app_config.WS_HEARTBEAT_INTERVAL,
+                    "heartbeat_timeout": app_config.WS_HEARTBEAT_TIMEOUT,
                     "reconnect": {"mode": "last_seq_per_chat", "op": "resume"},
                 },
             },

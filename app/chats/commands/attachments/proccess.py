@@ -6,16 +6,16 @@ import magic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.config import chat_config
-from app.chats.dtos.delivery import DeliveryData, DeliveryDTO
 from app.chats.exceptions import AccessDeniedChatError, AttachmentMediaValidationError
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.schemas.ws import AttachmentSuccessPayload, WSEventType
 from app.chats.services.attachment_media import AttachmentMediaValidator
-from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.services.media.exceptions import MediaProbeUnavailableError
 from app.core.services.storage.exceptions import StorageError
 from app.core.services.storage.service import StorageService
+from app.core.websocket.dtos import DeliveryData, DeliveryDTO
+from app.core.websocket.manager import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class ProccessAttachmentsCommand(BaseCommand):
 class ProccessAttachmentsCommandHandler(BaseCommandHandler[ProccessAttachmentsCommand, None]):
     attachment_repository: AttachmentRepository
     storage_service: StorageService
-    connection_manager: ChatConnectionManager
+    connection_manager: ConnectionManager
     session: AsyncSession
     media_validator: AttachmentMediaValidator
 

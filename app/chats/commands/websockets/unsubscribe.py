@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from app.chats.dtos.websocket import WSConnection
 from app.chats.schemas.ws import WSClientOp
-from app.chats.services.ws import ChatConnectionManager
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.websocket.manager import ConnectionManager
+from app.core.websocket.websocket import WSConnection
 
 
 @dataclass(frozen=True)
@@ -15,7 +15,7 @@ class UnsubscribeCommand(BaseCommand):
 
 @dataclass(frozen=True)
 class UnsubscribeCommandHandler(BaseCommandHandler[UnsubscribeCommand, None]):
-    manager: ChatConnectionManager
+    manager: ConnectionManager
 
     async def handle(self, command: UnsubscribeCommand) -> None:
         await self.manager.unsubscribe_channel(command.conn, command.chat_id)

@@ -4,8 +4,8 @@ import orjson
 import pytest
 from fastapi.websockets import WebSocketState
 
-from app.chats.config import chat_config
-from app.chats.dtos.websocket import WSConnection
+from app.core.configs.app import app_config
+from app.core.websocket.websocket import WSConnection
 
 
 def make_ws_mock() -> MagicMock:
@@ -56,7 +56,7 @@ class TestTrySend:
     def test_try_send_returns_false_when_queue_full(self) -> None:
         conn = make_connection()
 
-        for i in range(chat_config.WS_SEND_QUEUE_SIZE):
+        for i in range(app_config.WS_SEND_QUEUE_SIZE):
             conn.try_send({"type": "ws.msg", "seq": i})
 
         result = conn.try_send({"type": "ws.overflow", "payload": {}})
@@ -170,12 +170,12 @@ class TestQueueConfig:
 
     def test_queue_max_size_matches_config(self) -> None:
         conn = make_connection()
-        assert conn.send_queue.maxsize == chat_config.WS_SEND_QUEUE_SIZE
+        assert conn.send_queue.maxsize == app_config.WS_SEND_QUEUE_SIZE
 
     def test_queue_accepts_exactly_max_items(self) -> None:
         conn = make_connection()
 
-        for i in range(chat_config.WS_SEND_QUEUE_SIZE):
+        for i in range(app_config.WS_SEND_QUEUE_SIZE):
             result = conn.try_send({"seq": i})
             assert result is True
 

@@ -3,9 +3,9 @@ from datetime import timedelta
 import pytest
 from httpx import AsyncClient
 
-from app.chats.keys import ChatKeys
 from app.core.services.auth.dto import UserJWTData
 from app.core.utils import now_utc
+from app.core.websocket.keys import WebsocketKeys
 from tests.chats.integration.factories import group_chat_payload
 from tests.support.http import api_path
 
@@ -188,7 +188,7 @@ class TestMembersHttpEndpoints:
         headers = create_auth_headers(user_jwt)
         peer_id = 50_150
         await redis_client.zadd(
-            ChatKeys.presence_last_seen_zset(),
+            WebsocketKeys.presence_last_seen_zset(),
             {str(peer_id): now_utc().timestamp()},
         )
 

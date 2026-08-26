@@ -11,11 +11,8 @@ import orjson
 from redis.asyncio import Redis
 from redis.exceptions import ResponseError
 
-from app.chats.config import chat_config
-from app.chats.dtos.delivery import DeliveryDTO
-from app.chats.dtos.websocket import WSConnection
-from app.chats.keys import WebsocketKeys
-from app.chats.metrics import (
+from app.core.configs.app import app_config
+from app.core.metrics import (
     EVICTION_REASON_CONNECTION_LIMIT,
     EVICTION_REASON_SHUTDOWN,
     EVICTION_REASON_SLOW_CONSUMER,
@@ -27,8 +24,11 @@ from app.chats.metrics import (
     WS_GATEWAY_STREAM_LENGTH,
     WS_GATEWAY_STREAM_PENDING,
 )
-from app.chats.services.presence import PresenceService
 from app.core.utils import now_utc
+from app.core.websocket.dtos import DeliveryDTO
+from app.core.websocket.keys import WebsocketKeys
+from app.core.websocket.presence import PresenceService
+from app.core.websocket.websocket import WSConnection
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ _CLAIM_START_ID = "0-0"
 
 
 @dataclass(slots=True)
-class ChatConnectionManager:
+class ConnectionManager:
     redis: Redis
     presence_service: PresenceService
     gateway_id: str = field(default_factory=lambda: os.getenv("GATEWAY_ID", "") or os.getenv("HOSTNAME", "local-gateway"))
@@ -111,7 +111,7 @@ class ChatConnectionManager:
             user_conns.add(conn.connection_id)
             is_first_local_connection = len(user_conns) == 1
 
-            overflow = len(user_conns) - chat_config.WS_MAX_CONNECTIONS_PER_USER
+            overflow = len(user_conns) - app_config.WS_MAX_CONNECTIONS_PER_USER
             if overflow > 0:
                 stale_to_close.extend(
                     sorted((
@@ -203,11 +203,11 @@ class ChatConnectionManager:
         route = WebsocketKeys.active_subscription_route(conn.user_id, self.gateway_id, conn.connection_id)
         pipe = self.redis.pipeline(transaction=False)
         pipe.sadd(WebsocketKeys.active_subscription_key(channel), route)
-        pipe.expire(WebsocketKeys.active_subscription_key(channel), chat_config.WS_ACTIVE_SUBSCRIPTION_TTL)
+        pipe.expire(WebsocketKeys.active_subscription_key(channel), app_config.WS_ACTIVE_SUBSCRIPTION_TTL)
         pipe.set(
             WebsocketKeys.connection_subscription_key(conn.connection_id, channel),
             route,
-            ex=chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
+            ex=app_config.WS_ACTIVE_SUBSCRIPTION_TTL,
         )
         await pipe.execute()
         self._export_state_metrics()
@@ -283,9 +283,9 @@ class ChatConnectionManager:
         route_value = f"{self.gateway_id}:{conn.connection_id}"
         pipe = self.redis.pipeline(transaction=False)
         pipe.sadd(WebsocketKeys.user_route_key(conn.user_id), route_value)
-        pipe.expire(WebsocketKeys.user_route_key(conn.user_id), chat_config.WS_REDIS_CONNECTION_TTL)
+        pipe.expire(WebsocketKeys.user_route_key(conn.user_id), app_config.WS_REDIS_CONNECTION_TTL)
         pipe.sadd(WebsocketKeys.gateway_route_key(self.gateway_id), conn.connection_id)
-        pipe.expire(WebsocketKeys.gateway_route_key(self.gateway_id), chat_config.WS_REDIS_CONNECTION_TTL)
+        pipe.expire(WebsocketKeys.gateway_route_key(self.gateway_id), app_config.WS_REDIS_CONNECTION_TTL)
         pipe.set(
             WebsocketKeys.connection_key(conn.connection_id),
             orjson.dumps(
@@ -296,12 +296,12 @@ class ChatConnectionManager:
                     "connected_at": conn.connected_at.isoformat(),
                 }
             ),
-            ex=chat_config.WS_REDIS_CONNECTION_TTL,
+            ex=app_config.WS_REDIS_CONNECTION_TTL,
         )
         await pipe.execute()
 
     async def _refresh_routes_loop(self) -> None:
-        interval = max(5, min(30, chat_config.WS_REDIS_CONNECTION_TTL // 2))
+        interval = max(5, min(30, app_config.WS_REDIS_CONNECTION_TTL // 2))
         tick = 0
         while not self._shutdown_event.is_set():
             try:
@@ -331,17 +331,17 @@ class ChatConnectionManager:
                             pipe.sadd(WebsocketKeys.active_subscription_key(channel), route)
                             pipe.expire(
                                 WebsocketKeys.active_subscription_key(channel),
-                                chat_config.WS_ACTIVE_SUBSCRIPTION_TTL
+                                app_config.WS_ACTIVE_SUBSCRIPTION_TTL
                             )
                             pipe.set(
                                 WebsocketKeys.connection_subscription_key(conn.connection_id, channel),
                                 route,
-                                ex=chat_config.WS_ACTIVE_SUBSCRIPTION_TTL,
+                                ex=app_config.WS_ACTIVE_SUBSCRIPTION_TTL,
                             )
                         await pipe.execute()
 
                 await self._refresh_presence(conns)
-                if tick % chat_config.WS_PRESENCE_CLEANUP_EVERY_TICKS == 0:
+                if tick % app_config.WS_PRESENCE_CLEANUP_EVERY_TICKS == 0:
                     await self.presence_service.cleanup_stale()
 
                 self._export_state_metrics()
@@ -381,8 +381,8 @@ class ChatConnectionManager:
                     groupname=self.stream_group,
                     consumername=self.stream_consumer,
                     streams={self.stream_key: ">"},
-                    count=chat_config.WS_GATEWAY_STREAM_READ_COUNT,
-                    block=chat_config.WS_GATEWAY_STREAM_BLOCK_MS,
+                    count=app_config.WS_GATEWAY_STREAM_READ_COUNT,
+                    block=app_config.WS_GATEWAY_STREAM_BLOCK_MS,
                 )
                 consecutive_errors = 0
 
@@ -408,7 +408,7 @@ class ChatConnectionManager:
                 await asyncio.sleep(backoff)
 
     async def _claim_pending_loop(self) -> None:
-        interval = float(chat_config.WS_GATEWAY_STREAM_CLAIM_INTERVAL)
+        interval = float(app_config.WS_GATEWAY_STREAM_CLAIM_INTERVAL)
         while not self._shutdown_event.is_set():
             try:
                 await asyncio.wait_for(self._shutdown_event.wait(), timeout=interval)
@@ -433,9 +433,9 @@ class ChatConnectionManager:
                 name=self.stream_key,
                 groupname=self.stream_group,
                 consumername=self.stream_consumer,
-                min_idle_time=chat_config.WS_GATEWAY_STREAM_CLAIM_MIN_IDLE_MS,
+                min_idle_time=app_config.WS_GATEWAY_STREAM_CLAIM_MIN_IDLE_MS,
                 start_id=cursor,
-                count=chat_config.WS_GATEWAY_STREAM_CLAIM_COUNT,
+                count=app_config.WS_GATEWAY_STREAM_CLAIM_COUNT,
             )
 
             next_cursor, entries = result[0], result[1]
@@ -479,7 +479,7 @@ class ChatConnectionManager:
             await self.redis.xack(self.stream_key, self.stream_group, *ack_ids)
 
     async def _stream_metrics_loop(self) -> None:
-        interval = float(chat_config.WS_GATEWAY_STREAM_METRICS_INTERVAL)
+        interval = float(app_config.WS_GATEWAY_STREAM_METRICS_INTERVAL)
         while not self._shutdown_event.is_set():
             try:
                 await asyncio.wait_for(self._shutdown_event.wait(), timeout=interval)
@@ -531,7 +531,7 @@ class ChatConnectionManager:
                 fields={
                     "event": event.model_dump_json(),
                 },
-                maxlen=chat_config.WS_GATEWAY_STREAM_MAXLEN,
+                maxlen=app_config.WS_GATEWAY_STREAM_MAXLEN,
                 approximate=True,
             )
         await pipe.execute()

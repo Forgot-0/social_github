@@ -346,11 +346,11 @@ class ReaderUser(User):
             self._handle_frame(frame)
 
     def _handle_frame(self, frame: dict) -> None:
-        if frame.get("message") is None:
+        if frame["payload"].get("message") is None:
             return
         recv_time = time.time()
 
-        message_id = frame["message"]["id"]
+        message_id = frame["payload"]["message"]["id"]
 
         sent_at = self.environment.loadtest_sent_at.get(message_id) if message_id else None
         if sent_at is not None:

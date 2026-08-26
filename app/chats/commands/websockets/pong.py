@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from app.chats.dtos.websocket import WSConnection
 from app.chats.schemas.ws import WSClientOp
 from app.core.commands import BaseCommand, BaseCommandHandler
+from app.core.websocket.websocket import WSConnection
 
 
 @dataclass(frozen=True)

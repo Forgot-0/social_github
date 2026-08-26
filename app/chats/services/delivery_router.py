@@ -7,9 +7,8 @@ from redis.asyncio import Redis
 
 from app.chats.config import chat_config
 from app.chats.dtos.chats import ChatDTO
-from app.chats.dtos.delivery import DeliveryData, DeliveryDTO, MessagePayloadWS, WsEvent, chunks
+from app.chats.dtos.delivery import MessagePayloadWS, WsEvent, chunks
 from app.chats.dtos.messages import MessageDTO
-from app.chats.keys import WebsocketKeys
 from app.chats.metrics import (
     DELIVERY_ROUTER_OFFLINE_RECIPIENTS,
     DELIVERY_ROUTER_OFFLINE_SIGNALS,
@@ -20,8 +19,11 @@ from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import ChatEventPayload
 from app.chats.services.messages import MessageService
+from app.core.configs.app import app_config
 from app.core.consumers.event import TypedEventDTO
 from app.core.message_brokers.base import BaseMessageBroker
+from app.core.websocket.dtos import DeliveryData, DeliveryDTO
+from app.core.websocket.keys import WebsocketKeys
 
 RouteMap = dict[str, set[int]]
 ActiveSubscriptionRoute = tuple[int, str, str, str]
@@ -240,7 +242,7 @@ class ChatDeliveryRouter:
 
         for gateway_id, user_ids in routes_by_gateway.items():
             stream_key = WebsocketKeys.gateway_stream_key(gateway_id)
-            for user_chunk in chunks(sorted(user_ids), chat_config.WS_GATEWAY_STREAM_USERS_PER_ENTRY):
+            for user_chunk in chunks(sorted(user_ids), app_config.WS_GATEWAY_STREAM_USERS_PER_ENTRY):
                 stream_event = DeliveryDTO(
                     type=ws_event.type,
                     payload=MessagePayloadWS(
@@ -256,7 +258,7 @@ class ChatDeliveryRouter:
                 pipe.xadd(
                     stream_key,
                     fields={"event": stream_event.model_dump_json()},
-                    maxlen=chat_config.WS_GATEWAY_STREAM_MAXLEN,
+                    maxlen=app_config.WS_GATEWAY_STREAM_MAXLEN,
                     approximate=True,
                 )
                 enqueued += 1

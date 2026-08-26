@@ -8,6 +8,7 @@ from app.core.di.events import EventProvider
 from app.core.di.mail import MailProvider
 from app.core.di.mediator import MediatorProvider
 from app.core.di.queues import QueueProvider
+from app.core.di.websocket import CoreWSProvider
 
 
 def get_core_providers() -> list[Provider]:
@@ -20,4 +21,5 @@ def get_core_providers() -> list[Provider]:
         QueueProvider(),
         MailProvider(),
         AuthServicesProvider(),
+        CoreWSProvider(),
     ]
