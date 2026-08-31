@@ -44,14 +44,14 @@ class ChatRepository(IRepository[Chat], CacheRepository):
     async def get_direct_chat(self, user_id: int, other_user_id: int) -> Chat | None:
         member_a = aliased(ChatMember)
         member_b = aliased(ChatMember)
- 
+
         stmt = (
             select(Chat)
             .join(member_a, and_(member_a.chat_id == Chat.id, member_a.user_id == user_id))
             .join(member_b, and_(member_b.chat_id == Chat.id, member_b.user_id == other_user_id))
             .where(
                 Chat.type == ChatType.DIRECT,
-                Chat.is_public == False,
+                Chat.is_public.is_(False),
             )
         )
         result = await self.session.execute(stmt)
