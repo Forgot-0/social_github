@@ -85,7 +85,6 @@ class ChatMember(BaseModel, DateMixin):
                 reason=reason,
                 banned_at=now_utc(),
                 banned_to=banned_to,
-
             )
         )
 

@@ -4,16 +4,15 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.config import chat_config
 from app.chats.dtos.livekit import JoinTokenDTO
-from app.chats.exceptions import NotChatMemberError, NotFoundChatError
-from app.chats.models.message import Message, MessageType
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError, NotFoundChatError
+from app.chats.models.chat import ChatType
 from app.chats.repositories.chat import ChatRepository
-from app.chats.repositories.message import MessageRepository
 from app.chats.services.livekit_service import LiveKitService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
 from app.core.services.auth.dto import UserJWTData
-from app.core.utils import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,6 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
     session: AsyncSession
     chat_repository: ChatRepository
     livekit_service: LiveKitService
-    message_repository: MessageRepository
     event_bus: BaseEventBus
 
     async def handle(self, command: JoinCallCommand) -> JoinTokenDTO:
@@ -44,28 +42,19 @@ class JoinCallCommandHandler(BaseCommandHandler[JoinCallCommand, JoinTokenDTO]):
         if chat is None:
             raise NotFoundChatError(chat_id=str(command.chat_id))
 
+        if (
+            chat.type == ChatType.SUPERGROUP or
+            chat.type == ChatType.CHANNEL or
+            chat.member_count >= chat_config.ROOM_MAX_PARTICIPANTS
+        ):
+            raise AccessDeniedChatError(chat_id=str(chat.id), requester_id=user_id)
+
         token = self.livekit_service.generate_join_token(
             slug=str(chat.id),
             user_id=str(user_id),
             username=username,
         )
-        message_date = now_utc()
-        next_seq = await self.chat_repository.allocate_message_seq(
-            chat_id=chat.id,
-            message_date=message_date,
-        )
-        if next_seq is None:
-            raise NotFoundChatError(chat_id=str(command.chat_id))
 
-        msg = Message.create(
-            sender_id=int(command.user_jwt_data.id),
-            chat_id=chat.id,
-            seq=next_seq,
-            content=f"📞 {username} joined the call",
-            message_type=MessageType.SYSTEM
-        )
-        await self.message_repository.create(msg)
-        await self.event_bus.publish(msg.pull_events())
         await self.session.commit()
         logger.info(
             "User joined call",
