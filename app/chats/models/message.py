@@ -142,13 +142,7 @@ class Message(BaseModel, DateMixin):
         primaryjoin="Message.author_id == ChatUserProfile.user_id",
         lazy="noload",
     )
-    reactions: Mapped[list[MessageReaction]] = relationship(
-        MessageReaction,
-        primaryjoin="MessageReaction.message_id == Message.id",
-        order_by=MessageReaction.id,
-        viewonly=True,
-        lazy="noload",
-    )
+
 
     __table_args__ = (
         Index("ix_messages_chat_not_deleted", "chat_id", "seq",
@@ -229,17 +223,6 @@ class Message(BaseModel, DateMixin):
                 deleted_by=deleted_by
             )
         )
-
-    def split_reactions_preview(
-        self, user_id: int
-    ) -> tuple[list[MessageReaction], list[MessageReaction]]:
-        mine: list[MessageReaction] = []
-        others: list[MessageReaction] = []
-
-        for reaction in self.reactions:
-            (mine if reaction.user_id == user_id else others).append(reaction)
-
-        return mine, others
 
     def validate_content(self) -> None:
         if not self.content:
