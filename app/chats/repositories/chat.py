@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import aliased, contains_eager, selectinload
 
+from app.chats.exceptions import NotFoundChatError
 from app.chats.models.chat import Chat, ChatType
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.message import Message
@@ -78,10 +79,12 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         self,
         chat_id: UUID,
         member_id: int
-    ) -> tuple[Chat, ChatMember] | None:
+    ) -> tuple[Chat, ChatMember]:
         stmt = select(Chat, ChatMember).join(
             ChatMember,
             and_(ChatMember.chat_id == Chat.id, ChatMember.user_id == member_id),
+        ).options(
+            selectinload(ChatMember.role)
         ).where(
             Chat.id == chat_id,
             Chat.deleted_at.is_(None),
@@ -89,7 +92,11 @@ class ChatRepository(IRepository[Chat], CacheRepository):
 
         result = await self.session.execute(stmt)
 
-        return result.tuples().first()
+        row = result.tuples().first()
+        if row is None:
+            raise NotFoundChatError(chat_id=str(chat_id))
+
+        return row
 
     async def get_member_chat(
         self,

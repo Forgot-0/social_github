@@ -34,11 +34,11 @@ class TestUpdateProfileHandler:
             ),
             (
                 ProfileCommandFactory.update_command(display_name="only_name"),
-                {"display_name": "only_name", "bio": None, "skills": list()},
+                {"display_name": "only_name", "bio": None, "skills": []},
             ),
             (
                 ProfileCommandFactory.update_command(skills=set()),
-                {"display_name": None, "bio": None, "skills": list()},
+                {"display_name": None, "bio": None, "skills": []},
             ),
         ],
     )

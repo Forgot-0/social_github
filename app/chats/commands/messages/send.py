@@ -47,14 +47,12 @@ class SendMessageCommandHandler(BaseCommandHandler[SendMessageCommand, MessageDT
     event_bus: BaseEventBus
 
     async def handle(self, command: SendMessageCommand) -> MessageDTO:
-        chat = await self.chat_repository.get_by_id(command.chat_id)
-        if chat is None:
-            raise NotFoundChatError(chat_id=str(command.chat_id))
-
         user_id = int(command.user_jwt_data.id)
-        member = await self.chat_repository.get_member_chat(
+
+        chat, member = await self.chat_repository.get_chat_and_member(
             chat_id=command.chat_id, member_id=user_id
         )
+
 
         if not await self.access_service.can_send_message(
             user_jwt_data=command.user_jwt_data,

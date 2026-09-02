@@ -41,8 +41,8 @@ class TestCreateChatCommand:
         assert chat.member_count == 2
         assert chat.members[0].role_id == ChatRolesEnum.DIRECT_MEMBER.value.id
         assert chat.members[1].role_id == ChatRolesEnum.DIRECT_MEMBER.value.id
-        assert chat.name == None
-        assert chat.description == None
+        assert chat.name is None
+        assert chat.description is None
         assert chat.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE
 
     async def test_create_group_chat_with_name_and_description(
@@ -89,7 +89,7 @@ class TestCreateChatCommand:
         assert chat.type == ChatType.CHANNEL
         assert chat.member_count == 4
         assert chat.name == "News Channel"
-        assert chat.description == None
+        assert chat.description is None
         assert chat.is_public
 
     async def test_create_group_with_slow_mode(

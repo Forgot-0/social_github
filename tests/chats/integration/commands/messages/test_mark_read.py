@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.messages.mark_read import MarkAsReadCommand, MarkAsReadCommandHandler
-from app.chats.exceptions import NotChatMemberError
+from app.chats.exceptions import NotFoundChatError
 from app.chats.models.chat import Chat
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.services.auth.dto import UserJWTData
@@ -74,7 +74,7 @@ class TestMarkAsReadCommand:
         make_user_jwt,
     ) -> None:
         outsider = make_user_jwt(id="999")
-        with pytest.raises(NotChatMemberError):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 MarkAsReadCommand(chat_id=group_chat.id, message_seq=1, user_jwt_data=outsider)
             )

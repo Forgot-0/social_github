@@ -7,8 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.chats.exceptions import (
     AccessDeniedChatError,
     AlreadyMemberError,
-    NotChatMemberError,
-    NotFoundChatError,
 )
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
@@ -36,13 +34,9 @@ class AddMemberCommandHandler(BaseCommandHandler[AddMemberCommand, None]):
 
     async def handle(self, command: AddMemberCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
-        chat = await self.chat_repository.get_by_id(command.chat_id)
-        if chat is None:
-            raise NotFoundChatError(chat_id=str(command.chat_id))
-
-        requester = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
-        if requester is None:
-            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=requester_id)
+        chat, requester = await self.chat_repository.get_chat_and_member(
+            chat_id=command.chat_id, member_id=requester_id
+        )
 
         if not await self.chat_access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,

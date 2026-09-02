@@ -54,7 +54,6 @@ class TestFullChatLifecycleE2E:
                 headers=headers,
             )
             assert send_resp.status_code == 201
-            message_id = send_resp.json()["id"]
             message_seq = send_resp.json()["seq"]
 
             event = None

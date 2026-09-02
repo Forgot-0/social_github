@@ -37,11 +37,12 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
     event_bus: BaseEventBus
 
     async def handle(self, command: BanMemberCommand) -> None:
+        requester_id = int(command.user_jwt_data.id)
+
         chat = await self.chat_repository.get_by_id(command.chat_id)
         if chat is None:
             raise NotFoundChatError(chat_id=str(command.chat_id))
 
-        requester_id = int(command.user_jwt_data.id)
         requester = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
 
         target = await self.chat_repository.get_member_chat(command.chat_id, command.target_user_id)

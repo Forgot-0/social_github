@@ -25,10 +25,11 @@ def _ws_scope(
     subprotocols: list[str],
 ) -> Scope:
     path_only = path.split("?", 1)[0]
-    if "?" in path:
-        qs = path.split("?", 1)[1].encode("latin-1")
-    else:
-        qs = urlencode(query or {}).encode("latin-1")
+    qs = (
+        path.split("?", 1)[1].encode("latin-1")
+        if "?" in path
+        else urlencode(query or {}).encode("latin-1")
+    )
     state = dict(app.state._state)
     return {
         "type": "websocket",

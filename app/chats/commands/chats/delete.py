@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError, NotFoundChatError
+from app.chats.exceptions import AccessDeniedChatError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -29,13 +29,10 @@ class DeleteChatCommandHandler(BaseCommandHandler[DeleteChatCommand, None]):
 
     async def handle(self, command: DeleteChatCommand) -> None:
         requester_id = int(command.user_jwt_data.id)
-        chat = await self.chat_repository.get_by_id(command.chat_id)
-        if chat is None:
-            raise NotFoundChatError(chat_id=str(command.chat_id))
 
-        member = await self.chat_repository.get_member_chat(command.chat_id, requester_id)
-        if member is None:
-            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=requester_id)
+        chat, member = await self.chat_repository.get_chat_and_member(
+            chat_id=command.chat_id, member_id=requester_id
+        )
 
         if not await self.access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,

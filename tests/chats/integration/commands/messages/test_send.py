@@ -94,7 +94,7 @@ class TestSendMessageCommand:
     ) -> None:
         chat = await create_group_chat([2, 3])
 
-        with pytest.raises(AccessDeniedChatError):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 SendMessageCommand(chat_id=chat.id, content="Hack", user_jwt_data=make_user_jwt(id="99"))
             )

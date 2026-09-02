@@ -245,8 +245,8 @@ class TestMessagesHttpEndpoints:
             json=send_text_payload("nope"),
             headers=create_auth_headers(outsider),
         )
-        assert response.status_code == 403
-        assert response.json()["error"]["code"] == "CHAT_ACCESS_DENIED"
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "NOT_FOUND_CHAT"
 
     async def test_list_messages_cursor_pagination(
         self,

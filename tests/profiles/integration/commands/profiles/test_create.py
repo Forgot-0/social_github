@@ -41,7 +41,7 @@ class TestCreateCommand:
         assert created_profile.bio is None
         assert created_profile.display_name is None
         assert isinstance(created_profile.skills, list)
-        assert created_profile.skills == list()
+        assert created_profile.skills == []
 
     async def test_create_duplicated(
         self,
