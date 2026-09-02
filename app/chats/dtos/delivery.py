@@ -49,7 +49,6 @@ class WsEvent:
 
 
 class MessagePayloadWS(BaseModel):
-    chat: ChatDTO
     message: MessageDTO | None = None
 
 

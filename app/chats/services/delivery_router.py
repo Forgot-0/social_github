@@ -90,7 +90,6 @@ class ChatDeliveryRouter:
                 await self._enqueue_gateway_deliveries(
                     routes,
                     ws_event,
-                    chat=chat,
                     require_subscription=False,
                     message=message
                 )
@@ -105,7 +104,6 @@ class ChatDeliveryRouter:
             await self._enqueue_gateway_deliveries(
                 routes_by_gateway,
                 ws_event,
-                chat,
                 require_subscription=True,
                 message=message,
             )
@@ -229,7 +227,6 @@ class ChatDeliveryRouter:
         self,
         routes_by_gateway: RouteMap,
         ws_event: WsEvent,
-        chat: ChatDTO,
         *,
         require_subscription: bool,
         message: MessageDTO | None=None,
@@ -246,7 +243,6 @@ class ChatDeliveryRouter:
                 stream_event = DeliveryDTO(
                     type=ws_event.type,
                     payload=MessagePayloadWS(
-                        chat=chat,
                         message=message,
                     ).model_dump(),
                     delivery=DeliveryData(

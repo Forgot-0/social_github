@@ -7,6 +7,7 @@ class ChatConfig(BaseConfig):
     MAX_SUPERGROUP_MEMBERS: int = 1_000_000
     MAX_CHANNEL_SUBSCRIBERS: int = 10_000_000
     MAX_MESSAGE_LENGTH: int = 4_096
+
     MAX_REACTIONS_PER_MESSAGE: int = 20
     MAX_BULK_ADD_MEMBERS: int = 100
 

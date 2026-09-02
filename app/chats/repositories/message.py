@@ -13,6 +13,7 @@ def _message_load_options() -> list:
     return [
         selectinload(Message.attachments),
         selectinload(Message.profile),
+        selectinload(Message.reactions),
         selectinload(Message.reply_to).options(
             selectinload(Message.profile),
             selectinload(Message.attachments),
