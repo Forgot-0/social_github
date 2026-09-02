@@ -74,6 +74,23 @@ class ChatRepository(IRepository[Chat], CacheRepository):
     async def create(self, chat: Chat) -> None:
         self.session.add(chat)
 
+    async def get_chat_and_member(
+        self,
+        chat_id: UUID,
+        member_id: int
+    ) -> tuple[Chat, ChatMember] | None:
+        stmt = select(Chat, ChatMember).join(
+            ChatMember,
+            and_(ChatMember.chat_id == Chat.id, ChatMember.user_id == member_id),
+        ).where(
+            Chat.id == chat_id,
+            Chat.deleted_at.is_(None),
+        )
+
+        result = await self.session.execute(stmt)
+
+        return result.tuples().first()
+
     async def get_member_chat(
         self,
         chat_id: UUID,

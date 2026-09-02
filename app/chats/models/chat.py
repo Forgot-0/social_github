@@ -182,6 +182,10 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             return ChatFanoutStrategy.ACTIVE_SUBSCRIBERS
         return ChatFanoutStrategy.FANOUT_ON_WRITE
 
+    @property
+    def support_read_event(self) -> bool:
+        return self.type == ChatType.DIRECT or self.type == ChatType.GROUP
+
     @classmethod
     def create(
         cls,

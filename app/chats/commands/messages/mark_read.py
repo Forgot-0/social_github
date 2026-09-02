@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError
+from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError, NotFoundChatError
 from app.chats.models.message import ReadedMessageEvent
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.reads import ReadReceiptRepository
@@ -35,9 +35,13 @@ class MarkAsReadCommandHandler(BaseCommandHandler[MarkAsReadCommand, None]):
     async def handle(self, command: MarkAsReadCommand) -> None:
         user_id = int(command.user_jwt_data.id)
 
-        member = await self.chat_repository.get_member_chat(command.chat_id, user_id)
-        if not member:
-            raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
+        row = await self.chat_repository.get_chat_and_member(
+            chat_id=command.chat_id, member_id=user_id
+        )
+        if row is None:
+            raise NotFoundChatError(chat_id=str(command.chat_id))
+
+        chat, member = row
 
         if not await self.access_service.has_permissions(
             user_jwt_data=command.user_jwt_data,
@@ -51,11 +55,12 @@ class MarkAsReadCommandHandler(BaseCommandHandler[MarkAsReadCommand, None]):
             chat_id=command.chat_id,
             message_seq=command.message_seq,
         )
-        await self.event_bus.publish([ReadedMessageEvent(
-            chat_id=str(command.chat_id),
-            seq=command.message_seq,
-            reader_id=user_id
-        )])
+        if chat.support_read_event:
+            await self.event_bus.publish([ReadedMessageEvent(
+                chat_id=str(command.chat_id),
+                seq=command.message_seq,
+                reader_id=user_id
+            )])
 
         await self.session.commit()
 
