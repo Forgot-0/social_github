@@ -24,7 +24,6 @@ from app.chats.exceptions import (
 )
 from app.chats.models.attachment import AttachmentStatus, AttachmentType, MessageAttachment
 from app.chats.models.profile import ChatUserProfile
-from app.chats.models.reaction import MessageReaction
 from app.core.db.base_model import BaseModel, DateMixin
 from app.core.events.event import BaseEvent
 

@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.chats.dtos.attachments import AttachmentDTO
 from app.chats.dtos.profiles import ChatProfileDTO
+from app.chats.dtos.reactions import ReactionGroupDTO
 from app.chats.models.message import MessageType
 
 
@@ -25,6 +26,7 @@ class MessageDTO(BaseModel):
 
     profile: ChatProfileDTO | None = Field(default=None)
     attachments: list[AttachmentDTO] = Field(default_factory=list)
+    reactions: list[ReactionGroupDTO] = Field(default_factory=list)
 
     reply_to: MessageDTO | None = Field(default=None)
     forwarded_from: MessageDTO | None = Field(default=None)

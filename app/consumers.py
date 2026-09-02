@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -10,7 +12,12 @@ from faststream.kafka import KafkaBroker
 from faststream.kafka.prometheus import KafkaPrometheusMiddleware
 from prometheus_client import CollectorRegistry, make_asgi_app
 
+from app.chats.config import chat_config
 from app.chats.consumers import delivery, profiles
+from app.chats.services.reaction_coalescer import (
+    ReactionCoalesceQueue,
+    run_reaction_coalescer,
+)
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
 from app.core.log.init import configure_logging
@@ -27,7 +34,20 @@ async def lifespan(context: ContextRepo) -> AsyncGenerator[None]:
     message_broker: BaseMessageBroker = await container.get(BaseMessageBroker)
     await message_broker.start()
 
+    coalescer_task: asyncio.Task | None = None
+    if chat_config.REACTIONS_COALESCE_ENABLED:
+        coalesce_queue = await container.get(ReactionCoalesceQueue)
+        coalescer_task = asyncio.create_task(
+            run_reaction_coalescer(container, coalesce_queue),
+            name="chats:reaction-coalescer",
+        )
+
     yield
+
+    if coalescer_task is not None:
+        coalescer_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await coalescer_task
 
     await message_broker.close()
 

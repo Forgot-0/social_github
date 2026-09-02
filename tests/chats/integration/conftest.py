@@ -6,6 +6,7 @@ from app.chats.models.message import Message
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
+from app.chats.repositories.reaction import MessageReactionRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.services.access import ChatAccessService
 from app.chats.services.livekit_service import LiveKitService
@@ -43,6 +44,11 @@ def attachment_repository(db_session: AsyncSession, redis_client) -> AttachmentR
 @pytest.fixture
 def read_repository(db_session: AsyncSession) -> ReadReceiptRepository:
     return ReadReceiptRepository(session=db_session)
+
+
+@pytest.fixture
+def reaction_repository(db_session: AsyncSession) -> MessageReactionRepository:
+    return MessageReactionRepository(session=db_session)
 
 
 @pytest.fixture

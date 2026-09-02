@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.dtos.chats import ChatDTO
 from app.chats.exceptions import AccessDeniedChatError, NotFoundChatError
+from app.chats.models.chat import ChatReactionsMode
 from app.chats.repositories.chat import ChatRepository
 from app.chats.services.access import ChatAccessService
 from app.core.commands import BaseCommand, BaseCommandHandler
@@ -25,6 +26,8 @@ class UpdateChatCommand(BaseCommand):
     admin_only: bool | None = None
     slow_mode_seconds: int | None = None
     permissions: dict[str, bool] | None = None
+    reactions_mode: ChatReactionsMode | None = None
+    allowed_reactions: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -62,6 +65,8 @@ class UpdateChatCommandHandler(BaseCommandHandler[UpdateChatCommand, ChatDTO]):
             admin_only=command.admin_only,
             slow_mode_seconds=command.slow_mode_seconds,
             permissions=command.permissions,
+            reactions_mode=command.reactions_mode,
+            allowed_reactions=command.allowed_reactions,
         )
 
         await self.event_bus.publish(chat.pull_events())

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.chats.dtos.reactions import MessageReactionsDTO, ReactionSummaryDTO, ReactionUserDTO
+from app.chats.dtos.reactions import MessageReactionsDTO, ReactionGroupDTO
 from app.chats.exceptions import NotChatMemberError, NotFoundMessageError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
@@ -42,43 +42,44 @@ class GetMessageReactionsQueryHandler(
         if message is None or message.chat_id != query.chat_id:
             raise NotFoundMessageError(message_id=str(query.message_id))
 
-        counters = await self.reaction_repository.get_counters_for_messages(
-            [query.message_id]
-        )
-        my_reactions = await self.reaction_repository.get_user_reactions_for_messages(
+        state = await self.reaction_repository.get_reaction_state_for_messages(
             [query.message_id], user_id
         )
-        my_emoji = my_reactions[0].emoji if my_reactions else None
+        msg_state = state.get(query.message_id)
+        groups = (
+            []
+            if msg_state is None
+            else [
+                ReactionGroupDTO(
+                    emoji=g.emoji,
+                    count=g.count,
+                    version=g.version,
+                    reacted_by_me=g.emoji in msg_state.my_emojis,
+                    recent_user_ids=msg_state.recent_by_emoji.get(g.emoji, []),
+                )
+                for g in msg_state.groups
+            ]
+        )
 
-        summaries = [
-            ReactionSummaryDTO(
-                emoji=counter.emoji,
-                count=int(counter.count),
-                reacted_by_me=(counter.emoji == my_emoji),
-            )
-            for counter in counters
-        ]
-
-        users: list[ReactionUserDTO] = []
+        users: list[int] = []
         has_next = False
         next_user_id: int | None = None
 
         if query.emoji is not None:
             limit = min(max(query.limit, 1), 100)
-            reactions = await self.reaction_repository.get_users_by_emoji(
+            page = await self.reaction_repository.get_users_by_emoji(
                 message_id=query.message_id,
                 emoji=query.emoji,
                 limit=limit,
                 cursor_user_id=query.cursor_user_id,
             )
-            page = reactions[:limit]
-            users = [ReactionUserDTO.model_validate(reaction) for reaction in page]
-            has_next = len(reactions) > limit
-            next_user_id = page[-1].user_id if has_next and page else None
+            users = page[:limit]
+            has_next = len(page) > limit
+            next_user_id = users[-1] if has_next and users else None
 
         return MessageReactionsDTO(
             message_id=query.message_id,
-            summaries=summaries,
+            groups=groups,
             emoji=query.emoji,
             users=users,
             has_next=has_next,

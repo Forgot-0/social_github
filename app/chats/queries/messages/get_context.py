@@ -6,6 +6,7 @@ from app.chats.exceptions import NotChatMemberError
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.services.messages import MessageService
+from app.chats.services.reaction_attach import ReactionAttachService
 from app.core.queries import BaseQuery, BaseQueryHandler
 from app.core.services.auth.dto import UserJWTData
 
@@ -23,6 +24,7 @@ class GetMessageContextQueryHandler(BaseQueryHandler[GetMessageContextQuery, Mes
     chat_repository: ChatRepository
     message_repository: MessageRepository
     message_service: MessageService
+    reaction_attach_service: ReactionAttachService
 
     async def handle(self, query: GetMessageContextQuery) -> MessagesDTO:
         user_id = int(query.user_jwt_data.id)
@@ -40,6 +42,7 @@ class GetMessageContextQueryHandler(BaseQueryHandler[GetMessageContextQuery, Mes
         messages = sorted(messages, key=lambda msg: msg.seq)
         message_dtos = [MessageDTO.model_validate(msg) for msg in messages]
         message_dtos = await self.message_service.attach_download_urls(message_dtos)
+        message_dtos = await self.reaction_attach_service.attach(message_dtos, user_id)
 
         return MessagesDTO(
             messages=message_dtos,

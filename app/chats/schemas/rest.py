@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.chats.config import chat_config
 from app.chats.models.attachment import AttachmentType
-from app.chats.models.chat import ChatType
+from app.chats.models.chat import ChatReactionsMode, ChatType
 from app.chats.models.message import MessageType
 
 
@@ -27,6 +27,10 @@ class UpdateChatRequest(BaseModel):
     admin_only: bool | None = None
     slow_mode_seconds: int | None = Field(default=None, ge=0, le=chat_config.MAX_SLOW_MODE_SECONDS)
     permissions: dict[str, bool] | None = None
+    reactions_mode: ChatReactionsMode | None = None
+    allowed_reactions: list[str] | None = Field(
+        default=None, max_length=chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE
+    )
 
 
 class GetListUserChatsRequest(BaseModel):
@@ -69,6 +73,13 @@ class ForwardMessageRequest(BaseModel):
 
 class MarkReadRequest(BaseModel):
     message_seq: int = Field(ge=0)
+
+
+class SetReactionsRequest(BaseModel):
+    reactions: list[str] = Field(
+        default_factory=list,
+        max_length=chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE,
+    )
 
 
 class UploadRequestItem(BaseModel):

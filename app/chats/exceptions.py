@@ -418,10 +418,47 @@ class InvalidReactionError(ApplicationError):
 
 @dataclass(kw_only=True)
 class TooManyReactionsError(ApplicationError):
-    code: str = "TOO_MANY_REACTION"
+    limit: int
+    scope: str = "message"
+    code: str = "TOO_MANY_REACTIONS"
     status: int = 400
 
     @property
     def message(self) -> str:
-        return "To many reaction"
+        return "Too many reactions"
+
+    @property
+    def detail(self) -> dict:
+        return {"limit": self.limit, "scope": self.scope}
+
+
+@dataclass(kw_only=True)
+class ReactionsDisabledError(ApplicationError):
+    chat_id: str
+    code: str = "REACTIONS_DISABLED"
+    status: int = 403
+
+    @property
+    def message(self) -> str:
+        return "Reactions are disabled in this chat"
+
+    @property
+    def detail(self) -> dict:
+        return {"chat_id": self.chat_id}
+
+
+@dataclass(kw_only=True)
+class ReactionNotAllowedError(ApplicationError):
+    emoji: str
+    allowed: list[str]
+    code: str = "REACTION_NOT_ALLOWED"
+    status: int = 400
+
+    @property
+    def message(self) -> str:
+        return "This reaction is not allowed in this chat"
+
+    @property
+    def detail(self) -> dict:
+        return {"emoji": self.emoji, "allowed": self.allowed}
 

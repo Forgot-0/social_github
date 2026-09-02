@@ -4,8 +4,9 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chats.exceptions import NotChatMemberError, NotFoundChatError, NotFoundMessageError
-from app.chats.models.reaction import ReactionUpdatedEvent
+from app.chats.commands.reactions import build_reaction_event
+from app.chats.exceptions import NotChatMemberError, NotFoundMessageError
+from app.chats.metrics import CHAT_REACTIONS_APPLIED
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reaction import MessageReactionRepository
@@ -35,44 +36,35 @@ class RemoveReactionCommandHandler(BaseCommandHandler[RemoveReactionCommand, Non
     async def handle(self, command: RemoveReactionCommand) -> None:
         user_id = int(command.user_jwt_data.id)
 
-        chat = await self.chat_repository.get_by_id(command.chat_id)
-        if chat is None:
-            raise NotFoundChatError(chat_id=str(command.chat_id))
-
-        member = await self.chat_repository.get_member_chat(
-            command.chat_id, user_id, with_role=False
+        _chat, member = await self.chat_repository.get_chat_and_member(
+            chat_id=command.chat_id, member_id=user_id
         )
-        if member is None or member.is_banned:
+        if member.is_banned:
             raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
 
         message = await self.message_repository.get_by_id(command.message_id)
         if message is None or message.chat_id != command.chat_id:
             raise NotFoundMessageError(message_id=str(command.message_id))
 
-        removed = await self.reaction_repository.remove_reaction(
+        applied = await self.reaction_repository.remove_reaction(
             message_id=command.message_id,
             user_id=user_id,
             emoji=command.emoji,
         )
-
-        if not removed:
-            await self.session.rollback()
+        if applied is None:
             return
 
-        count = await self.reaction_repository.get_counter(
-            command.message_id, command.emoji
+        event = await build_reaction_event(
+            self.reaction_repository,
+            chat_id=command.chat_id,
+            message_id=command.message_id,
+            actor_id=user_id,
+            action="remove",
         )
-        await self.event_bus.publish([
-            ReactionUpdatedEvent(
-                message_id=str(command.message_id),
-                chat_id=str(command.chat_id),
-                emoji=command.emoji,
-                count=count,
-                changed_by=user_id,
-            )
-        ])
+        await self.event_bus.publish([event])
         await self.session.commit()
 
+        CHAT_REACTIONS_APPLIED.labels(action="remove").inc()
         logger.info(
             "Reaction removed",
             extra={

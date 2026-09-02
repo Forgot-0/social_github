@@ -1,174 +1,302 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
-from uuid import UUID, uuid7
+from dataclasses import dataclass, field
+from uuid import UUID
 
-from sqlalchemy import func, select, text
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import func, select, text, true
 
-from app.chats.models.reaction import MessageReaction, MessageReactionCounter
+from app.chats.config import chat_config
+from app.chats.models.reaction import (
+    MessageReaction,
+    MessageReactionCounter,
+    ReactionGroupSnapshot,
+)
 from app.core.db.repository import IRepository
 from app.core.utils import now_utc
 
-SET_REACTION_SQL = text(
+_ADD_REACTION_SQL = text(
     """
-    WITH old AS (
-        SELECT emoji
-        FROM message_reactions
-        WHERE message_id = :message_id AND user_id = :user_id
-        FOR UPDATE
-    ), upserted AS (
-        INSERT INTO message_reactions (id, chat_id, message_id, user_id, emoji, created_at, updated_at)
-        VALUES (:id, :chat_id, :message_id, :user_id, :emoji, :now, :now)
-        ON CONFLICT (message_id, user_id)
-        DO UPDATE SET emoji = EXCLUDED.emoji, updated_at = EXCLUDED.updated_at
-        RETURNING emoji
-    )
-    SELECT (SELECT emoji FROM old) AS old_emoji,
-           (SELECT emoji FROM upserted) AS new_emoji
+    INSERT INTO message_reactions (message_id, user_id, emoji, chat_id, created_at, updated_at)
+    VALUES (:message_id, :user_id, :emoji, :chat_id, :now, :now)
+    ON CONFLICT (message_id, user_id, emoji) DO NOTHING
+    RETURNING message_id
     """
 )
 
-DELETE_REACTION_SQL = text(
+_BUMP_COUNTER_UP_SQL = text(
+    """
+    INSERT INTO message_reaction_counters
+        (message_id, emoji, chat_id, count, version, first_reacted_at, last_reacted_at)
+    VALUES (:message_id, :emoji, :chat_id, 1, 1, :now, :now)
+    ON CONFLICT (message_id, emoji) DO UPDATE
+        SET count = message_reaction_counters.count + 1,
+            version = message_reaction_counters.version + 1,
+            last_reacted_at = :now
+    RETURNING count, version
+    """
+)
+
+_REMOVE_REACTION_SQL = text(
     """
     DELETE FROM message_reactions
     WHERE message_id = :message_id AND user_id = :user_id AND emoji = :emoji
-    RETURNING emoji
+    RETURNING message_id
     """
 )
+
+_BUMP_COUNTER_DOWN_SQL = text(
+    """
+    UPDATE message_reaction_counters
+    SET count = count - 1,
+        version = version + 1,
+        last_reacted_at = :now
+    WHERE message_id = :message_id AND emoji = :emoji
+    RETURNING count, version
+    """
+)
+
+_DROP_EMPTY_COUNTER_SQL = text(
+    """
+    DELETE FROM message_reaction_counters
+    WHERE message_id = :message_id AND emoji = :emoji AND count <= 0
+    """
+)
+
+@dataclass(slots=True)
+class MessageReactionState:
+    groups: list[ReactionGroupSnapshot] = field(default_factory=list)
+    my_emojis: set[str] = field(default_factory=set)
+    recent_by_emoji: dict[str, list[int]] = field(default_factory=dict)
 
 
 @dataclass
 class MessageReactionRepository(IRepository[MessageReaction]):
 
-    async def set_reaction(
+    async def count_user_reactions(self, message_id: UUID, user_id: int) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(MessageReaction)
+            .where(
+                MessageReaction.message_id == message_id,
+                MessageReaction.user_id == user_id,
+            )
+        )
+        return int((await self.session.execute(stmt)).scalar_one())
+
+    async def count_distinct_emojis(self, message_id: UUID) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(MessageReactionCounter)
+            .where(MessageReactionCounter.message_id == message_id)
+        )
+        return int((await self.session.execute(stmt)).scalar_one())
+
+    async def list_user_emojis(self, message_id: UUID, user_id: int) -> list[str]:
+        stmt = select(MessageReaction.emoji).where(
+            MessageReaction.message_id == message_id,
+            MessageReaction.user_id == user_id,
+        )
+        return list((await self.session.execute(stmt)).scalars().all())
+
+    async def add_reaction(
         self,
         chat_id: UUID,
         message_id: UUID,
         user_id: int,
         emoji: str,
-    ) -> tuple[str | None, bool]:
-        result = await self.session.execute(
-            SET_REACTION_SQL,
+    ) -> tuple[int, int] | None:
+        now = now_utc()
+        inserted = await self.session.execute(
+            _ADD_REACTION_SQL,
             {
-                "id": uuid7(),
-                "chat_id": chat_id,
                 "message_id": message_id,
                 "user_id": user_id,
                 "emoji": emoji,
-                "now": now_utc(),
+                "chat_id": chat_id,
+                "now": now,
             },
         )
+        if inserted.first() is None:
+            return None
 
-        row = result.one()
-        old_emoji: str | None = row.old_emoji
-
-        if old_emoji == emoji:
-            return old_emoji, False
-
-        if old_emoji is not None:
-            await self._decrement_counter(message_id, old_emoji)
-
-        await self._increment_counter(message_id, emoji)
-        return old_emoji, True
+        row = (
+            await self.session.execute(
+                _BUMP_COUNTER_UP_SQL,
+                {
+                    "message_id": message_id,
+                    "emoji": emoji,
+                    "chat_id": chat_id,
+                    "now": now,
+                },
+            )
+        ).one()
+        return int(row[0]), int(row[1])
 
     async def remove_reaction(
         self,
         message_id: UUID,
         user_id: int,
         emoji: str,
-    ) -> bool:
-        result = await self.session.execute(
-            DELETE_REACTION_SQL,
+    ) -> tuple[int, int] | None:
+        now = now_utc()
+        deleted = await self.session.execute(
+            _REMOVE_REACTION_SQL,
             {"message_id": message_id, "user_id": user_id, "emoji": emoji},
         )
-        removed = result.first() is not None
+        if deleted.first() is None:
+            return None
 
-        if removed:
-            await self._decrement_counter(message_id, emoji)
-
-        return removed
-
-    async def _increment_counter(self, message_id: UUID, emoji: str) -> None:
-        stmt = (
-            insert(MessageReactionCounter)
-            .values(message_id=message_id, emoji=emoji, count=1, updated_at=now_utc())
-            .on_conflict_do_update(
-                index_elements=[
-                    MessageReactionCounter.message_id,
-                    MessageReactionCounter.emoji,
-                ],
-                set_={
-                    "count": MessageReactionCounter.count + 1,
-                    "updated_at": now_utc(),
-                },
+        row = (
+            await self.session.execute(
+                _BUMP_COUNTER_DOWN_SQL,
+                {"message_id": message_id, "emoji": emoji, "now": now},
             )
-        )
-        await self.session.execute(stmt)
+        ).first()
 
-    async def _decrement_counter(self, message_id: UUID, emoji: str) -> None:
         await self.session.execute(
-            text(
-                """
-                UPDATE message_reaction_counters
-                SET count = GREATEST(0, count - 1), updated_at = :now
-                WHERE message_id = :message_id AND emoji = :emoji
-                """
-            ),
-            {"message_id": message_id, "emoji": emoji, "now": now_utc()},
+            _DROP_EMPTY_COUNTER_SQL, {"message_id": message_id, "emoji": emoji}
         )
 
-    async def get_counter(self, message_id: UUID, emoji: str) -> int:
-        stmt = select(MessageReactionCounter.count).where(
-            MessageReactionCounter.message_id == message_id,
-            MessageReactionCounter.emoji == emoji,
-        )
-        result = await self.session.execute(stmt)
-        value = result.scalar()
-        return int(value or 0)
+        if row is None:
+            return 0, 0
+        return max(0, int(row[0])), int(row[1])
 
-    async def count_distinct_emojis(self, message_id: UUID) -> int:
+    async def set_reactions(
+        self,
+        chat_id: UUID,
+        message_id: UUID,
+        user_id: int,
+        emojis: Sequence[str],
+    ) -> bool:
+        """Replace the user's whole reaction set for a message. Returns True if anything changed."""
+        locked = await self.session.execute(
+            select(MessageReaction.emoji)
+            .where(
+                MessageReaction.message_id == message_id,
+                MessageReaction.user_id == user_id,
+            )
+            .with_for_update()
+        )
+        current = set(locked.scalars().all())
+        target = set(emojis)
+
+        to_add = target - current
+        to_remove = current - target
+        if not to_add and not to_remove:
+            return False
+
+        for emoji in to_remove:
+            await self.remove_reaction(message_id, user_id, emoji)
+        for emoji in to_add:
+            await self.add_reaction(chat_id, message_id, user_id, emoji)
+        return True
+
+    async def get_current_groups(self, message_id: UUID) -> list[ReactionGroupSnapshot]:
         stmt = (
-            select(func.count())
-            .select_from(MessageReactionCounter)
+            select(
+                MessageReactionCounter.emoji.label("emoji"),
+                MessageReactionCounter.count.label("cnt"),
+                MessageReactionCounter.version.label("ver"),
+            )
             .where(
                 MessageReactionCounter.message_id == message_id,
                 MessageReactionCounter.count > 0,
             )
-        )
-        result = await self.session.execute(stmt)
-        return int(result.scalar_one())
-
-    async def get_counters_for_messages(
-        self, message_ids: Sequence[UUID]
-    ) -> list[MessageReactionCounter]:
-        if not message_ids:
-            return []
-
-        stmt = (
-            select(MessageReactionCounter)
-            .where(
-                MessageReactionCounter.message_id.in_(list(message_ids)),
-                MessageReactionCounter.count > 0,
+            .order_by(
+                MessageReactionCounter.count.desc(),
+                MessageReactionCounter.emoji.asc(),
             )
-            .order_by(MessageReactionCounter.message_id, MessageReactionCounter.emoji)
         )
-        result = await self.session.execute(stmt)
+        rows = (await self.session.execute(stmt)).all()
+        return [
+            ReactionGroupSnapshot(emoji=r.emoji, count=int(r.cnt), version=int(r.ver))
+            for r in rows
+        ]
 
-        return list(result.scalars().all())
-
-    async def get_user_reactions_for_messages(
+    async def get_reaction_state_for_messages(
         self, message_ids: Sequence[UUID], user_id: int
-    ) -> list[MessageReaction]:
-        if not message_ids:
-            return []
+    ) -> dict[UUID, MessageReactionState]:
+        ids = list(dict.fromkeys(message_ids))
+        if not ids:
+            return {}
 
-        stmt = select(MessageReaction).where(
-            MessageReaction.message_id.in_(list(message_ids)),
-            MessageReaction.user_id == user_id,
-        )
-        result = await self.session.execute(stmt)
+        state: dict[UUID, MessageReactionState] = {}
 
-        return list(result.scalars().all())
+        counters = (
+            await self.session.execute(
+                select(
+                    MessageReactionCounter.message_id.label("message_id"),
+                    MessageReactionCounter.emoji.label("emoji"),
+                    MessageReactionCounter.count.label("cnt"),
+                    MessageReactionCounter.version.label("ver"),
+                )
+                .where(
+                    MessageReactionCounter.message_id.in_(ids),
+                    MessageReactionCounter.count > 0,
+                )
+                .order_by(
+                    MessageReactionCounter.message_id,
+                    MessageReactionCounter.count.desc(),
+                    MessageReactionCounter.emoji.asc(),
+                )
+            )
+        ).all()
+        for row in counters:
+            state.setdefault(row.message_id, MessageReactionState()).groups.append(
+                ReactionGroupSnapshot(
+                    emoji=row.emoji, count=int(row.cnt), version=int(row.ver)
+                )
+            )
+
+        if not state:
+            return {}
+
+        mine = (
+            await self.session.execute(
+                select(MessageReaction.message_id, MessageReaction.emoji).where(
+                    MessageReaction.message_id.in_(list(state)),
+                    MessageReaction.user_id == user_id,
+                )
+            )
+        ).all()
+        for my_row in mine:
+            if my_row.message_id in state:
+                state[my_row.message_id].my_emojis.add(my_row.emoji)
+
+        if chat_config.REACTIONS_INCLUDE_RECENT_USERS:
+            recent_lateral = (
+                select(MessageReaction.user_id)
+                .where(
+                    MessageReaction.message_id == MessageReactionCounter.message_id,
+                    MessageReaction.emoji == MessageReactionCounter.emoji,
+                )
+                .order_by(
+                    MessageReaction.created_at.desc(),
+                    MessageReaction.user_id.desc(),
+                )
+                .limit(chat_config.REACTION_RECENT_USERS_LIMIT)
+                .lateral("recent_reactor")
+            )
+            recent = await self.session.execute(
+                select(
+                    MessageReactionCounter.message_id,
+                    MessageReactionCounter.emoji,
+                    recent_lateral.c.user_id,
+                )
+                .select_from(MessageReactionCounter)
+                .join(recent_lateral, true())
+                .where(
+                    MessageReactionCounter.message_id.in_(list(state)),
+                    MessageReactionCounter.count > 0,
+                )
+            )
+            for row in recent.all():
+                msg_state = state.get(row.message_id)
+                if msg_state is not None:
+                    msg_state.recent_by_emoji.setdefault(row.emoji, []).append(
+                        int(row.user_id)
+                    )
+
+        return state
 
     async def get_users_by_emoji(
         self,
@@ -176,9 +304,9 @@ class MessageReactionRepository(IRepository[MessageReaction]):
         emoji: str,
         limit: int,
         cursor_user_id: int | None = None,
-    ) -> list[MessageReaction]:
+    ) -> list[int]:
         stmt = (
-            select(MessageReaction)
+            select(MessageReaction.user_id)
             .where(
                 MessageReaction.message_id == message_id,
                 MessageReaction.emoji == emoji,
@@ -186,9 +314,28 @@ class MessageReactionRepository(IRepository[MessageReaction]):
             .order_by(MessageReaction.user_id.asc())
             .limit(limit + 1)
         )
-
         if cursor_user_id is not None:
             stmt = stmt.where(MessageReaction.user_id > cursor_user_id)
 
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list((await self.session.execute(stmt)).scalars().all())
+
+    async def recount(self, message_id: UUID) -> None:
+        """Rebuild counter rows for a message from the source reaction rows."""
+        await self.session.execute(
+            text("DELETE FROM message_reaction_counters WHERE message_id = :message_id"),
+            {"message_id": message_id},
+        )
+        await self.session.execute(
+            text(
+                """
+                INSERT INTO message_reaction_counters
+                    (message_id, emoji, chat_id, count, version, first_reacted_at, last_reacted_at)
+                SELECT message_id, emoji, MIN(chat_id::text)::uuid, COUNT(*), 1,
+                       MIN(created_at), MAX(created_at)
+                FROM message_reactions
+                WHERE message_id = :message_id
+                GROUP BY message_id, emoji
+                """
+            ),
+            {"message_id": message_id},
+        )

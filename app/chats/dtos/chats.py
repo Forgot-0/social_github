@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.chats.dtos.members import MemberChatDTO
 from app.chats.dtos.messages import MessageDTO, ReadDetail
-from app.chats.models.chat import ChatType
+from app.chats.models.chat import ChatReactionsMode, ChatType
 
 
 class ChatDTO(BaseModel):
@@ -22,6 +22,8 @@ class ChatDTO(BaseModel):
     admin_only: bool = False
     slow_mode_seconds: int = 0
     permissions: dict[str, bool] = Field(default_factory=dict)
+    reactions_mode: ChatReactionsMode = ChatReactionsMode.ALL
+    allowed_reactions: list[str] = Field(default_factory=list)
     created_by: int
 
     member_count: int
@@ -48,6 +50,8 @@ class ChatDetailDTO(BaseModel):
     admin_only: bool = False
     slow_mode_seconds: int = 0
     permissions: dict[str, bool] = Field(default_factory=dict)
+    reactions_mode: ChatReactionsMode = ChatReactionsMode.ALL
+    allowed_reactions: list[str] = Field(default_factory=list)
     created_by: int
 
     member_count: int

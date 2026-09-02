@@ -97,6 +97,8 @@ async def update_chat(
             admin_only=payload.admin_only,
             slow_mode_seconds=payload.slow_mode_seconds,
             permissions=payload.permissions,
+            reactions_mode=payload.reactions_mode,
+            allowed_reactions=payload.allowed_reactions,
             user_jwt_data=user_jwt_data,
         )
     )

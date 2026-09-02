@@ -256,8 +256,10 @@ interface ErrorResponse {
 | `INVALID_MESSAGE` | 400 | `{ "reason": string }` |
 | `EMPTY_ATTACHMENT_UPLOAD_REQUEST` | 400 | `{}` |
 | `MAX_LIMIT_CURSOR` | 429 | `{ "max": number, "current": number }` — только в WS-команде `resume`, лимит 20 курсоров |
-| `INVALID_REACTION` | 400 | `{ "emoji": string }` (обрезан до 64 симв.) — пустой эмодзи, длиннее 32 симв., только пробелы или содержит `\x00`; см. 6.7.4 |
-| `TOO_MANY_REACTION` | 400 | `{}` — на сообщении уже 20 различных эмодзи (`MAX_REACTIONS_PER_MESSAGE`); см. 6.7.4 |
+| `INVALID_REACTION` | 400 | `{ "emoji": string }` — эмодзи не входит в каталог реакций; см. 6.7.4 |
+| `REACTION_NOT_ALLOWED` | 400 | `{ "emoji": string, "allowed": string[] }` — режим чата `some`, эмодзи не в белом списке; см. 6.7.4 |
+| `REACTIONS_DISABLED` | 403 | `{ "chat_id": string }` — в чате `reactions_mode = "none"`; см. 6.7.4 |
+| `TOO_MANY_REACTIONS` | 400 | `{ "limit": number, "scope": "user" \| "message" }` — превышен лимит реакций; см. 6.7.4 |
 
 ⚠️ `ATTACHMENT_MEDIA_VALIDATION` (класс `AttachmentMediaValidationError`) в этой таблице **намеренно не указан** — он никогда не долетает до HTTP-ответа: возникает только внутри фонового воркера `ProccessAttachmentsCommandHandler` (см. 6.5), там же перехватывается и сворачивается в `attachment_status: "error"`. Клиенту как код ошибки API не отдаётся.
 
@@ -904,7 +906,7 @@ interface MessagesDTO {   // курсорная пагинация, has_next —
 }
 ```
 
-⚠️ **В `MessageDTO` НЕТ поля `reactions`** — сводку реакций нужно запрашивать отдельно (см. 6.7) и обновлять по WS-событию.
+**`MessageDTO.reactions`** (`ReactionGroupDTO[]`, см. 6.7.3) присутствует в каждом сообщении списка/деталей/контекста/WS-replay. Обновляется по WS-событию `reaction_update`. Отдельный `GET .../reactions/` нужен только для пагинации списка «кто поставил».
 
 **Порядок и курсор:** `GET /messages/` идёт `direction="backward"` — от новых к старым. `next_cursor` — `seq` последнего (самого старого) элемента страницы, заполняется **только когда `has_next == true`**, иначе `null`.
 
@@ -1010,81 +1012,103 @@ interface LiveKitParticipantsDTO { identity: string; name: string; state: number
 
 ### 6.7 Реакции на сообщения 🆕
 
-#### 6.7.0
-
 #### 6.7.1 Эндпоинты
 
-Базовый префикс (после починки): `/chats/{chat_id}/messages/{message_id}/reactions`
+Базовый префикс: `/chats/{chat_id}/messages/{message_id}/reactions`
 
 | Метод | Путь | Rate limit | Request | Response |
 |---|---|---|---|---|
-| PUT | `.../reactions/{emoji}/` | 10/сек (`RATE_LIMIT_REACTIONS_PER_SECOND`) | — | `204` — поставить/заменить реакцию |
-| DELETE | `.../reactions/{emoji}/` | 10/сек | — | `204` — снять реакцию |
 | GET | `.../reactions/` | — | Query `emoji?: string (1..32), limit=50 (≤100), cursor_user_id?: number (≥1)` | `200`, `MessageReactionsDTO` |
+| PUT | `.../reactions/` | 10/сек (`RATE_LIMIT_REACTIONS_PER_SECOND`) | `{ "reactions": string[] }` | `204` — заменить весь набор реакций пользователя (set-семантика) |
+| DELETE | `.../reactions/` | 10/сек | — | `204` — снять все свои реакции |
+| PUT | `.../reactions/{emoji}/` | 10/сек | — | `204` — добавить одну реакцию |
+| DELETE | `.../reactions/{emoji}/` | 10/сек | — | `204` — снять одну реакцию |
 
 `{emoji}` — path-параметр, строка 1..32, **обязательно URL-encoded** (`👍` → `%F0%9F%91%8D`).
 
-#### 6.7.2 Семантика «одна реакция на пользователя»
+#### 6.7.2 Семантика (Telegram-like)
 
-⚠️ Ключевое отличие от Telegram/Slack: в БД стоит `UniqueConstraint(message_id, user_id)` — у пользователя может быть **ровно одна** реакция на сообщение.
-- `PUT` с новым эмодзи, когда уже стоит другой — это **замена**: старый счётчик декрементится, новый инкрементится, бэкенд публикует **два** события `reaction_updated`.
-- `PUT` с тем же эмодзи, который уже стоит — no-op (транзакция откатывается, событий нет), ответ всё равно `204`.
-- `DELETE` несуществующей реакции — тоже no-op, ответ `204`.
-
-Клиент не должен ожидать «набор эмодзи от одного юзера» — модель строго single-choice. Оптимистичный UI: ставя новый эмодзи, сразу снимать подсветку со старого.
+- Пользователь может поставить **несколько** разных эмодзи на одно сообщение — до `MAX_REACTIONS_PER_USER_PER_MESSAGE = 3`.
+- `PUT .../reactions/{emoji}/` — добавляет эмодзи к набору пользователя. Повтор того же эмодзи — no-op, ответ `204`.
+- `DELETE .../reactions/{emoji}/` — снимает конкретный эмодзи. Снятие отсутствующего — no-op, `204`.
+- `PUT .../reactions/` с телом `{ "reactions": ["👍","🔥"] }` — **полная замена** набора пользователя (как `messages.sendReaction` в Telegram). Пустой список = снять всё.
+- Каждое результирующее изменение публикует **ровно одно** событие `chats.message.reaction_updated` на сообщение — со снимком всех групп (не дельтой).
+- Разрешён только курированный каталог эмодзи (`app/chats/reactions/catalog.py`, ~73 шт.). Плюс настройки чата (6.7.5).
 
 #### 6.7.3 Ответ GET
 
 ```ts
-interface ReactionSummaryDTO { emoji: string; count: number; reacted_by_me: boolean }
-interface ReactionUserDTO { user_id: number; emoji: string }
+interface ReactionGroupDTO {
+  emoji: string;
+  count: number;
+  version: number;            // монотонная версия группы (для идемпотентной сверки на клиенте)
+  reacted_by_me: boolean;
+  recent_user_ids: number[];  // до REACTION_RECENT_USERS_LIMIT (3) последних реагировавших, для аватарок
+}
 interface MessageReactionsDTO {
   message_id: string;                 // UUID
-  summaries: ReactionSummaryDTO[];    // всегда: сводка по ВСЕМ эмодзи сообщения
+  groups: ReactionGroupDTO[];         // всегда: сводка по ВСЕМ эмодзи сообщения, сортировка count DESC, emoji ASC
   emoji: string | null;               // эхо query-параметра
-  users: ReactionUserDTO[];           // непустой ТОЛЬКО если передан ?emoji=
+  users: number[];                    // user_id, непустой ТОЛЬКО если передан ?emoji=
   has_next: boolean;
   next_user_id: number | null;        // передать следующим запросом как cursor_user_id
 }
 ```
 Два режима одного эндпоинта:
-1. **Без `?emoji=`** — только `summaries` (для «чипсов» под сообщением), `users = []`, `has_next = false`.
+1. **Без `?emoji=`** — только `groups` (для «чипсов» под сообщением), `users = []`.
 2. **С `?emoji=👍`** — дополнительно постранично отдаёт список проголосовавших (шторка «кто поставил»).
+
+Реакции также приходят **прямо в `MessageDTO.reactions`** (`ReactionGroupDTO[]`) в списке сообщений, деталях, контексте и в WS-replay (`ws.history`) — отдельный GET нужен только для пагинации «кто поставил».
 
 #### 6.7.4 Лимиты и ошибки
 
-- `MAX_REACTIONS_PER_MESSAGE = 20` — максимум **различных эмодзи** на сообщение (проверка срабатывает только при добавлении эмодзи, которого ещё нет).
-- `MAX_REACRTION_LENGTH = 32` (опечатка в имени константы сохранена).
+- `MAX_DISTINCT_REACTIONS_PER_MESSAGE = 20` — максимум различных эмодзи на сообщение.
+- `MAX_REACTIONS_PER_USER_PER_MESSAGE = 3` — максимум эмодзи от одного пользователя.
+- `MAX_REACTION_LENGTH = 32`.
 
 | code | HTTP | detail | Когда |
 |---|---|---|---|
-| `INVALID_REACTION` | 400 | `{ "emoji": string }` (обрезан до 64) | пустой эмодзи, длиннее 32, только пробелы, содержит `\x00` |
-| `TOO_MANY_REACTION` | 400 | `{}` | на сообщении уже 20 различных эмодзи |
-| `NOT_FOUND_CHAT` | 404 | `{ "chat_id": string }` | |
-| `NOT_CHAT_MEMBER` | 403 | `{ "chat_id": string, "user_id": number }` | в т.ч. если участник забанен |
-| `NOT_FOUND_MESSAGE` | 404 | `{ "message_id": string }` | в т.ч. если сообщение из другого чата |
+| `INVALID_REACTION` | 400 | `{ "emoji": string }` | эмодзи не входит в каталог |
+| `REACTION_NOT_ALLOWED` | 400 | `{ "emoji": string, "allowed": string[] }` | чат в режиме `some`, эмодзи не в белом списке |
+| `REACTIONS_DISABLED` | 403 | `{ "chat_id": string }` | в чате `reactions_mode = "none"` |
+| `TOO_MANY_REACTIONS` | 400 | `{ "limit": number, "scope": "user" \| "message" }` | превышен лимит |
+| `CHAT_ACCESS_DENIED` | 403 | `{ "chat_id": string, "requester_id": number }` | участник в муте |
+| `NOT_FOUND_CHAT` | 404 | `{ "chat_id": string }` | не участник чата |
+| `NOT_CHAT_MEMBER` | 403 | `{ "chat_id": string, "user_id": number }` | участник забанен |
+| `NOT_FOUND_MESSAGE` | 404 | `{ "message_id": string }` | нет сообщения / другой чат / удалено |
 
-#### 6.7.5 WS-событие
+#### 6.7.5 Настройки реакций на уровне чата
 
-Доменное событие `chats.message.reaction_updated` маппится в WS-тип `reaction_update`. В текущей delivery-цепочке исходный payload события с `emoji/count/changed_by` не передаётся клиенту напрямую: `ChatDeliveryRouter` подтягивает актуальные `ChatDTO` и `MessageDTO`, затем кладёт их в `MessagePayloadWS`.
+`ChatDTO` / `ChatDetailDTO` содержат:
+- `reactions_mode: "all" | "some" | "none"` (по умолчанию `"all"`);
+- `allowed_reactions: string[]` — белый список эмодзи, применяется при `mode = "some"`.
+
+Меняются через `PATCH /chats/{chat_id}/` (`chat:update`), поля `reactions_mode`, `allowed_reactions`. Изменение уходит в `chat_updated`.
+
+#### 6.7.6 WS-событие
+
+Доменное событие `chats.message.reaction_updated` → WS-тип `reaction_update`. Payload **не содержит `MessageDTO`** — только компактный снимок реакций. При включённом коалесинге (`REACTIONS_COALESCE_ENABLED`, по умолчанию) всплеск реакций на «вирусном» сообщении схлопывается в ≤ 1 рассылку за `REACTIONS_COALESCE_WINDOW_MS` (500 мс), снимок всегда финальный.
 
 ```ts
 {
   type: "reaction_update",
-  chat_id: string,
+  channel: string,           // chat_id
   ts: string,
   payload: {
-    chat: ChatDTO;
-    message: MessageDTO; // сообщение уже содержит актуальный reactions
+    message: null,
+    reaction: {
+      message_id: string;
+      chat_id: string;
+      actor_id: number;      // кто вызвал изменение
+      action: "add" | "remove" | "replace" | "update";
+      groups: ReactionGroupDTO[];   // полный текущий набор групп; reacted_by_me тут всегда false
+    }
   },
-  delivery: {
-    require_subscription: boolean;
-    recipients: number[];
-  }
+  delivery: { require_subscription: boolean; recipients: number[] }
 }
 ```
 
-Обработка: заменить/обновить локальное сообщение из `payload.message` целиком. Отдельные поля `emoji`, `count` и `changed_by` в WS-payload сейчас не приходят.
+Обработка: заменить группы реакций у локального сообщения `message_id` на `reaction.groups`. `reacted_by_me` в этом событии не персонализируется — клиент трекает свой выбор оптимистично (или сверяется через GET). После переподключения актуальные реакции для видимых сообщений приходят в `ws.history` / перезапросом списка сообщений.
 
 
 ## 7. Чаты — WebSocket
@@ -1156,8 +1180,8 @@ interface DeliveryData {
 }
 
 interface MessagePayloadWS {
-  chat: ChatDTO;                        // актуальный DTO чата
-  message: MessageDTO;                  // полный DTO сообщения с profile/attachments/reactions
+  message: MessageDTO | null;           // полный DTO сообщения с profile/attachments/reactions
+  reaction?: ReactionUpdateWSDTO | null; // заполнен только для type = "reaction_update" (см. 6.7.6)
 }
 
 interface DeliveryDTO {
@@ -1169,7 +1193,7 @@ interface DeliveryDTO {
 }
 ```
 
-⚠️ Для доменных событий из брокера (`chats.*`) наружу уходит именно `DeliveryDTO`: в `payload` лежит `MessagePayloadWS { chat, message }`, а не исходный минимальный payload доменного события с `message_id`/`seq`/`changed_by`. Это актуально для `new_message`, `message_edited`, `message_deleted`, `messages_read`, member/chat-событий и `reaction_update`, если они были маршрутизированы через `ChatDeliveryRouter`. `event_name` и `event_id` в клиентский WS-конверт сейчас не попадают. Служебные протокольные события (`ws.*`) имеют собственную форму — см. подраздел "Служебные события" ниже.
+⚠️ Для доменных событий из брокера (`chats.*`) наружу уходит именно `DeliveryDTO`: в `payload` лежит `MessagePayloadWS { chat, message }`, а не исходный минимальный payload доменного события с `message_id`/`seq`/`changed_by`. Это актуально для `new_message`, `message_edited`, `message_deleted`, `messages_read`, member/chat-событий, если они были маршрутизированы через `ChatDeliveryRouter`. Для `reaction_update` payload другой — `{ message: null, reaction: ReactionUpdateWSDTO }` (см. 6.7.6). `event_name` и `event_id` в клиентский WS-конверт сейчас не попадают. Служебные протокольные события (`ws.*`) имеют собственную форму — см. подраздел "Служебные события" ниже.
 
 #### Доменные события (`type`) и точная форма `payload`
 
@@ -1185,7 +1209,7 @@ interface DeliveryDTO {
 | `member_banned` | Участника забанили/разбанили | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
 | `chat_created` | Чат создан | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
 | `chat_updated` | Изменены настройки чата | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` при доставке через брокерный router. |
-| `reaction_update` | Поставили/изменили реакцию на сообщении | `MessagePayloadWS { chat: ChatDTO; message: MessageDTO }` — обновить сообщение целиком; отдельные `emoji/count/changed_by` в WS-payload сейчас не передаются. |
+| `reaction_update` | Поставили/сняли/заменили реакцию на сообщении | `MessagePayloadWS { message: null; reaction: ReactionUpdateWSDTO }` — `reaction.groups` содержит полный текущий набор групп; заменить локальные реакции сообщения `reaction.message_id`. Под нагрузкой рассылки коалесятся (окно 500 мс). Подробно — 6.7.6. |
 | `attachment_success` | Вложение(я) успешно обработаны после `confirm/` (шлётся лично пользователю-загрузчику, не всей подписке чата) | `AttachmentSuccessPayload { user_id: number; chat_id: string; tokens: string[] }` — список готовых `upload_token`; `delivery.require_subscription=false`, `recipients=[user_id]`. |
 
 **Определены, но реально нигде не публикуются** (есть в `WSEventType`, но `rg` по кодовой базе не находит ни одного места, где они реально отправляются): `typing_start`, `typing_stop`, `call_started`, `call_ended`, `call_joined`, `call_left`. `chat_deleted` в `WSEventType` сейчас не определён. Не полагайтесь на их получение — заложить обработку на будущее можно, но сейчас бэкенд их не шлёт.
@@ -1206,7 +1230,7 @@ interface DeliveryDTO {
 
 1. Установить соединение с `?token=...`. Слушать `ws.ready`, сохранить `heartbeat_interval`/`heartbeat_timeout`.
 2. На каждый экран чата — слать `{"op": "subscribe", "chat_id": "...", "last_seq": <последний известный seq из локального кэша>}`.
-3. При получении `new_message`/`message_edited`/`message_deleted`/`reaction_update` — брать готовое сообщение из `payload.message` и актуальные данные чата из `payload.chat`; отдельного минимального payload с `message_id`/`seq` сейчас нет.
+3. При получении `new_message`/`message_edited`/`message_deleted` — брать готовое сообщение из `payload.message`; отдельного минимального payload с `message_id`/`seq` сейчас нет. Для `reaction_update` — брать `payload.reaction` (компактный снимок групп, см. 6.7.6), `payload.message` там `null`.
 4. На `ws.ping` отвечать `{"op": "pong"}`.
 5. При разрыве соединения — переподключиться с экспоненциальным backoff, затем отправить `resume` с курсорами по всем открытым в UI чатам (≤20).
 6. При закрытии с кодом `1012` — значит открыто больше 2 соединений на аккаунт; просто переподключиться нормально (не ошибка, а следствие лимита).

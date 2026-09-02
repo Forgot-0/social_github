@@ -4,11 +4,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.chats.dtos.chats import ChatDTO
 from app.chats.dtos.messages import MessageDTO
+from app.chats.dtos.reactions import ReactionGroupDTO, ReactionUpdateWSDTO
 from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.schemas.ws import ChatEventPayload, WSEventType
 from app.core.consumers.event import TypedEventDTO
+
+REACTION_EVENT_NAME = "chats.message.reaction_updated"
 
 CHAT_EVENT_TO_WS_TYPE: dict[str, str] = {
     "chats.message.sent": WSEventType.NEW_MESSAGE.value,
@@ -50,6 +52,37 @@ class WsEvent:
 
 class MessagePayloadWS(BaseModel):
     message: MessageDTO | None = None
+    reaction: ReactionUpdateWSDTO | None = None
+
+
+def build_reaction_ws_dto(payload: ChatEventPayload | dict) -> ReactionUpdateWSDTO:
+    data = payload if isinstance(payload, dict) else {
+        **(payload.model_extra or {}),
+        "chat_id": payload.chat_id,
+        "message_id": payload.message_id,
+    }
+
+    recent = data.get("recent_by_emoji") or {}
+    groups: list[ReactionGroupDTO] = []
+    for group in data.get("groups") or []:
+        emoji = group["emoji"]
+        groups.append(
+            ReactionGroupDTO(
+                emoji=emoji,
+                count=group["count"],
+                version=group.get("version", 1),
+                reacted_by_me=False,
+                recent_user_ids=recent.get(emoji, []),
+            )
+        )
+
+    return ReactionUpdateWSDTO(
+        message_id=data["message_id"],
+        chat_id=data["chat_id"],
+        actor_id=data.get("actor_id", 0),
+        action=data.get("action", "update"),
+        groups=groups,
+    )
 
 
 def chunks(items: Iterable[int], size: int) -> Iterator[list[int]]:

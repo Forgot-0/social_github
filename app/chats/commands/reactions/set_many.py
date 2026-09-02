@@ -1,5 +1,4 @@
 import logging
-import time
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -12,11 +11,7 @@ from app.chats.exceptions import (
     NotFoundMessageError,
     TooManyReactionsError,
 )
-from app.chats.metrics import (
-    CHAT_REACTION_APPLY_LATENCY,
-    CHAT_REACTIONS_APPLIED,
-    CHAT_REACTIONS_REJECTED,
-)
+from app.chats.metrics import CHAT_REACTIONS_APPLIED, CHAT_REACTIONS_REJECTED
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reaction import MessageReactionRepository
@@ -29,15 +24,18 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
-class SetReactionCommand(BaseCommand):
+class SetReactionsCommand(BaseCommand):
+    """Replace the caller's whole reaction set for a message (set-semantics,
+    like Telegram ``messages.sendReaction``). An empty list clears all."""
+
     chat_id: UUID
     message_id: UUID
-    emoji: str
+    emojis: tuple[str, ...]
     user_jwt_data: UserJWTData
 
 
 @dataclass(frozen=True)
-class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
+class SetReactionsCommandHandler(BaseCommandHandler[SetReactionsCommand, None]):
     session: AsyncSession
     chat_repository: ChatRepository
     message_repository: MessageRepository
@@ -45,9 +43,9 @@ class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
     reaction_policy: ReactionPolicy
     event_bus: BaseEventBus
 
-    async def handle(self, command: SetReactionCommand) -> None:
-        started = time.perf_counter()
+    async def handle(self, command: SetReactionsCommand) -> None:
         user_id = int(command.user_jwt_data.id)
+        target = list(dict.fromkeys(command.emojis))
 
         chat, member = await self.chat_repository.get_chat_and_member(
             chat_id=command.chat_id, member_id=user_id
@@ -61,37 +59,50 @@ class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
             CHAT_REACTIONS_REJECTED.labels(reason="message_not_found").inc()
             raise NotFoundMessageError(message_id=str(command.message_id))
 
-        try:
-            self.reaction_policy.validate(chat, member, command.emoji)
-        except Exception:
-            CHAT_REACTIONS_REJECTED.labels(reason="policy").inc()
-            raise
+        if target:
+            self.reaction_policy.ensure_can_react(chat, member)
+            for emoji in target:
+                try:
+                    self.reaction_policy.validate_emoji(chat, emoji)
+                except Exception:
+                    CHAT_REACTIONS_REJECTED.labels(reason="policy").inc()
+                    raise
 
-        existing = await self.reaction_repository.list_user_emojis(
-            command.message_id, user_id
-        )
-        if command.emoji not in existing:
-            if len(existing) >= chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE:
+            if len(target) > chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE:
                 CHAT_REACTIONS_REJECTED.labels(reason="per_user_limit").inc()
                 raise TooManyReactionsError(
                     limit=chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE, scope="user"
                 )
-            distinct = await self.reaction_repository.count_distinct_emojis(
-                command.message_id
-            )
-            if distinct >= chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE:
-                CHAT_REACTIONS_REJECTED.labels(reason="per_message_limit").inc()
-                raise TooManyReactionsError(
-                    limit=chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE, scope="message"
-                )
 
-        applied = await self.reaction_repository.add_reaction(
+            new_emojis = set(target) - set(
+                await self.reaction_repository.list_user_emojis(
+                    command.message_id, user_id
+                )
+            )
+            if new_emojis:
+                distinct = await self.reaction_repository.count_distinct_emojis(
+                    command.message_id
+                )
+                existing_groups = {
+                    g.emoji for g in await self.reaction_repository.get_current_groups(
+                        command.message_id
+                    )
+                }
+                added_distinct = len(new_emojis - existing_groups)
+                if distinct + added_distinct > chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE:
+                    CHAT_REACTIONS_REJECTED.labels(reason="per_message_limit").inc()
+                    raise TooManyReactionsError(
+                        limit=chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE,
+                        scope="message",
+                    )
+
+        changed = await self.reaction_repository.set_reactions(
             chat_id=command.chat_id,
             message_id=command.message_id,
             user_id=user_id,
-            emoji=command.emoji,
+            emojis=target,
         )
-        if applied is None:
+        if not changed:
             return
 
         event = await build_reaction_event(
@@ -99,19 +110,18 @@ class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
             chat_id=command.chat_id,
             message_id=command.message_id,
             actor_id=user_id,
-            action="add",
+            action="replace",
         )
         await self.event_bus.publish([event])
         await self.session.commit()
 
-        CHAT_REACTIONS_APPLIED.labels(action="add").inc()
-        CHAT_REACTION_APPLY_LATENCY.observe(time.perf_counter() - started)
+        CHAT_REACTIONS_APPLIED.labels(action="replace").inc()
         logger.info(
-            "Reaction added",
+            "Reactions replaced",
             extra={
                 "chat_id": str(command.chat_id),
                 "message_id": str(command.message_id),
                 "user_id": user_id,
-                "emoji": command.emoji,
+                "emojis": target,
             },
         )

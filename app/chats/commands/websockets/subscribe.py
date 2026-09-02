@@ -7,6 +7,7 @@ from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.schemas.ws import WSClientOp
 from app.chats.services.messages import MessageService
+from app.chats.services.reaction_attach import ReactionAttachService
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.websocket.manager import ConnectionManager
 from app.core.websocket.websocket import WSConnection
@@ -27,6 +28,7 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
     chat_repository: ChatRepository
     message_repository: MessageRepository
     message_service: MessageService
+    reaction_attach_service: ReactionAttachService
 
     async def handle(self, command: SubscribeCommand) -> None:
         chat_id = UUID(command.chat_id)
@@ -69,9 +71,12 @@ class SubscribeCommandHandler(BaseCommandHandler[SubscribeCommand, None]):
                         "after_seq": last_seq,
                         "messages": [
                             message.model_dump(mode="json")
-                            for message in await self.message_service.attach_download_urls([
-                                MessageDTO.model_validate(item) for item in batch
-                            ])
+                            for message in await self.reaction_attach_service.attach(
+                                await self.message_service.attach_download_urls([
+                                    MessageDTO.model_validate(item) for item in batch
+                                ]),
+                                command.user_id,
+                            )
                         ],
                         "has_more": len(messages) > limit,
                         "next_last_seq": next_last_seq,

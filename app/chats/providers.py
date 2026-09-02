@@ -26,6 +26,9 @@ from app.chats.commands.messages.mark_read import MarkAsReadCommand, MarkAsReadC
 from app.chats.commands.messages.modify import EditMessageCommand, EditMessageCommandHandler
 from app.chats.commands.messages.send import SendMessageCommand, SendMessageCommandHandler
 from app.chats.commands.profiles.upsert import UpsertProfileProjectionCommand, UpsertProfileProjectionCommandHandler
+from app.chats.commands.reactions.remove import RemoveReactionCommand, RemoveReactionCommandHandler
+from app.chats.commands.reactions.set import SetReactionCommand, SetReactionCommandHandler
+from app.chats.commands.reactions.set_many import SetReactionsCommand, SetReactionsCommandHandler
 from app.chats.commands.websockets.ping import PingCommand, PingCommandHandler
 from app.chats.commands.websockets.pong import PongCommand, PongCommandHandler
 from app.chats.commands.websockets.resume import ResumeCommand, ResumeCommandHandler
@@ -39,9 +42,14 @@ from app.chats.queries.chats.get_members import GetChatMembersQuery, GetChatMemb
 from app.chats.queries.messages.get_context import GetMessageContextQuery, GetMessageContextQueryHandler
 from app.chats.queries.messages.get_detail import GetMessageDetailQuery, GetMessageDetailQueryHandler
 from app.chats.queries.messages.get_list import GetMessagesQuery, GetMessagesQueryHandler
+from app.chats.queries.reactions.get_list import (
+    GetMessageReactionsQuery,
+    GetMessageReactionsQueryHandler,
+)
 from app.chats.repositories.attachment import AttachmentRepository
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
+from app.chats.repositories.reaction import MessageReactionRepository
 from app.chats.repositories.reads import ReadReceiptRepository
 from app.chats.repositories.user_profile import ChatUserProfileRepository
 from app.chats.services.access import ChatAccessService
@@ -49,6 +57,9 @@ from app.chats.services.attachment_media import AttachmentMediaValidator
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.messages import MessageService
+from app.chats.services.reaction_attach import ReactionAttachService
+from app.chats.services.reaction_coalescer import ReactionCoalesceQueue
+from app.chats.services.reaction_policy import ReactionPolicy
 from app.core.events.event import EventRegistry
 from app.core.mediators.base import CommandRegistry, QueryRegistry
 
@@ -63,6 +74,8 @@ class ChatModuleProvider(Provider):
         )
 
     delivery_router = provide(ChatDeliveryRouter, scope=Scope.REQUEST)
+    reaction_attach_service = provide(ReactionAttachService, scope=Scope.REQUEST)
+    reaction_coalesce_queue = provide(ReactionCoalesceQueue, scope=Scope.APP)
 
     commands = provide_all(
         RequestAttachmentUploadCommandHandler,
@@ -90,6 +103,9 @@ class ChatModuleProvider(Provider):
         SubscribeCommandHandler,
         UnsubscribeCommandHandler,
         UpsertProfileProjectionCommandHandler,
+        SetReactionCommandHandler,
+        RemoveReactionCommandHandler,
+        SetReactionsCommandHandler,
         scope=Scope.REQUEST,
     )
 
@@ -101,12 +117,14 @@ class ChatModuleProvider(Provider):
         GetMessageContextQueryHandler,
         GetMessageDetailQueryHandler,
         GetMessagesQueryHandler,
+        GetMessageReactionsQueryHandler,
         scope=Scope.REQUEST,
     )
 
     repositories = provide_all(
         ChatRepository,
         MessageRepository,
+        MessageReactionRepository,
         AttachmentRepository,
         ReadReceiptRepository,
         ChatUserProfileRepository,
@@ -117,6 +135,7 @@ class ChatModuleProvider(Provider):
         MessageService,
         ChatAccessService,
         AttachmentMediaValidator,
+        ReactionPolicy,
         scope=Scope.APP
     )
 
@@ -148,6 +167,9 @@ class ChatModuleProvider(Provider):
         command_registry.register_command(SubscribeCommand, SubscribeCommandHandler)
         command_registry.register_command(UnsubscribeCommand, UnsubscribeCommandHandler)
         command_registry.register_command(UpsertProfileProjectionCommand, UpsertProfileProjectionCommandHandler)
+        command_registry.register_command(SetReactionCommand, SetReactionCommandHandler)
+        command_registry.register_command(RemoveReactionCommand, RemoveReactionCommandHandler)
+        command_registry.register_command(SetReactionsCommand, SetReactionsCommandHandler)
         return command_registry
 
     @decorate
@@ -159,6 +181,7 @@ class ChatModuleProvider(Provider):
         query_registry.register_query(GetMessageContextQuery, GetMessageContextQueryHandler)
         query_registry.register_query(GetMessageDetailQuery, GetMessageDetailQueryHandler)
         query_registry.register_query(GetMessagesQuery, GetMessagesQueryHandler)
+        query_registry.register_query(GetMessageReactionsQuery, GetMessageReactionsQueryHandler)
         return query_registry
 
     @decorate

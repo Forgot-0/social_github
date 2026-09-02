@@ -32,6 +32,12 @@ class ChatType(StrEnum):
     CHANNEL = "channel"
 
 
+class ChatReactionsMode(StrEnum):
+    ALL = "all"
+    SOME = "some"
+    NONE = "none"
+
+
 class ChatFanoutStrategy(StrEnum):
     FANOUT_ON_WRITE = "fanout_on_write"
     ACTIVE_SUBSCRIBERS = "active_subscribers"
@@ -63,6 +69,8 @@ class UpdatedChatEvent(BaseEvent):
     admin_only: bool
     slow_mode_seconds: int
     permissions: dict[str, bool]
+    reactions_mode: str
+    allowed_reactions: list[str]
 
     __event_name__ = "chats.chat.updated"
 
@@ -146,6 +154,20 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     admin_only: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     slow_mode_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     permissions: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}", default=dict)
+
+    reactions_mode: Mapped[ChatReactionsMode] = mapped_column(
+        Enum(
+            ChatReactionsMode,
+            name="chat_reactions_mode",
+            values_callable=lambda enum: [member.value for member in enum],
+        ),
+        server_default=ChatReactionsMode.ALL.value,
+        default=ChatReactionsMode.ALL,
+        nullable=False,
+    )
+    allowed_reactions: Mapped[list[str]] = mapped_column(
+        JSONB, server_default="[]", default=list, nullable=False
+    )
 
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -261,6 +283,8 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         admin_only: bool | None = None,
         slow_mode_seconds: int | None = None,
         permissions: dict[str, bool] | None = None,
+        reactions_mode: ChatReactionsMode | None = None,
+        allowed_reactions: list[str] | None = None,
     ) -> None:
         if slow_mode_seconds is not None:
             self._validate_slow_mode(slow_mode_seconds)
@@ -269,6 +293,11 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             self.admin_only = admin_only
         if permissions is not None:
             self.permissions = permissions
+        if reactions_mode is not None:
+            self.reactions_mode = reactions_mode
+        if allowed_reactions is not None:
+            self._validate_allowed_reactions(allowed_reactions)
+            self.allowed_reactions = allowed_reactions
 
         self.name = name
         self.description = description
@@ -285,6 +314,8 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
                 admin_only=self.admin_only,
                 slow_mode_seconds=self.slow_mode_seconds,
                 permissions=self.permissions or {},
+                reactions_mode=self.reactions_mode.value,
+                allowed_reactions=list(self.allowed_reactions or []),
             )
         )
 
@@ -354,3 +385,19 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     def _validate_slow_mode(slow_mode_seconds: int) -> None:
         if slow_mode_seconds < 0 or slow_mode_seconds > chat_config.MAX_SLOW_MODE_SECONDS:
             raise SlowModeOutOfRangeError(seconds=slow_mode_seconds)
+
+    @staticmethod
+    def _validate_allowed_reactions(allowed_reactions: list[str]) -> None:
+        from app.chats.exceptions import ReactionNotAllowedError
+        from app.chats.reactions.catalog import DEFAULT_REACTION_SET
+
+        if len(allowed_reactions) > chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE:
+            raise ReactionNotAllowedError(
+                emoji="", allowed=sorted(DEFAULT_REACTION_SET)
+            )
+
+        unknown = [e for e in allowed_reactions if e not in DEFAULT_REACTION_SET]
+        if unknown:
+            raise ReactionNotAllowedError(
+                emoji=unknown[0], allowed=sorted(DEFAULT_REACTION_SET)
+            )
