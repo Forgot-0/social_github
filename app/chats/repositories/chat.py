@@ -13,7 +13,6 @@ from app.chats.models.message import Message
 from app.chats.models.profile import ChatUserProfile
 from app.chats.models.read_receipts import ReadReceipt
 from app.core.db.repository import CacheRepository, IRepository
-from app.core.utils import now_utc
 
 
 @dataclass
@@ -70,6 +69,25 @@ class ChatRepository(IRepository[Chat], CacheRepository):
             .returning(Chat.seq_counter)
             .execution_options(synchronize_session=False)
         )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def shift_member_count(
+        self,
+        chat_id: UUID,
+        delta: int,
+        limit: int | None = None,
+    ) -> int | None:
+        stmt = (
+            update(Chat)
+            .where(Chat.id == chat_id, Chat.deleted_at.is_(None))
+            .values(member_count=Chat.member_count + delta)
+            .returning(Chat.member_count)
+            .execution_options(synchronize_session="fetch")
+        )
+        if limit is not None:
+            stmt = stmt.where(Chat.member_count + delta <= limit)
+
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -130,8 +148,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
     ) -> list[ChatMember]:
         conditions = [
             ChatMember.chat_id == chat_id,
-            ChatMember.banned_to.is_not(None),
-            ChatMember.banned_to < now_utc()
+            ChatMember.active_criteria(),
         ]
         if cursor_user_id is not None:
             conditions.append(ChatMember.user_id > cursor_user_id)
@@ -159,8 +176,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         while True:
             conditions = [
                 ChatMember.chat_id == chat_id,
-                ChatMember.banned_to.is_not(None),
-                ChatMember.banned_to < now_utc(),
+                ChatMember.active_criteria(),
                 ChatMember.user_id > last_user_id,
             ]
             if role_ids is not None:
@@ -214,8 +230,7 @@ class ChatRepository(IRepository[Chat], CacheRepository):
                 contains_eager(ChatMember.profile.of_type(member_profile)),
             ).where(
                 ChatMember.user_id == user_id,
-                ChatMember.banned_to.is_not(None),
-                ChatMember.banned_to < now_utc(),
+                ChatMember.active_criteria(),
                 Chat.deleted_at.is_(None),
             ).order_by(
                 Chat.last_activity_at.desc().nullslast(), Chat.id.desc()

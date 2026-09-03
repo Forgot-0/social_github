@@ -143,7 +143,7 @@ class TestSendMessageCommand:
         )
         assert dto2.seq == 2
 
-    async def test_html_content_is_escaped(
+    async def test_html_content_is_stored_verbatim(
         self,
         handler: SendMessageCommandHandler,
         create_group_chat,
@@ -157,8 +157,7 @@ class TestSendMessageCommand:
                 user_jwt_data=user_jwt,
             )
         )
-        assert dto.content is not None
-        assert "<script>" not in dto.content
+        assert dto.content == '<script>alert("xss")</script>'
 
     async def test_admin_only_chat_blocks_regular_member(
         self,

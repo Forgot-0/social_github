@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -6,7 +7,17 @@ from pydantic import BaseModel, Field
 from app.chats.config import chat_config
 from app.chats.models.attachment import AttachmentType
 from app.chats.models.chat import ChatReactionsMode, ChatType
+from app.chats.models.chat_roles import ChatRoleId
 from app.chats.models.message import MessageType
+
+
+class ClientMessageType(StrEnum):
+    TEXT = MessageType.TEXT
+    IMAGE = MessageType.IMAGE
+    FILE = MessageType.FILE
+    REPLY = MessageType.REPLY
+    VOICE = MessageType.VOICE
+    VIDEO_NOTE = MessageType.VIDEO_NOTE
 
 
 class CreateChatRequest(BaseModel):
@@ -42,11 +53,11 @@ class GetListUserChatsRequest(BaseModel):
 
 class AddMemberRequest(BaseModel):
     user_id: int = Field(gt=0)
-    role_id: int = Field(default=5, gt=0)
+    role_id: ChatRoleId = ChatRoleId.MEMBER
 
 
 class ChangeMemberRoleRequest(BaseModel):
-    role_id: int = Field(gt=0)
+    role_id: ChatRoleId
 
 
 class BanMemberRequest(BaseModel):
@@ -57,7 +68,7 @@ class BanMemberRequest(BaseModel):
 class SendMessageRequest(BaseModel):
     content: str | None = Field(default=None, max_length=chat_config.MAX_MESSAGE_LENGTH)
     reply_to_id: UUID | None = None
-    message_type: MessageType = MessageType.TEXT
+    message_type: ClientMessageType = ClientMessageType.TEXT
     upload_tokens: list[UUID] = Field(default_factory=list)
 
 

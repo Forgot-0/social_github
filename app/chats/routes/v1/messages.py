@@ -13,6 +13,7 @@ from app.chats.commands.messages.send import SendMessageCommand
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO, MessagesDTO
 from app.chats.exceptions import IdempotencyConflictError
+from app.chats.models.message import MessageType
 from app.chats.queries.messages.get_context import GetMessageContextQuery
 from app.chats.queries.messages.get_detail import GetMessageDetailQuery
 from app.chats.queries.messages.get_list import GetMessagesQuery
@@ -102,7 +103,7 @@ async def send_message(
                 chat_id=chat_id,
                 content=payload.content,
                 reply_to_id=payload.reply_to_id,
-                message_type=payload.message_type,
+                message_type=MessageType(payload.message_type),
                 upload_tokens=payload.upload_tokens,
                 user_jwt_data=user_jwt_data,
             )

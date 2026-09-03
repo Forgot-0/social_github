@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from app.chats.config import chat_config
-from app.chats.models.chat_members import ChatMember
+from app.chats.models.chat_members import PERMANENT_UNTIL, ChatMember
 from app.chats.models.chat_roles import ChatRole
 from app.chats.models.permission import (
     MEMBER_PERMISSIONS,
@@ -30,7 +30,7 @@ def make_member(
     if is_banned:
         m.ban(0)
     if is_muted:
-        m.muted_to = now_utc() + timedelta(days=1)
+        m.muted_until = now_utc() + timedelta(days=1)
     return m
 
 
@@ -191,3 +191,53 @@ class TestCanBypassSlowMode:
         member = make_member(OWNER, overrides={"slowmode:bypass": False})
         assert member.can_bypass_slow_mode() is True
 
+
+
+@pytest.mark.unit
+@pytest.mark.chats
+class TestBanMuteSemantics:
+    """NULL = ограничения нет; «навсегда» — явный маркер в будущем."""
+
+    def test_fresh_member_is_neither_banned_nor_muted(self) -> None:
+        member = ChatMember.create(chat_id=uuid4(), user_id=1, role_id=MEMBER.id)
+
+        assert member.banned_until is None
+        assert member.is_banned is False
+        assert member.is_muted is False
+
+    def test_bare_constructor_is_not_banned_either(self) -> None:
+        # Раньше строка, созданная мимо create(), рождалась забаненной навсегда.
+        assert ChatMember().is_banned is False
+
+    def test_ban_without_deadline_is_permanent(self) -> None:
+        member = ChatMember.create(chat_id=uuid4(), user_id=1, role_id=MEMBER.id)
+        member.ban(banned_by=2)
+
+        assert member.banned_until == PERMANENT_UNTIL
+        assert member.is_banned is True
+
+    def test_ban_with_future_deadline_is_temporary(self) -> None:
+        member = ChatMember.create(chat_id=uuid4(), user_id=1, role_id=MEMBER.id)
+        until = now_utc() + timedelta(hours=1)
+        member.ban(banned_by=2, banned_until=until)
+
+        assert member.banned_until == until
+        assert member.is_banned is True
+
+    def test_past_deadline_lifts_the_ban(self) -> None:
+        member = ChatMember.create(chat_id=uuid4(), user_id=1, role_id=MEMBER.id)
+        member.ban(banned_by=2)
+        member.ban(banned_by=2, banned_until=now_utc() - timedelta(days=1))
+
+        assert member.banned_until is None
+        assert member.is_banned is False
+
+    def test_mute_mirrors_ban_semantics(self) -> None:
+        member = ChatMember.create(chat_id=uuid4(), user_id=1, role_id=MEMBER.id)
+
+        member.mute()
+        assert member.is_muted is True
+
+        member.mute(muted_until=now_utc() - timedelta(minutes=1))
+        assert member.muted_until is None
+        assert member.is_muted is False

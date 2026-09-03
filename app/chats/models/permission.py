@@ -1,6 +1,6 @@
 from enum import Enum
 
-from app.chats.models.chat_roles import ChatRole
+from app.chats.models.chat_roles import CHAT_ROLE_LEVELS, ChatRole, ChatRoleId
 
 OWNER_PERMISSIONS = {
     "chat:delete": True, "chat:update": True, "chat:get": True,
@@ -75,44 +75,44 @@ VIEWER_PERMISSIONS = {
 
 class ChatRolesEnum(Enum):
     OWNER = ChatRole(
-        id=1,
+        id=ChatRoleId.OWNER,
         name="owner",
-        level=100,
+        level=CHAT_ROLE_LEVELS[ChatRoleId.OWNER],
         permissions=OWNER_PERMISSIONS,
     )
 
     ADMIN = ChatRole(
-        id=2,
+        id=ChatRoleId.ADMIN,
         name="admin",
-        level=90,
+        level=CHAT_ROLE_LEVELS[ChatRoleId.ADMIN],
         permissions=ADMIN_PERMISSIONS,
     )
 
     EDITOR = ChatRole(
-        id=3,
+        id=ChatRoleId.EDITOR,
         name="editor",
-        level=80,
+        level=CHAT_ROLE_LEVELS[ChatRoleId.EDITOR],
         permissions=EDITOR_PERMISSIONS,
     )
 
     DIRECT_MEMBER = ChatRole(
-        id=4,
+        id=ChatRoleId.DIRECT_MEMBER,
         name="direct",
-        level=70,
+        level=CHAT_ROLE_LEVELS[ChatRoleId.DIRECT_MEMBER],
         permissions=DIRECT_MEMBER_PERMISSIONS,
     )
 
     MEMBER = ChatRole(
-        id=5,
+        id=ChatRoleId.MEMBER,
         name="member",
-        level=10,
+        level=CHAT_ROLE_LEVELS[ChatRoleId.MEMBER],
         permissions=MEMBER_PERMISSIONS,
     )
 
     VIEWER = ChatRole(
-        id=6,
+        id=ChatRoleId.VIEWER,
         name="viewer",
-        level=1,
+        level=CHAT_ROLE_LEVELS[ChatRoleId.VIEWER],
         permissions=VIEWER_PERMISSIONS,
     )
 

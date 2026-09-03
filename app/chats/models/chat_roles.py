@@ -1,3 +1,4 @@
+from enum import IntEnum
 from typing import Self
 
 from sqlalchemy import JSON, BigInteger, Integer, String
@@ -5,6 +6,32 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.chats.exceptions import TooLongChatRoleNameError
 from app.core.db.base_model import BaseModel
+
+
+class ChatRoleId(IntEnum):
+    OWNER = 1
+    ADMIN = 2
+    EDITOR = 3
+    DIRECT_MEMBER = 4
+    MEMBER = 5
+    VIEWER = 6
+
+
+CHAT_ROLE_LEVELS: dict[ChatRoleId, int] = {
+    ChatRoleId.OWNER: 100,
+    ChatRoleId.ADMIN: 90,
+    ChatRoleId.EDITOR: 80,
+    ChatRoleId.DIRECT_MEMBER: 70,
+    ChatRoleId.MEMBER: 10,
+    ChatRoleId.VIEWER: 1,
+}
+
+
+def chat_role_level(role_id: int) -> int | None:
+    try:
+        return CHAT_ROLE_LEVELS[ChatRoleId(role_id)]
+    except ValueError:
+        return None
 
 
 class ChatRole(BaseModel):

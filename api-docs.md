@@ -234,6 +234,7 @@ interface ErrorResponse {
 | code | HTTP | detail |
 |---|---|---|
 | `NOT_FOUND_CHAT` | 404 | `{ "chat_id": string }` |
+| `INVALID_CHAT_ROLE` | 422 | `{ "role_id": number }` |
 | `NOT_CHAT_MEMBER` | 403 | `{ "chat_id": string, "user_id": number }` |
 | `NOT_FOUND_MESSAGE` | 404 | `{ "message_id": string }` |
 | `CHAT_ACCESS_DENIED` | 403 | `{ "chat_id": string, "requester_id": number }` — не хватает прав по роли в чате |
@@ -739,6 +740,9 @@ interface ProjectRoleDTO { id: number; name: string; permissions: Record<string,
 
 ### 6.2 Чаты — CRUD, join/leave
 
+⚠️ `PATCH /chats/{chat_id}/` — настоящий partial update: поля, которых нет в теле запроса,
+остаются как были. Обнулить `name`/`description` через `null` нельзя.
+
 | Метод | Путь | Rate limit | Request | Response |
 |---|---|---|---|---|
 | GET | `/chats/` | — | Query `GetListUserChatsRequest {limit=50 (≤100), last_chat_id?: UUID, last_activity_at?: datetime}` — курсорная пагинация | `ListChats` |
@@ -808,9 +812,18 @@ interface ReadDetail { last_read_message_seq: number; last_read_at: string }
 | Метод | Путь | Rate limit | Request | Response |
 |---|---|---|---|---|
 | GET | `/chats/{chat_id}/members/` | — | Query: `limit=50 (≤500), cursor_user_id?, include_presence=false` | `ListMembers` |
-| POST | `/chats/{chat_id}/members/` | 30/5мин | `AddMemberRequest {user_id: number, role_id: number = 5}` | `204` |
-| PATCH | `/chats/{chat_id}/members/{user_id}/role/` | — | `ChangeMemberRoleRequest {role_id: number}` | `204` |
+| POST | `/chats/{chat_id}/members/` | 30/5мин | `AddMemberRequest {user_id: number, role_id: 1..6 = 5}` | `204` |
+| PATCH | `/chats/{chat_id}/members/{user_id}/role/` | — | `ChangeMemberRoleRequest {role_id: 1..6}` | `204` |
 | PATCH | `/chats/{chat_id}/members/{user_id}/ban/` | — | `BanMemberRequest {reason?: string, banned_to?: datetime}` | `204` |
+
+⚠️ **Назначить можно только роль строго ниже собственной.** Овнер (level 100) не может
+выдать роль `owner` — передача владения чатом не делается сменой роли; админ (90) не может
+выдать `owner` или `admin`. Нарушение → `403 CHAT_ACCESS_DENIED`. Неизвестный `role_id`
+(вне 1..6) → `422 INVALID_CHAT_ROLE` с `detail: { role_id }`. Это касается и
+`POST /members/` (пригласить сразу овнером нельзя), и `PATCH /members/{id}/role/`.
+
+⚠️ `BanMemberRequest.banned_to`: `null` — бан навсегда, дата в прошлом — снятие бана,
+дата в будущем — временный бан.
 | DELETE | `/chats/{chat_id}/members/{user_id}/` | — | — | `204` (кик) |
 
 ```ts
@@ -846,7 +859,7 @@ interface MemberPresenceDTO { user_id: number; is_online: boolean }
 ⚠️ `presence` — **отдельный массив**, а не поле внутри `members`. Клиент сам джойнит по `user_id`; отсутствие записи трактовать как offline.
 
 ⚠️ **Забаненные участники по-разному видны в разных эндпоинтах** (несогласованность в текущей реализации, не архитектурное решение):
-- `GET /chats/{chat_id}/members/` (постраничный список, `ChatRepository.get_chat_members`) **полностью исключает** из выборки как перманентно забаненных (`banned_to = null`), так и временно забаненных прямо сейчас (`banned_to` в будущем) участников — SQL-фильтр `banned_to IS NOT NULL AND banned_to < now()`. Такие пользователи просто не попадут в список, а не придут с `is_banned: true`.
+- `GET /chats/{chat_id}/members/` (постраничный список, `ChatRepository.get_chat_members`) **полностью исключает** забаненных участников — и бессрочно, и временно. Такие пользователи просто не попадут в список, а не придут с `is_banned: true`.
 - `GET /chats/{chat_id}/` (`ChatDetailDTO.members`, через `get_by_id(with_members=True)`) отдаёт **всех** участников без этого фильтра — там забаненные будут присутствовать с `is_banned: true`.
 - Тот же фильтр применяется к `GET /chats/` — если текущий пользователь сам забанен (перманентно или временно) в каком-то чате, этот чат **пропадёт из его собственного списка чатов** до истечения/снятия бана, без какой-либо отдельной пометки.
 
@@ -870,7 +883,7 @@ interface MemberPresenceDTO { user_id: number; is_online: boolean }
 {
   content?: string | null;          // ≤ 4096 симв.
   reply_to_id?: string | null;      // UUID сообщения, на которое отвечаем
-  message_type?: "text" | "image" | "file" | "system" | "reply" | "forward" | "voice" | "video_note";  // по умолчанию "text"
+  message_type?: "text" | "image" | "file" | "reply" | "voice" | "video_note";  // по умолчанию "text"
   upload_tokens?: string[];         // UUID'ы слотов вложений (см. 6.5), по умолчанию []
 }
 // ForwardMessageRequest
@@ -878,6 +891,12 @@ interface MemberPresenceDTO { user_id: number; is_online: boolean }
 // MarkReadRequest
 { message_seq: number }
 ```
+
+⚠️ `"system"` и `"forward"` клиенту недоступны — их ставит только сервер (`"forward"` появляется
+через `POST /messages/forward/`). Попытка отправить их в `POST /messages/` → `422`.
+
+⚠️ **Контент сообщения хранится и отдаётся как есть**, без HTML-экранирования: в `content`
+придёт ровно то, что ввёл автор (`<`, `&`, `"`). Экранирование при выводе — забота клиента.
 
 ⚠️ **`message_type` расширен**: добавлены `"voice"` и `"video_note"`. Для голосового нужно передать `message_type: "voice"` **и** `upload_tokens` со слотом, запрошенным с `attachment_type: "voice"` (см. 6.5).
 

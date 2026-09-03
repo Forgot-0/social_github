@@ -213,7 +213,7 @@ class TestSetReactionCommand:
     ) -> None:
         message = await create_message(group_chat, user_jwt, "React")
         member = await chat_repository.get_member_chat(group_chat.id, 2, with_role=False)
-        member.muted_to = now_utc() + timedelta(hours=1)
+        member.muted_until = now_utc() + timedelta(hours=1)
         await db_session.commit()
 
         with pytest.raises(AccessDeniedChatError):

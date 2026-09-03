@@ -46,6 +46,13 @@ class ChangeMemberRoleCommandHandler(BaseCommandHandler[ChangeMemberRoleCommand,
         ):
             raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=requester_id)
 
+        self.chat_access_service.ensure_can_assign_role(
+            user_jwt_data=command.user_jwt_data,
+            requester=requester,
+            chat_id=command.chat_id,
+            role_id=command.role_id,
+        )
+
         target.role_id = command.role_id
         await self.session.commit()
 

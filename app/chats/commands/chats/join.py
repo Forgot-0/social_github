@@ -7,9 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.chats.exceptions import (
     AccessDeniedChatError,
     AlreadyMemberError,
+    MemberLimitExceededError,
     NotFoundChatError,
 )
-from app.chats.models.chat import ChatType
+from app.chats.models.chat import Chat, ChatType
+from app.chats.models.chat_roles import ChatRoleId
 from app.chats.repositories.chat import ChatRepository
 from app.core.commands import BaseCommand, BaseCommandHandler
 from app.core.events.service import BaseEventBus
@@ -43,7 +45,11 @@ class JoinChatCommandHandler(BaseCommandHandler[JoinChatCommand, None]):
         if existing is not None:
             raise AlreadyMemberError(user_id=user_id, chat_id=str(command.chat_id))
 
-        role_id = 6 if chat.type == ChatType.CHANNEL else 5
+        limit = Chat.member_limit(chat.type)
+        if await self.chat_repository.shift_member_count(chat.id, delta=1, limit=limit) is None:
+            raise MemberLimitExceededError(limit=limit)
+
+        role_id = ChatRoleId.VIEWER if chat.type == ChatType.CHANNEL else ChatRoleId.MEMBER
         chat.add_member(user_id, role_id=role_id)
 
         await self.event_bus.publish(chat.pull_events())

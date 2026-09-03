@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import StrEnum
-from html import escape
 from typing import TYPE_CHECKING, Self
 from uuid import UUID, uuid7
 
@@ -178,8 +177,7 @@ class Message(BaseModel, DateMixin):
             forwarded_from_author_id=forwarded_from_author_id,
         )
 
-        if message_type != MessageType.SYSTEM and content:
-            instance.validate_content()
+        instance.validate_content()
 
         if attachments is not None:
             instance.attachments.extend(attachments)
@@ -233,9 +231,7 @@ class Message(BaseModel, DateMixin):
                 max_length=chat_config.MAX_MESSAGE_LENGTH
             )
 
-        self.content = escape(self.content, quote=True)
-
-        if self.content is not None and "\x00" in self.content:  # type: ignore
+        if "\x00" in self.content:
             raise InvalidMessageError(reason="message content contains null byte")
 
     def validate_attachments(self) -> None:

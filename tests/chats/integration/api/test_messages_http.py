@@ -370,3 +370,34 @@ class TestMessagesHttpEndpoints:
         )
         assert fwd.status_code == 404
         assert fwd.json()["error"]["code"] == "NOT_FOUND_MESSAGE"
+
+
+@pytest.mark.integration
+@pytest.mark.chats
+@pytest.mark.asyncio
+class TestClientMessageTypeContract:
+    """SYSTEM обходил проверки контента, FORWARD оставлял пустые forwarded_from_*."""
+
+    @pytest.mark.parametrize("message_type", ["system", "forward"])
+    async def test_server_only_message_types_are_rejected(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+        message_type: str,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        created = await client.post(
+            api_path("chats/"),
+            json=group_chat_payload(name="Client type guard"),
+            headers=headers,
+        )
+        assert created.status_code == 201
+        chat_id = created.json()["id"]
+
+        response = await client.post(
+            api_path(f"chats/{chat_id}/messages/"),
+            json={"content": "x", "message_type": message_type},
+            headers=headers,
+        )
+        assert response.status_code == 422

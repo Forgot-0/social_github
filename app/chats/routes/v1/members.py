@@ -99,7 +99,7 @@ async def ban_member(
             chat_id=chat_id,
             target_user_id=user_id,
             reason=ban_member_request.reason,
-            banned_to=ban_member_request.banned_to
+            banned_until=ban_member_request.banned_to
         )
     )
 

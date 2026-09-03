@@ -2,8 +2,9 @@ import pytest
 from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.chats.commands.chats.add_member import AddMemberCommand, AddMemberCommandHandler
 from app.chats.commands.chats.change_role import ChangeMemberRoleCommand, ChangeMemberRoleCommandHandler
-from app.chats.exceptions import AccessDeniedChatError, NotChatMemberError
+from app.chats.exceptions import AccessDeniedChatError, InvalidChatRoleError, NotChatMemberError
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
@@ -239,8 +240,8 @@ class TestChangeMemberRoleDowngrade:
                 )
             )
 
-    @pytest.mark.parametrize("role_id", [OWNER_ID, ADMIN_ID, EDITOR_ID, MEMBER_ID, VIEWER_ID])
-    async def test_owner_can_assign_any_role(
+    @pytest.mark.parametrize("role_id", [ADMIN_ID, EDITOR_ID, MEMBER_ID, VIEWER_ID])
+    async def test_owner_can_assign_any_role_below_own(
         self,
         handler: ChangeMemberRoleCommandHandler,
         chat_repository: ChatRepository,
@@ -257,3 +258,105 @@ class TestChangeMemberRoleDowngrade:
             )
         )
         assert await self._get_role_id(chat_repository, group_chat, 2) == role_id
+
+
+@pytest.mark.integration
+@pytest.mark.chats
+@pytest.mark.asyncio
+class TestRoleAssignmentGuard:
+    """Роль строго ниже собственной — иначе через смену роли уходит владение чатом."""
+
+    @pytest.fixture
+    async def handler(self, request_container: AsyncContainer) -> ChangeMemberRoleCommandHandler:
+        return await request_container.get(ChangeMemberRoleCommandHandler)
+
+    @pytest.fixture
+    async def add_member_handler(self, request_container: AsyncContainer) -> AddMemberCommandHandler:
+        return await request_container.get(AddMemberCommandHandler)
+
+    async def _promote(
+        self,
+        db_session: AsyncSession,
+        chat_repository: ChatRepository,
+        chat: Chat,
+        user_id: int,
+        role_id: int,
+    ) -> None:
+        member = await chat_repository.get_member_chat(chat.id, user_id)
+        assert member is not None
+        member.role_id = role_id
+        await db_session.commit()
+
+    async def test_owner_cannot_hand_over_ownership_via_role_change(
+        self,
+        handler: ChangeMemberRoleCommandHandler,
+        group_chat: Chat,
+        user_jwt: UserJWTData,
+    ) -> None:
+        with pytest.raises(AccessDeniedChatError):
+            await handler.handle(
+                ChangeMemberRoleCommand(
+                    user_jwt_data=user_jwt,
+                    chat_id=group_chat.id,
+                    target_user_id=2,
+                    role_id=OWNER_ID,
+                )
+            )
+
+    async def test_admin_cannot_promote_member_to_owner(
+        self,
+        handler: ChangeMemberRoleCommandHandler,
+        chat_repository: ChatRepository,
+        db_session: AsyncSession,
+        group_chat: Chat,
+        make_user_jwt,
+    ) -> None:
+        await self._promote(db_session, chat_repository, group_chat, 2, ADMIN_ID)
+
+        with pytest.raises(AccessDeniedChatError):
+            await handler.handle(
+                ChangeMemberRoleCommand(
+                    user_jwt_data=make_user_jwt(id="2"),
+                    chat_id=group_chat.id,
+                    target_user_id=3,
+                    role_id=OWNER_ID,
+                )
+            )
+        assert (await chat_repository.get_member_chat(group_chat.id, 3)).role_id == MEMBER_ID
+
+    async def test_unknown_role_id_is_rejected(
+        self,
+        handler: ChangeMemberRoleCommandHandler,
+        group_chat: Chat,
+        user_jwt: UserJWTData,
+    ) -> None:
+        with pytest.raises(InvalidChatRoleError):
+            await handler.handle(
+                ChangeMemberRoleCommand(
+                    user_jwt_data=user_jwt,
+                    chat_id=group_chat.id,
+                    target_user_id=2,
+                    role_id=999,
+                )
+            )
+
+    async def test_inviter_cannot_add_member_as_owner(
+        self,
+        add_member_handler: AddMemberCommandHandler,
+        chat_repository: ChatRepository,
+        db_session: AsyncSession,
+        group_chat: Chat,
+        make_user_jwt,
+    ) -> None:
+        await self._promote(db_session, chat_repository, group_chat, 2, ADMIN_ID)
+
+        with pytest.raises(AccessDeniedChatError):
+            await add_member_handler.handle(
+                AddMemberCommand(
+                    user_jwt_data=make_user_jwt(id="2"),
+                    chat_id=group_chat.id,
+                    target_user_id=77_001,
+                    role_id=OWNER_ID,
+                )
+            )
+        assert await chat_repository.get_member_chat(group_chat.id, 77_001) is None

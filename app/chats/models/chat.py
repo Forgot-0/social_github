@@ -25,6 +25,7 @@ from app.chats.exceptions import (
     SlowModeOutOfRangeError,
 )
 from app.chats.models.chat_members import ChatMember
+from app.chats.models.chat_roles import ChatRoleId
 from app.chats.models.message import Message
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
 from app.core.events.event import BaseEvent
@@ -249,18 +250,20 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         )
 
         if chat_type == ChatType.DIRECT:
-            instance.add_member(created_by, role_id=4)
-            instance.add_member(members_ids[0], role_id=4)
+            instance.add_member(created_by, ChatRoleId.DIRECT_MEMBER)
+            instance.add_member(members_ids[0], ChatRoleId.DIRECT_MEMBER)
 
         elif chat_type in (ChatType.GROUP, ChatType.SUPERGROUP):
-            instance.add_member(created_by, role_id=1)
+            instance.add_member(created_by, ChatRoleId.OWNER)
             for m_id in members_ids:
-                instance.add_member(m_id, role_id=5)
+                instance.add_member(m_id, ChatRoleId.MEMBER)
 
         elif chat_type == ChatType.CHANNEL:
-            instance.add_member(created_by, role_id=1)
+            instance.add_member(created_by, ChatRoleId.OWNER)
             for m_id in members_ids:
-                instance.add_member(m_id, role_id=6)
+                instance.add_member(m_id, ChatRoleId.VIEWER)
+
+        instance.member_count = len(instance.members)
 
         instance.register_event(
             CreatedChatEvent(
@@ -304,8 +307,12 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             self._validate_allowed_reactions(allowed_reactions)
             self.allowed_reactions = allowed_reactions
 
-        self.name = name
-        self.description = description
+        if name is not None:
+            self.name = name
+
+        if description is not None:
+            self.description = description
+
         if is_public is not None:
             self.is_public = is_public
 
@@ -334,23 +341,14 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         )
 
     def add_member(self, member_id: int, role_id: int) -> None:
-        limit = self.member_limit(self.type)
-        if self.member_count >= limit:
-            raise MemberLimitExceededError(limit=limit)
-
         self.members.append(
-            ChatMember.create(
-                chat_id=self.id,
-                user_id=member_id,
-                role_id=role_id,
-            )
+            ChatMember.create(chat_id=self.id, user_id=member_id, role_id=role_id)
         )
-        self.member_count += 1
         self.register_event(
             AddedChatMemberEvent(
                 chat_id=str(self.id),
                 user_id=member_id,
-                role_id=role_id,
+                role_id=int(role_id),
             )
         )
 
@@ -358,7 +356,6 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         if self.created_by == user_id:
             raise AccessDeniedChatError(chat_id=str(self.id), requester_id=user_id)
 
-        self.member_count -= 1
         self.register_event(LeftChatMemberEvent(
             chat_id=str(self.id),
             user_id=user_id,
@@ -368,7 +365,6 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         if target == requester_id:
             raise AccessDeniedChatError(chat_id=str(self.id), requester_id=requester_id)
 
-        self.member_count -= 1
         self.register_event(KickedChatMemberEvent(
             chat_id=str(self.id),
             requester_id=requester_id,

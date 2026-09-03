@@ -149,20 +149,13 @@ class TestChatModel:
         assert isinstance(events[0], DeletedChatEvent)
         assert events[0].deleted_by == 1
 
-    def test_add_member_raises_when_membership_limit_reached(self) -> None:
-        chat = make_group_chat(created_by=1, members_ids=[1, 2, 3])
-        chat.member_count = chat_config.MAX_GROUP_MEMBERS
-
-        with pytest.raises(MemberLimitExceededError):
-            chat.add_member(member_id=999, role_id=5)
-
-    def test_leave_decrements_member_count_and_registers_event(self) -> None:
+    def test_leave_registers_event(self) -> None:
         chat = make_group_chat(created_by=1, members_ids=[1, 2, 3])
         chat.pull_events()
 
         chat.leave(user_id=2)
 
-        assert chat.member_count == 2
+        # member_count сдвигает ChatRepository.shift_member_count одним UPDATE.
         events = chat.pull_events()
         assert len(events) == 1
         assert isinstance(events[0], LeftChatMemberEvent)
@@ -174,13 +167,12 @@ class TestChatModel:
         with pytest.raises(AccessDeniedChatError):
             chat.leave(user_id=1)
 
-    def test_kick_member_decrements_count_and_registers_event(self) -> None:
+    def test_kick_member_registers_event(self) -> None:
         chat = make_group_chat(created_by=1, members_ids=[1, 2, 3])
         chat.pull_events()
 
         chat.kick_member(target=2, requester_id=1)
 
-        assert chat.member_count == 2
         events = chat.pull_events()
         assert len(events) == 1
         assert isinstance(events[0], KickedChatMemberEvent)
@@ -243,3 +235,35 @@ class TestChatModel:
         assert chat.pull_events() == []
 
 
+
+
+@pytest.mark.unit
+@pytest.mark.chats
+class TestChatPartialUpdate:
+    """PATCH не должен затирать поля, которых нет в запросе."""
+
+    def test_update_without_name_keeps_name_and_description(self) -> None:
+        chat = make_group_chat(created_by=1, members_ids=[1, 2])
+        chat.name = "Team"
+        chat.description = "About the team"
+        chat.pull_events()
+
+        chat.update(
+            updated_by=1,
+            name=None,
+            description=None,
+            is_public=None,
+            slow_mode_seconds=30,
+        )
+
+        assert chat.name == "Team"
+        assert chat.description == "About the team"
+        assert chat.slow_mode_seconds == 30
+
+    def test_update_with_name_replaces_it(self) -> None:
+        chat = make_group_chat(created_by=1, members_ids=[1, 2])
+        chat.name = "Team"
+
+        chat.update(updated_by=1, name="Squad", description=None, is_public=None)
+
+        assert chat.name == "Squad"

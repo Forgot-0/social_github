@@ -25,7 +25,7 @@ class BanMemberCommand(BaseCommand):
     chat_id: UUID
     target_user_id: int
 
-    banned_to: datetime | None = None
+    banned_until: datetime | None = None
     reason: str | None = None
 
 
@@ -57,7 +57,7 @@ class BanMemberCommandHandler(BaseCommandHandler[BanMemberCommand, None]):
         ):
             raise AccessDeniedChatError(chat_id=str(command.chat_id), requester_id=requester_id)
 
-        target.ban(banned_by=requester_id, reason=command.reason, banned_to=command.banned_to)
+        target.ban(banned_by=requester_id, reason=command.reason, banned_until=command.banned_until)
         chat.ban_member(command.target_user_id, requester_id, target.is_banned)
 
         await self.event_bus.publish(chat.pull_events())

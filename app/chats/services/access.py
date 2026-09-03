@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+from uuid import UUID
 
+from app.chats.exceptions import AccessDeniedChatError, InvalidChatRoleError
 from app.chats.models.chat import Chat
 from app.chats.models.chat_members import ChatMember
+from app.chats.models.chat_roles import chat_role_level
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.auth.rbac import RBACManagerInterface
 
@@ -65,6 +68,25 @@ class ChatAccessService:
         if member is None or member.is_banned:
             return False
         return member.can_bypass_slow_mode()
+
+    def ensure_can_assign_role(
+        self,
+        user_jwt_data: UserJWTData,
+        requester: ChatMember | None,
+        chat_id: UUID,
+        role_id: int,
+    ) -> None:
+        role_level = chat_role_level(role_id)
+        if role_level is None:
+            raise InvalidChatRoleError(role_id=role_id)
+
+        if self._has_global_chat_admin(user_jwt_data):
+            return
+
+        if requester is None or requester.is_banned or role_level >= requester.role.level:
+            raise AccessDeniedChatError(
+                chat_id=str(chat_id), requester_id=int(user_jwt_data.id)
+            )
 
     async def update_member(
         self,

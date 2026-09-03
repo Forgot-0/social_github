@@ -462,3 +462,17 @@ class ReactionNotAllowedError(ApplicationError):
     def detail(self) -> dict:
         return {"emoji": self.emoji, "allowed": self.allowed}
 
+
+@dataclass(kw_only=True)
+class InvalidChatRoleError(ApplicationError):
+    role_id: int
+    code: str = "INVALID_CHAT_ROLE"
+    status: int = 422
+
+    @property
+    def message(self) -> str:
+        return "Unknown chat role"
+
+    @property
+    def detail(self) -> dict:
+        return {"role_id": self.role_id}

@@ -64,11 +64,17 @@ class TestMessageModel:
         assert events[0].sender_id == 1
         assert events[0].message_type == MessageType.TEXT.value
 
-    def test_html_content_is_escaped_on_create(self) -> None:
-        msg = create_message('<script>alert("xss")</script>')
-        assert msg.content is not None
-        assert "<script>" not in msg.content
-        assert "&lt;script&gt;" in msg.content
+    def test_content_is_stored_verbatim(self) -> None:
+        # Экранирование — забота слоя отображения: в БД лежит то, что ввёл автор,
+        # иначе правка сообщения экранирует его повторно (& -> &amp; -> &amp;amp;).
+        raw = '<script>alert("xss")</script> 2 < 3 && 4 > 1'
+        msg = create_message(raw)
+        assert msg.content == raw
+
+    def test_edit_does_not_mangle_content(self) -> None:
+        msg = create_message("a & b")
+        msg.update_content("a && b", modified_by=1)
+        assert msg.content == "a && b"
 
     def test_content_too_long_raises(self) -> None:
         with pytest.raises(MessageTooLongError) as exc:
