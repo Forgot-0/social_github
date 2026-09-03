@@ -1,22 +1,5 @@
 from prometheus_client import Counter, Histogram
 
-CHAT_REACTIONS_APPLIED = Counter(
-    "chat_reactions_applied_total",
-    "Reaction mutations that changed state, by action",
-    labelnames=("action",),
-)
-
-CHAT_REACTIONS_REJECTED = Counter(
-    "chat_reactions_rejected_total",
-    "Reaction mutations rejected before touching storage, by reason",
-    labelnames=("reason",),
-)
-
-CHAT_REACTION_APPLY_LATENCY = Histogram(
-    "chat_reaction_apply_seconds",
-    "Latency of applying a reaction mutation (validation + storage + event)",
-)
-
 CHAT_REACTION_COALESCE_COLLAPSED = Histogram(
     "chat_reaction_coalesce_collapsed",
     "Number of reaction events collapsed into a single fan-out by the coalescer",

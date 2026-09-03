@@ -9,9 +9,6 @@ from app.chats.repositories.reaction import MessageReactionRepository
 
 @dataclass
 class ReactionAttachService:
-    """Batch-loads reaction groups for a page of messages and attaches them to the
-    corresponding ``MessageDTO`` objects (including nested reply/forward previews)."""
-
     reaction_repository: MessageReactionRepository
 
     async def attach(
@@ -41,7 +38,6 @@ class ReactionAttachService:
                     ReactionGroupDTO(
                         emoji=group.emoji,
                         count=group.count,
-                        version=group.version,
                         reacted_by_me=group.emoji in msg_state.my_emojis,
                         recent_user_ids=msg_state.recent_by_emoji.get(group.emoji, []),
                     )

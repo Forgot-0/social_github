@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from app.chats.config import chat_config
 from app.chats.exceptions import (
     AccessDeniedChatError,
     InvalidReactionError,
@@ -8,15 +9,10 @@ from app.chats.exceptions import (
 )
 from app.chats.models.chat import Chat, ChatReactionsMode
 from app.chats.models.chat_members import ChatMember
-from app.chats.reactions.catalog import DEFAULT_REACTION_SET
 
 
 @dataclass(slots=True)
 class ReactionPolicy:
-    """Validates whether a member may react to a message in a given chat with a
-    given emoji. Mirrors Telegram: muted members cannot react, a chat can allow
-    every default reaction, a curated subset, or disable reactions entirely."""
-
     def ensure_can_react(self, chat: Chat, member: ChatMember) -> None:
         if member.is_muted:
             raise AccessDeniedChatError(
@@ -26,7 +22,7 @@ class ReactionPolicy:
             raise ReactionsDisabledError(chat_id=str(chat.id))
 
     def validate_emoji(self, chat: Chat, emoji: str) -> None:
-        if emoji not in DEFAULT_REACTION_SET:
+        if emoji not in chat_config.DEFAULT_REACTIONS:
             raise InvalidReactionError(emoji=emoji[:64])
 
         if chat.reactions_mode == ChatReactionsMode.NONE:

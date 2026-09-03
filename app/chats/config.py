@@ -100,11 +100,20 @@ class ChatConfig(BaseConfig):
     REACTION_RECENT_USERS_LIMIT: int = 3
     REACTIONS_INCLUDE_RECENT_USERS: bool = True
 
-    REACTIONS_COALESCE_ENABLED: bool = True
     REACTIONS_COALESCE_WINDOW_MS: int = 500
     REACTIONS_COALESCE_TICK_MS: int = 100
     REACTIONS_COALESCE_MAX_KEYS_PER_TICK: int = 500
     REACTIONS_COALESCE_LOCK_TTL_MS: int = 5_000
+    DEFAULT_REACTIONS: tuple[str, ...] = (
+        "👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱",
+        "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊️", "🤡",
+        "🥱", "🥴", "😍", "🐳", "❤️‍🔥", "🌚", "🌭", "💯", "🤣", "⚡️",
+        "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈",
+        "😴", "😭", "🤓", "👻", "👩‍💻", "👀", "🎃", "🙈", "😇", "😨",
+        "🤝", "✍️", "🤗", "🫡", "🎅", "🎄", "☃️", "💅", "🤪", "🗿",
+        "🆒", "💘", "🙉", "🦄", "😘", "💊", "🙊", "😎", "👾", "🤷‍♂️",
+        "🤷", "🤷‍♀️", "😡",
+    )
 
     PROFILE_PROJECTION_GROUP_ID: str = "profile_projection"
 

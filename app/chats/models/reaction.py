@@ -23,8 +23,6 @@ from app.core.utils import now_utc
 class ReactionGroupSnapshot:
     emoji: str
     count: int
-    version: int
-
 
 @dataclass(frozen=True)
 class ReactionUpdatedEvent(BaseEvent):
@@ -95,7 +93,6 @@ class MessageReactionCounter(BaseModel):
 
     chat_id: Mapped[UUID] = mapped_column(SAUUID(as_uuid=True), nullable=False)
     count: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
-    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
 
     first_reacted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=now_utc

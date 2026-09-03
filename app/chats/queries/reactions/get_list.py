@@ -53,7 +53,6 @@ class GetMessageReactionsQueryHandler(
                 ReactionGroupDTO(
                     emoji=g.emoji,
                     count=g.count,
-                    version=g.version,
                     reacted_by_me=g.emoji in msg_state.my_emojis,
                     recent_user_ids=msg_state.recent_by_emoji.get(g.emoji, []),
                 )

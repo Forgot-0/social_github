@@ -25,13 +25,12 @@ _ADD_REACTION_SQL = text(
 _BUMP_COUNTER_UP_SQL = text(
     """
     INSERT INTO message_reaction_counters
-        (message_id, emoji, chat_id, count, version, first_reacted_at, last_reacted_at)
-    VALUES (:message_id, :emoji, :chat_id, 1, 1, :now, :now)
+        (message_id, emoji, chat_id, count, first_reacted_at, last_reacted_at)
+    VALUES (:message_id, :emoji, :chat_id, 1, :now, :now)
     ON CONFLICT (message_id, emoji) DO UPDATE
         SET count = message_reaction_counters.count + 1,
-            version = message_reaction_counters.version + 1,
             last_reacted_at = :now
-    RETURNING count, version
+    RETURNING count
     """
 )
 
@@ -47,10 +46,9 @@ _BUMP_COUNTER_DOWN_SQL = text(
     """
     UPDATE message_reaction_counters
     SET count = count - 1,
-        version = version + 1,
         last_reacted_at = :now
     WHERE message_id = :message_id AND emoji = :emoji
-    RETURNING count, version
+    RETURNING count
     """
 )
 
@@ -103,7 +101,7 @@ class MessageReactionRepository(IRepository[MessageReaction]):
         message_id: UUID,
         user_id: int,
         emoji: str,
-    ) -> tuple[int, int] | None:
+    ) -> int | None:
         now = now_utc()
         inserted = await self.session.execute(
             _ADD_REACTION_SQL,
@@ -129,14 +127,14 @@ class MessageReactionRepository(IRepository[MessageReaction]):
                 },
             )
         ).one()
-        return int(row[0]), int(row[1])
+        return int(row[0])
 
     async def remove_reaction(
         self,
         message_id: UUID,
         user_id: int,
         emoji: str,
-    ) -> tuple[int, int] | None:
+    ) -> int | None:
         now = now_utc()
         deleted = await self.session.execute(
             _REMOVE_REACTION_SQL,
@@ -157,8 +155,9 @@ class MessageReactionRepository(IRepository[MessageReaction]):
         )
 
         if row is None:
-            return 0, 0
-        return max(0, int(row[0])), int(row[1])
+            return 0
+
+        return int(row[0])
 
     async def set_reactions(
         self,
@@ -167,7 +166,6 @@ class MessageReactionRepository(IRepository[MessageReaction]):
         user_id: int,
         emojis: Sequence[str],
     ) -> bool:
-        """Replace the user's whole reaction set for a message. Returns True if anything changed."""
         locked = await self.session.execute(
             select(MessageReaction.emoji)
             .where(
@@ -195,7 +193,6 @@ class MessageReactionRepository(IRepository[MessageReaction]):
             select(
                 MessageReactionCounter.emoji.label("emoji"),
                 MessageReactionCounter.count.label("cnt"),
-                MessageReactionCounter.version.label("ver"),
             )
             .where(
                 MessageReactionCounter.message_id == message_id,
@@ -208,7 +205,7 @@ class MessageReactionRepository(IRepository[MessageReaction]):
         )
         rows = (await self.session.execute(stmt)).all()
         return [
-            ReactionGroupSnapshot(emoji=r.emoji, count=int(r.cnt), version=int(r.ver))
+            ReactionGroupSnapshot(emoji=r.emoji, count=int(r.cnt))
             for r in rows
         ]
 
@@ -227,7 +224,6 @@ class MessageReactionRepository(IRepository[MessageReaction]):
                     MessageReactionCounter.message_id.label("message_id"),
                     MessageReactionCounter.emoji.label("emoji"),
                     MessageReactionCounter.count.label("cnt"),
-                    MessageReactionCounter.version.label("ver"),
                 )
                 .where(
                     MessageReactionCounter.message_id.in_(ids),
@@ -243,7 +239,7 @@ class MessageReactionRepository(IRepository[MessageReaction]):
         for row in counters:
             state.setdefault(row.message_id, MessageReactionState()).groups.append(
                 ReactionGroupSnapshot(
-                    emoji=row.emoji, count=int(row.cnt), version=int(row.ver)
+                    emoji=row.emoji, count=int(row.cnt)
                 )
             )
 
@@ -320,7 +316,6 @@ class MessageReactionRepository(IRepository[MessageReaction]):
         return list((await self.session.execute(stmt)).scalars().all())
 
     async def recount(self, message_id: UUID) -> None:
-        """Rebuild counter rows for a message from the source reaction rows."""
         await self.session.execute(
             text("DELETE FROM message_reaction_counters WHERE message_id = :message_id"),
             {"message_id": message_id},
@@ -329,8 +324,8 @@ class MessageReactionRepository(IRepository[MessageReaction]):
             text(
                 """
                 INSERT INTO message_reaction_counters
-                    (message_id, emoji, chat_id, count, version, first_reacted_at, last_reacted_at)
-                SELECT message_id, emoji, MIN(chat_id::text)::uuid, COUNT(*), 1,
+                    (message_id, emoji, chat_id, count, first_reacted_at, last_reacted_at)
+                SELECT message_id, emoji, MIN(chat_id::text)::uuid, COUNT(*),
                        MIN(created_at), MAX(created_at)
                 FROM message_reactions
                 WHERE message_id = :message_id

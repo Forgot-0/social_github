@@ -35,12 +35,11 @@ async def lifespan(context: ContextRepo) -> AsyncGenerator[None]:
     await message_broker.start()
 
     coalescer_task: asyncio.Task | None = None
-    if chat_config.REACTIONS_COALESCE_ENABLED:
-        coalesce_queue = await container.get(ReactionCoalesceQueue)
-        coalescer_task = asyncio.create_task(
-            run_reaction_coalescer(container, coalesce_queue),
-            name="chats:reaction-coalescer",
-        )
+    coalesce_queue = await container.get(ReactionCoalesceQueue)
+    coalescer_task = asyncio.create_task(
+        run_reaction_coalescer(container, coalesce_queue),
+        name="chats:reaction-coalescer",
+    )
 
     yield
 

@@ -1,5 +1,4 @@
 import logging
-import time
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -11,11 +10,6 @@ from app.chats.exceptions import (
     NotChatMemberError,
     NotFoundMessageError,
     TooManyReactionsError,
-)
-from app.chats.metrics import (
-    CHAT_REACTION_APPLY_LATENCY,
-    CHAT_REACTIONS_APPLIED,
-    CHAT_REACTIONS_REJECTED,
 )
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
@@ -46,25 +40,21 @@ class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
     event_bus: BaseEventBus
 
     async def handle(self, command: SetReactionCommand) -> None:
-        started = time.perf_counter()
         user_id = int(command.user_jwt_data.id)
 
         chat, member = await self.chat_repository.get_chat_and_member(
             chat_id=command.chat_id, member_id=user_id
         )
         if member.is_banned:
-            CHAT_REACTIONS_REJECTED.labels(reason="not_member").inc()
             raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
 
         message = await self.message_repository.get_by_id(command.message_id)
         if message is None or message.chat_id != command.chat_id:
-            CHAT_REACTIONS_REJECTED.labels(reason="message_not_found").inc()
             raise NotFoundMessageError(message_id=str(command.message_id))
 
         try:
             self.reaction_policy.validate(chat, member, command.emoji)
         except Exception:
-            CHAT_REACTIONS_REJECTED.labels(reason="policy").inc()
             raise
 
         existing = await self.reaction_repository.list_user_emojis(
@@ -72,7 +62,6 @@ class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
         )
         if command.emoji not in existing:
             if len(existing) >= chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE:
-                CHAT_REACTIONS_REJECTED.labels(reason="per_user_limit").inc()
                 raise TooManyReactionsError(
                     limit=chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE, scope="user"
                 )
@@ -80,7 +69,6 @@ class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
                 command.message_id
             )
             if distinct >= chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE:
-                CHAT_REACTIONS_REJECTED.labels(reason="per_message_limit").inc()
                 raise TooManyReactionsError(
                     limit=chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE, scope="message"
                 )
@@ -104,8 +92,6 @@ class SetReactionCommandHandler(BaseCommandHandler[SetReactionCommand, None]):
         await self.event_bus.publish([event])
         await self.session.commit()
 
-        CHAT_REACTIONS_APPLIED.labels(action="add").inc()
-        CHAT_REACTION_APPLY_LATENCY.observe(time.perf_counter() - started)
         logger.info(
             "Reaction added",
             extra={

@@ -1,50 +1,11 @@
 import pytest
-from sqlalchemy import func, select
 
 from app.chats.models.chat import Chat
-from app.chats.models.reaction import MessageReaction, MessageReactionCounter
+from app.chats.models.reaction import MessageReactionCounter
 from app.chats.repositories.reaction import MessageReactionRepository
 from app.core.services.auth.dto import UserJWTData
 
 pytestmark = [pytest.mark.integration, pytest.mark.chats, pytest.mark.asyncio]
-
-
-async def test_counter_tracks_row_count_and_version(
-    reaction_repository: MessageReactionRepository,
-    group_chat: Chat,
-    user_jwt: UserJWTData,
-    create_message,
-    db_session,
-) -> None:
-    message = await create_message(group_chat, user_jwt, "hi")
-
-    versions: list[int] = []
-    for uid in (1, 2, 3):
-        result = await reaction_repository.add_reaction(
-            chat_id=group_chat.id, message_id=message.id, user_id=uid, emoji="👍"
-        )
-        assert result is not None
-        versions.append(result[1])
-
-    assert versions == sorted(versions)
-    assert versions[-1] == 3
-
-    counter = (
-        await db_session.execute(
-            select(MessageReactionCounter.count).where(
-                MessageReactionCounter.message_id == message.id,
-                MessageReactionCounter.emoji == "👍",
-            )
-        )
-    ).scalar_one()
-    rows = (
-        await db_session.execute(
-            select(func.count())
-            .select_from(MessageReaction)
-            .where(MessageReaction.message_id == message.id)
-        )
-    ).scalar_one()
-    assert counter == rows == 3
 
 
 async def test_duplicate_add_returns_none(
@@ -76,7 +37,6 @@ async def test_recount_rebuilds_counters(
             chat_id=group_chat.id, message_id=message.id, user_id=uid, emoji="🔥"
         )
 
-    # Corrupt the counter, then repair it.
     await db_session.execute(
         MessageReactionCounter.__table__.update()
         .where(MessageReactionCounter.message_id == message.id)

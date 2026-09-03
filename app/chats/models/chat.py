@@ -18,7 +18,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.chats.config import chat_config
-from app.chats.exceptions import AccessDeniedChatError, MemberLimitExceededError, SlowModeOutOfRangeError
+from app.chats.exceptions import (
+    AccessDeniedChatError,
+    MemberLimitExceededError,
+    ReactionNotAllowedError,
+    SlowModeOutOfRangeError,
+)
 from app.chats.models.chat_members import ChatMember
 from app.chats.models.message import Message
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -156,12 +161,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
     permissions: Mapped[dict[str, bool]] = mapped_column(JSONB, server_default="{}", default=dict)
 
     reactions_mode: Mapped[ChatReactionsMode] = mapped_column(
-        Enum(
-            ChatReactionsMode,
-            name="chat_reactions_mode",
-            values_callable=lambda enum: [member.value for member in enum],
-        ),
-        server_default=ChatReactionsMode.ALL.value,
+        Enum(ChatReactionsMode),
         default=ChatReactionsMode.ALL,
         nullable=False,
     )
@@ -245,6 +245,7 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
             slow_mode_seconds=slow_mode_seconds,
             member_count=0,
             permissions=permissions or {},
+            reactions_mode=ChatReactionsMode.ALL
         )
 
         if chat_type == ChatType.DIRECT:
@@ -289,12 +290,16 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
         if slow_mode_seconds is not None:
             self._validate_slow_mode(slow_mode_seconds)
             self.slow_mode_seconds = slow_mode_seconds
+
         if admin_only is not None:
             self.admin_only = admin_only
+
         if permissions is not None:
             self.permissions = permissions
+
         if reactions_mode is not None:
             self.reactions_mode = reactions_mode
+
         if allowed_reactions is not None:
             self._validate_allowed_reactions(allowed_reactions)
             self.allowed_reactions = allowed_reactions
@@ -388,16 +393,14 @@ class Chat(BaseModel, DateMixin, SoftDeleteMixin):
 
     @staticmethod
     def _validate_allowed_reactions(allowed_reactions: list[str]) -> None:
-        from app.chats.exceptions import ReactionNotAllowedError
-        from app.chats.reactions.catalog import DEFAULT_REACTION_SET
 
         if len(allowed_reactions) > chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE:
             raise ReactionNotAllowedError(
-                emoji="", allowed=sorted(DEFAULT_REACTION_SET)
+                emoji="", allowed=sorted(chat_config.DEFAULT_REACTIONS)
             )
 
-        unknown = [e for e in allowed_reactions if e not in DEFAULT_REACTION_SET]
+        unknown = [e for e in allowed_reactions if e not in chat_config.DEFAULT_REACTIONS]
         if unknown:
             raise ReactionNotAllowedError(
-                emoji=unknown[0], allowed=sorted(DEFAULT_REACTION_SET)
+                emoji=unknown[0], allowed=sorted(chat_config.DEFAULT_REACTIONS)
             )

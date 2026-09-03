@@ -9,7 +9,6 @@ from app.chats.schemas.ws import ChatEventPayload
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.reaction_coalescer import (
     ReactionCoalesceQueue,
-    reaction_ws_payload_from_event,
 )
 from app.core.consumers.event import TypedEventDTO
 from app.core.consumers.idempotency import EventIdempotencyGuard
@@ -18,6 +17,17 @@ logger = logging.getLogger(__name__)
 
 router = KafkaRouter()
 
+
+def reaction_ws_payload_from_event(event_payload: ChatEventPayload) -> dict:
+    extra = dict(event_payload.model_extra or {})
+    return {
+        "chat_id": str(event_payload.chat_id),
+        "message_id": str(event_payload.message_id),
+        "actor_id": extra.get("actor_id", 0),
+        "action": extra.get("action", "update"),
+        "groups": extra.get("groups", []),
+        "recent_by_emoji": extra.get("recent_by_emoji", {}),
+    }
 
 @router.subscriber(
     chat_config.CHAT_TOPIC,
@@ -38,7 +48,6 @@ async def route_chat_delivery_event(
     try:
         if (
             event.event_name == REACTION_EVENT_NAME
-            and chat_config.REACTIONS_COALESCE_ENABLED
         ):
             payload = reaction_ws_payload_from_event(event.payload)
             payload["event_id"] = str(event.event_id)

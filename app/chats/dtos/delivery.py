@@ -70,7 +70,6 @@ def build_reaction_ws_dto(payload: ChatEventPayload | dict) -> ReactionUpdateWSD
             ReactionGroupDTO(
                 emoji=emoji,
                 count=group["count"],
-                version=group.get("version", 1),
                 reacted_by_me=False,
                 recent_user_ids=recent.get(emoji, []),
             )

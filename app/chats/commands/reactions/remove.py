@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.commands.reactions import build_reaction_event
 from app.chats.exceptions import NotChatMemberError, NotFoundMessageError
-from app.chats.metrics import CHAT_REACTIONS_APPLIED
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reaction import MessageReactionRepository
@@ -64,7 +63,6 @@ class RemoveReactionCommandHandler(BaseCommandHandler[RemoveReactionCommand, Non
         await self.event_bus.publish([event])
         await self.session.commit()
 
-        CHAT_REACTIONS_APPLIED.labels(action="remove").inc()
         logger.info(
             "Reaction removed",
             extra={

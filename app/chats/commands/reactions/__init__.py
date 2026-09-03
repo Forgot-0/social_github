@@ -13,8 +13,6 @@ async def build_reaction_event(
     actor_id: int,
     action: str,
 ) -> ReactionUpdatedEvent:
-    """Snapshot the current reaction groups for a message so the delivery layer
-    never has to touch the database to fan the update out."""
     groups = await reaction_repository.get_current_groups(message_id)
 
     recent_by_emoji: dict[str, list[int]] = {}

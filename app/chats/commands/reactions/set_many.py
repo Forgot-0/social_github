@@ -11,7 +11,6 @@ from app.chats.exceptions import (
     NotFoundMessageError,
     TooManyReactionsError,
 )
-from app.chats.metrics import CHAT_REACTIONS_APPLIED, CHAT_REACTIONS_REJECTED
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
 from app.chats.repositories.reaction import MessageReactionRepository
@@ -25,9 +24,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, kw_only=True)
 class SetReactionsCommand(BaseCommand):
-    """Replace the caller's whole reaction set for a message (set-semantics,
-    like Telegram ``messages.sendReaction``). An empty list clears all."""
-
     chat_id: UUID
     message_id: UUID
     emojis: tuple[str, ...]
@@ -51,25 +47,18 @@ class SetReactionsCommandHandler(BaseCommandHandler[SetReactionsCommand, None]):
             chat_id=command.chat_id, member_id=user_id
         )
         if member.is_banned:
-            CHAT_REACTIONS_REJECTED.labels(reason="not_member").inc()
             raise NotChatMemberError(chat_id=str(command.chat_id), user_id=user_id)
 
         message = await self.message_repository.get_by_id(command.message_id)
         if message is None or message.chat_id != command.chat_id:
-            CHAT_REACTIONS_REJECTED.labels(reason="message_not_found").inc()
             raise NotFoundMessageError(message_id=str(command.message_id))
 
         if target:
             self.reaction_policy.ensure_can_react(chat, member)
             for emoji in target:
-                try:
-                    self.reaction_policy.validate_emoji(chat, emoji)
-                except Exception:
-                    CHAT_REACTIONS_REJECTED.labels(reason="policy").inc()
-                    raise
+                self.reaction_policy.validate_emoji(chat, emoji)
 
             if len(target) > chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE:
-                CHAT_REACTIONS_REJECTED.labels(reason="per_user_limit").inc()
                 raise TooManyReactionsError(
                     limit=chat_config.MAX_REACTIONS_PER_USER_PER_MESSAGE, scope="user"
                 )
@@ -90,7 +79,6 @@ class SetReactionsCommandHandler(BaseCommandHandler[SetReactionsCommand, None]):
                 }
                 added_distinct = len(new_emojis - existing_groups)
                 if distinct + added_distinct > chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE:
-                    CHAT_REACTIONS_REJECTED.labels(reason="per_message_limit").inc()
                     raise TooManyReactionsError(
                         limit=chat_config.MAX_DISTINCT_REACTIONS_PER_MESSAGE,
                         scope="message",
@@ -115,7 +103,6 @@ class SetReactionsCommandHandler(BaseCommandHandler[SetReactionsCommand, None]):
         await self.event_bus.publish([event])
         await self.session.commit()
 
-        CHAT_REACTIONS_APPLIED.labels(action="replace").inc()
         logger.info(
             "Reactions replaced",
             extra={

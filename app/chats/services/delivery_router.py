@@ -80,9 +80,6 @@ class ChatDeliveryRouter:
         )
 
     async def route_reaction_snapshot(self, payload: dict) -> None:
-        """Fan out a coalesced reaction snapshot. Called by the coalescer flush
-        loop — the snapshot already carries the latest counters, so no DB read
-        beyond resolving the chat's fan-out strategy."""
         chat = await self.chat_repository.get_by_id(UUID(str(payload["chat_id"])))
         if chat is None:
             return
@@ -98,6 +95,7 @@ class ChatDeliveryRouter:
             ts=str(payload.get("ts") or now_utc().isoformat()),
             fanout_strategy=chat.fanout_strategy,
         )
+
         CHAT_REACTION_FANOUT_TOTAL.labels(mode="coalesced").inc()
         await self._dispatch(
             ChatDTO.model_validate(chat),

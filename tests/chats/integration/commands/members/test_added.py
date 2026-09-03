@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from app.chats.commands.chats.add_member import AddMemberCommand, AddMemberCommandHandler
-from app.chats.exceptions import AccessDeniedChatError, AlreadyMemberError, NotChatMemberError, NotFoundChatError
+from app.chats.exceptions import AccessDeniedChatError, AlreadyMemberError, NotFoundChatError
 from app.chats.models.chat import Chat
 from app.chats.models.permission import ChatRolesEnum
 from app.chats.repositories.chat import ChatRepository
@@ -97,7 +97,7 @@ class TestAddMemberCommand:
         make_user_jwt,
         group_chat: Chat
     ) -> None:
-        with pytest.raises(NotChatMemberError):
+        with pytest.raises(NotFoundChatError):
             await handler.handle(
                 AddMemberCommand(
                     user_jwt_data=make_user_jwt(id="999"),
