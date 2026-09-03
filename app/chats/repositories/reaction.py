@@ -69,17 +69,6 @@ class MessageReactionState:
 @dataclass
 class MessageReactionRepository(IRepository[MessageReaction]):
 
-    async def count_user_reactions(self, message_id: UUID, user_id: int) -> int:
-        stmt = (
-            select(func.count())
-            .select_from(MessageReaction)
-            .where(
-                MessageReaction.message_id == message_id,
-                MessageReaction.user_id == user_id,
-            )
-        )
-        return int((await self.session.execute(stmt)).scalar_one())
-
     async def count_distinct_emojis(self, message_id: UUID) -> int:
         stmt = (
             select(func.count())

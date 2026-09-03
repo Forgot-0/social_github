@@ -12,7 +12,6 @@ from faststream.kafka import KafkaBroker
 from faststream.kafka.prometheus import KafkaPrometheusMiddleware
 from prometheus_client import CollectorRegistry, make_asgi_app
 
-from app.chats.config import chat_config
 from app.chats.consumers import delivery, profiles
 from app.chats.services.reaction_coalescer import (
     ReactionCoalesceQueue,

@@ -85,6 +85,3 @@ class BaseFilter(ABC):
     def has_conditions(self) -> bool:
         return len(self._conditions) > 0
 
-    def has_sorting(self) -> bool:
-        return len(self._sort_fields) > 0
-

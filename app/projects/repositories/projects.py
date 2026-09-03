@@ -47,13 +47,6 @@ class ProjectRepository(IRepository[Project], CacheRepository):
         )
         return result.scalar()
 
-    async def list_members(self, project_id: int) -> list[ProjectMembership]:
-
-        result = await self.session.execute(
-            select(ProjectMembership).where(ProjectMembership.project_id == project_id)
-        )
-        return list(result.scalars().all())
-
     async def list_my_projects(self, user_id: int, page: int = 1, page_size: int = 20) -> PageResult[Project]:
         stmt = (
             select(Project)

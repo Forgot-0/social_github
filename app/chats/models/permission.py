@@ -119,11 +119,3 @@ class ChatRolesEnum(Enum):
     @classmethod
     def get_all_chat_roles(cls) -> list[ChatRole]:
         return [role.value for role in cls]
-
-    @classmethod
-    def channel_staff_role_ids(cls) -> set[int]:
-        return {cls.OWNER.value.id, cls.ADMIN.value.id, cls.EDITOR.value.id}
-
-    @classmethod
-    def channel_subscriber_role_ids(cls) -> set[int]:
-        return {cls.VIEWER.value.id}

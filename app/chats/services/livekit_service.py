@@ -149,15 +149,3 @@ class LiveKitService:
                 extra={"slug": slug, "error": str(exc)},
             )
             return []
-
-    def receive_webhook(self, raw_body: str, auth_header: str) -> lk_api.WebhookEvent:
-        try:
-            receiver = lk_api.WebhookReceiver(lk_api.TokenVerifier(
-                api_key=self.api_key,
-                api_secret=self.api_secret
-            ))
-
-            return receiver.receive(raw_body, auth_header)
-        except Exception as exc:
-            logger.warning("Webhook verification failed: %s", exc)
-            raise LiveKitServiceError(reason=f"Invalid webhook signature: {exc}") from exc

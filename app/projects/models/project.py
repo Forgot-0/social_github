@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Self
-from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
@@ -205,12 +204,6 @@ class Project(BaseModel, DateMixin, SoftDeleteMixin):
         for member in self.memberships:
             if member.user_id == user_id:
                 return member
-        return None
-
-    def get_position_by_id(self, position_id: UUID) -> Position | None:
-        for pos in self.positions:
-            if pos.id == position_id:
-                return pos
         return None
 
     @validates("tags")

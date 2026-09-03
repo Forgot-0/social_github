@@ -37,14 +37,6 @@ class PageResult[T]:
     def has_previous(self) -> bool:
         return self.page > 1
 
-    @property
-    def next_page(self) -> int | None:
-        return self.page + 1 if self.has_next else None
-
-    @property
-    def previous_page(self) -> int | None:
-        return self.page - 1 if self.has_previous else None
-
 
 @dataclass
 class IRepository[T](ABC):
@@ -83,21 +75,6 @@ class IRepository[T](ABC):
             page=filters.pagination.page,
             page_size=filters.pagination.page_size
         )
-
-    async def count_by_filter(self, model: type[T], filters: BaseFilter) -> int:
-        if issubclass(model, SoftDeleteMixin):
-            stmt = select(func.count()).select_from(model.select_not_deleted().subquery())
-        else:
-            stmt = select(func.count()).select_from(model)
-
-        conditions = SQLAlchemyFilterConverter.filter_to_sqlalchemy_conditions(model, filters)
-        stmt = self.apply_relationship_filters(stmt, filters)
-
-        if conditions:
-            stmt = stmt.where(and_(*conditions))
-
-        result = await self.session.execute(stmt)
-        return result.scalar_one()
 
     def apply_relationship_filters(
         self,

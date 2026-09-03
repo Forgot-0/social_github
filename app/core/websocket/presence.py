@@ -39,10 +39,6 @@ class PresenceService:
         )
         return int(removed or 0)
 
-    async def is_online(self, user_id: int) -> bool:
-        score = await self.redis.zscore(WebsocketKeys.presence_last_seen_zset(), str(user_id))
-        return self._is_fresh_score(score, now_utc().timestamp())
-
     async def get_online_status(self, user_ids: list[int]) -> dict[int, bool]:
         if not user_ids:
             return {}

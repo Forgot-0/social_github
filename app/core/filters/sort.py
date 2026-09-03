@@ -13,10 +13,6 @@ class SortField:
     direction: SortDirection = SortDirection.ASC
 
     @property
-    def is_ascending(self) -> bool:
-        return self.direction == SortDirection.ASC
-
-    @property
     def is_descending(self) -> bool:
         return self.direction == SortDirection.DESC
 

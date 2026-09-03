@@ -28,14 +28,6 @@ class BaseModel(DeclarativeBase):
         self.events.clear()
         return registered_events
 
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        return cls(**{k: v for k, v in data.items() if k in cls._get_field_names()})
-
-    @classmethod
-    def _get_field_names(cls) -> list[str]:
-        return [column.name for column in cls.__table__.columns]
-
 
 class DateMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
