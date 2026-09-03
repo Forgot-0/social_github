@@ -4,13 +4,8 @@ from dishka.integrations.faststream import FromDishka, inject
 from faststream.kafka import KafkaRouter
 
 from app.chats.config import chat_config
-from app.chats.dtos.delivery import REACTION_EVENT_NAME
-from app.chats.schemas.ws import ChatEventPayload
 from app.chats.services.delivery_router import ChatDeliveryRouter
-from app.chats.services.reaction_coalescer import (
-    ReactionCoalesceQueue,
-)
-from app.core.consumers.event import TypedEventDTO
+from app.core.consumers.event import DictEventDTO
 from app.core.consumers.idempotency import EventIdempotencyGuard
 
 logger = logging.getLogger(__name__)
@@ -18,16 +13,6 @@ logger = logging.getLogger(__name__)
 router = KafkaRouter()
 
 
-def reaction_ws_payload_from_event(event_payload: ChatEventPayload) -> dict:
-    extra = dict(event_payload.model_extra or {})
-    return {
-        "chat_id": str(event_payload.chat_id),
-        "message_id": str(event_payload.message_id),
-        "actor_id": extra.get("actor_id", 0),
-        "action": extra.get("action", "update"),
-        "groups": extra.get("groups", []),
-        "recent_by_emoji": extra.get("recent_by_emoji", {}),
-    }
 
 @router.subscriber(
     chat_config.CHAT_TOPIC,
@@ -35,9 +20,8 @@ def reaction_ws_payload_from_event(event_payload: ChatEventPayload) -> dict:
 )
 @inject
 async def route_chat_delivery_event(
-    event: TypedEventDTO[ChatEventPayload],
+    event: DictEventDTO,
     delivery_router: FromDishka[ChatDeliveryRouter],
-    coalesce_queue: FromDishka[ReactionCoalesceQueue],
     idempotency_guard: FromDishka[EventIdempotencyGuard],
 ) -> None:
     if not await idempotency_guard.try_acquire(
@@ -46,15 +30,6 @@ async def route_chat_delivery_event(
         return
 
     try:
-        if (
-            event.event_name == REACTION_EVENT_NAME
-        ):
-            payload = reaction_ws_payload_from_event(event.payload)
-            payload["event_id"] = str(event.event_id)
-            payload["ts"] = event.created_at.isoformat()
-            await coalesce_queue.enqueue(payload)
-            return
-
         await delivery_router.route_broker_message(event)
     except Exception:
         await idempotency_guard.release(

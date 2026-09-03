@@ -1,5 +1,6 @@
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -8,9 +9,8 @@ from app.chats.dtos.messages import MessageDTO
 from app.chats.dtos.reactions import ReactionGroupDTO, ReactionUpdateWSDTO
 from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.schemas.ws import ChatEventPayload, WSEventType
-from app.core.consumers.event import TypedEventDTO
+from app.core.consumers.event import DictEventDTO, TypedEventDTO
 
-REACTION_EVENT_NAME = "chats.message.reaction_updated"
 
 CHAT_EVENT_TO_WS_TYPE: dict[str, str] = {
     "chats.message.sent": WSEventType.NEW_MESSAGE.value,
@@ -33,19 +33,19 @@ class WsEvent:
     event_name: str
     event_id: str
     chat_id: UUID
-    payload: ChatEventPayload
+    payload: dict[str, Any]
     ts: str
     fanout_strategy: ChatFanoutStrategy
 
     @classmethod
-    def build(cls, event: TypedEventDTO[ChatEventPayload], fanout_strategy: ChatFanoutStrategy) -> WsEvent:
+    def build(cls, event: DictEventDTO, fanout_strategy: ChatFanoutStrategy) -> WsEvent:
         return WsEvent(
             type=CHAT_EVENT_TO_WS_TYPE[event.event_name],
             event_id=str(event.event_id),
             event_name=event.event_name,
             payload=event.payload,
             ts=event.created_at.isoformat(),
-            chat_id = event.payload.chat_id,
+            chat_id = UUID(event.payload["chat_id"]),
             fanout_strategy=fanout_strategy
         )
 
@@ -55,12 +55,8 @@ class MessagePayloadWS(BaseModel):
     reaction: ReactionUpdateWSDTO | None = None
 
 
-def build_reaction_ws_dto(payload: ChatEventPayload | dict) -> ReactionUpdateWSDTO:
-    data = payload if isinstance(payload, dict) else {
-        **(payload.model_extra or {}),
-        "chat_id": payload.chat_id,
-        "message_id": payload.message_id,
-    }
+def build_reaction_ws_dto(event: DictEventDTO) -> ReactionUpdateWSDTO:
+    data = event.payload
 
     recent = data.get("recent_by_emoji") or {}
     groups: list[ReactionGroupDTO] = []

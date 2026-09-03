@@ -10,7 +10,6 @@ from app.chats.config import chat_config
 from app.chats.dtos.chats import ChatDTO
 from app.chats.dtos.delivery import (
     CHAT_EVENT_TO_WS_TYPE,
-    REACTION_EVENT_NAME,
     MessagePayloadWS,
     WsEvent,
     build_reaction_ws_dto,
@@ -19,7 +18,6 @@ from app.chats.dtos.delivery import (
 from app.chats.dtos.messages import MessageDTO
 from app.chats.dtos.reactions import ReactionUpdateWSDTO
 from app.chats.metrics import (
-    CHAT_REACTION_FANOUT_TOTAL,
     DELIVERY_ROUTER_OFFLINE_RECIPIENTS,
     DELIVERY_ROUTER_OFFLINE_SIGNALS,
     DELIVERY_ROUTER_STREAM_ENTRIES,
@@ -27,10 +25,11 @@ from app.chats.metrics import (
 from app.chats.models.chat import ChatFanoutStrategy
 from app.chats.repositories.chat import ChatRepository
 from app.chats.repositories.message import MessageRepository
-from app.chats.schemas.ws import ChatEventPayload
+from app.chats.schemas.ws import ChatEventPayload, WSEventType
 from app.chats.services.messages import MessageService
+from app.chats.services.reaction_coalescer import ReactionCoalesceQueue
 from app.core.configs.app import app_config
-from app.core.consumers.event import TypedEventDTO
+from app.core.consumers.event import DictEventDTO, TypedEventDTO
 from app.core.message_brokers.base import BaseMessageBroker
 from app.core.utils import now_utc
 from app.core.websocket.dtos import DeliveryData, DeliveryDTO
@@ -48,27 +47,23 @@ class ChatDeliveryRouter:
     chat_repository: ChatRepository
     message_repository: MessageRepository
     message_service: MessageService
+    coalesce_queue: ReactionCoalesceQueue
     broker: BaseMessageBroker
 
-    async def route_broker_message(self, event: TypedEventDTO[ChatEventPayload]) -> None:
+    async def route_broker_message(self, event: DictEventDTO) -> None:
+        if CHAT_EVENT_TO_WS_TYPE[event.event_name] == WSEventType.REACTION_UPDATED.value:
+            await self.coalesce_queue.enqueue(event.model_dump())
+            return
 
-        chat = await self.chat_repository.get_by_id(event.payload.chat_id)
+        chat = await self.chat_repository.get_by_id(UUID(event.payload["chat_id"]))
         if chat is None:
             return
 
         ws_event = WsEvent.build(event, fanout_strategy=chat.fanout_strategy)
 
-        if event.event_name == REACTION_EVENT_NAME:
-            reaction = build_reaction_ws_dto(event.payload)
-            CHAT_REACTION_FANOUT_TOTAL.labels(mode="immediate").inc()
-            await self._dispatch(
-                ChatDTO.model_validate(chat), ws_event, reaction=reaction
-            )
-            return
-
         message_dto: MessageDTO | None = None
-        if event.payload.message_id:
-            message = await self.message_repository.get_by_id(event.payload.message_id, for_offline=True)
+        if event.payload.get("message_id"):
+            message = await self.message_repository.get_by_id(UUID(event.payload["message_id"]), for_offline=True)
             if message is None:
                 return
 
@@ -79,28 +74,27 @@ class ChatDeliveryRouter:
             ChatDTO.model_validate(chat), ws_event, message=message_dto
         )
 
-    async def route_reaction_snapshot(self, payload: dict) -> None:
-        chat = await self.chat_repository.get_by_id(UUID(str(payload["chat_id"])))
+    async def route_reaction_snapshot(self, event: DictEventDTO) -> None:
+        chat = await self.chat_repository.get_by_id(UUID(event.payload["chat_id"]))
         if chat is None:
             return
 
         ws_event = WsEvent(
-            type=CHAT_EVENT_TO_WS_TYPE[REACTION_EVENT_NAME],
-            event_name=REACTION_EVENT_NAME,
-            event_id=str(payload.get("event_id", "")),
+            type=WSEventType.REACTION_UPDATED.value,
+            event_name=event.event_name,
+            event_id=str(event.event_id),
             chat_id=chat.id,
             payload=ChatEventPayload(
-                chat_id=chat.id, message_id=UUID(str(payload["message_id"]))
-            ),
-            ts=str(payload.get("ts") or now_utc().isoformat()),
+                chat_id=chat.id, message_id=UUID(event.payload["message_id"])
+            ).model_dump(),
+            ts=event.created_at.isoformat(),
             fanout_strategy=chat.fanout_strategy,
         )
 
-        CHAT_REACTION_FANOUT_TOTAL.labels(mode="coalesced").inc()
         await self._dispatch(
             ChatDTO.model_validate(chat),
             ws_event,
-            reaction=build_reaction_ws_dto(payload),
+            reaction=build_reaction_ws_dto(event),
         )
 
     async def _dispatch(

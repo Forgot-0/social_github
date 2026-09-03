@@ -6,12 +6,6 @@ CHAT_REACTION_COALESCE_COLLAPSED = Histogram(
     buckets=(1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144),
 )
 
-CHAT_REACTION_FANOUT_TOTAL = Counter(
-    "chat_reaction_fanout_total",
-    "Reaction updates handed to the delivery router for fan-out",
-    labelnames=("mode",),
-)
-
 DELIVERY_ROUTER_STREAM_ENTRIES = Counter(
     "chat_delivery_router_stream_entries_total",
     "Entries pushed by ChatDeliveryRouter into gateway Redis Streams",

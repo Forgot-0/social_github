@@ -13,10 +13,8 @@ from faststream.kafka.prometheus import KafkaPrometheusMiddleware
 from prometheus_client import CollectorRegistry, make_asgi_app
 
 from app.chats.consumers import delivery, profiles
-from app.chats.services.reaction_coalescer import (
-    ReactionCoalesceQueue,
-    run_reaction_coalescer,
-)
+from app.chats.services.reaction_coalescer import ReactionCoalesceQueue
+from app.chats.tasks.coalescer import run_reaction_coalescer
 from app.core.configs.app import app_config
 from app.core.di.container import create_container
 from app.core.log.init import configure_logging
