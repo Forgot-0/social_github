@@ -61,3 +61,18 @@ class ValidationError(ApplicationError):
             "msg": "string",
             "type": "string"
         }]
+
+
+@dataclass(kw_only=True)
+class IdempotencyConflictError(ApplicationError):
+    key: str
+    code: str = "IDEMPOTENCY_CONFLICT"
+    status: int = 409
+
+    @property
+    def message(self) -> str:
+        return "Request with this idempotency key is already being processed"
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        return {"key": self.key}

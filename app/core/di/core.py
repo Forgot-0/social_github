@@ -1,7 +1,9 @@
 from dishka import Provider, Scope, provide
 from minio import Minio
+from redis.asyncio import Redis
 
 from app.core.configs.app import app_config
+from app.core.services.idempotency import IdempotencyStore
 from app.core.services.media.probe.ffprobe import FfprobeMediaProbeService
 from app.core.services.media.service import MediaProbeService
 from app.core.services.storage.aminio.policy import Policy
@@ -10,6 +12,10 @@ from app.core.services.storage.service import StorageService
 
 
 class CoreProvider(Provider):
+
+    @provide(scope=Scope.APP)
+    def idempotency_store(self, redis: Redis) -> IdempotencyStore:
+        return IdempotencyStore(redis=redis)
 
     @provide(scope=Scope.APP)
     def media_probe(self) -> MediaProbeService:

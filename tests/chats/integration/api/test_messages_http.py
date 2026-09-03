@@ -401,3 +401,91 @@ class TestClientMessageTypeContract:
             headers=headers,
         )
         assert response.status_code == 422
+
+
+@pytest.mark.integration
+@pytest.mark.chats
+@pytest.mark.asyncio
+class TestIdempotentWrites:
+    async def test_send_with_same_key_returns_the_same_message(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers, name="Idempotent send")
+        headers = {**headers, "Idempotency-Key": "send-retry-1"}
+
+        first = await client.post(
+            api_path(f"chats/{chat_id}/messages/"), json=send_text_payload("hi"), headers=headers
+        )
+        second = await client.post(
+            api_path(f"chats/{chat_id}/messages/"), json=send_text_payload("hi"), headers=headers
+        )
+
+        assert first.status_code == 201
+        assert second.status_code == 201
+        assert first.json()["id"] == second.json()["id"]
+        assert first.json()["seq"] == second.json()["seq"]
+
+        listed = await client.get(api_path(f"chats/{chat_id}/messages/"), headers=headers)
+        assert len(listed.json()["messages"]) == 1
+
+    async def test_different_keys_create_different_messages(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        chat_id = await _create_group_chat(client, headers, name="Idempotent send 2")
+
+        first = await client.post(
+            api_path(f"chats/{chat_id}/messages/"),
+            json=send_text_payload("hi"),
+            headers={**headers, "Idempotency-Key": "a"},
+        )
+        second = await client.post(
+            api_path(f"chats/{chat_id}/messages/"),
+            json=send_text_payload("hi"),
+            headers={**headers, "Idempotency-Key": "b"},
+        )
+
+        assert first.json()["id"] != second.json()["id"]
+
+    async def test_forward_is_idempotent_too(
+        self,
+        client: AsyncClient,
+        user_jwt: UserJWTData,
+        create_auth_headers,
+    ) -> None:
+        headers = create_auth_headers(user_jwt)
+        source_id = await _create_group_chat(client, headers, name="Forward source")
+        target_id = await _create_group_chat(client, headers, name="Forward target")
+
+        sent = await client.post(
+            api_path(f"chats/{source_id}/messages/"),
+            json=send_text_payload("to forward"),
+            headers=headers,
+        )
+        assert sent.status_code == 201
+
+        forward_headers = {**headers, "Idempotency-Key": "forward-retry-1"}
+        payload = {
+            "source_chat_id": source_id,
+            "source_message_id": sent.json()["id"],
+        }
+
+        first = await client.post(
+            api_path(f"chats/{target_id}/messages/forward/"), json=payload, headers=forward_headers
+        )
+        second = await client.post(
+            api_path(f"chats/{target_id}/messages/forward/"), json=payload, headers=forward_headers
+        )
+
+        assert first.status_code == 201
+        assert first.json()["id"] == second.json()["id"]
+
+        listed = await client.get(api_path(f"chats/{target_id}/messages/"), headers=headers)
+        assert len(listed.json()["messages"]) == 1

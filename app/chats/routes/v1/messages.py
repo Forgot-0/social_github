@@ -3,7 +3,6 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Header, Query, status
-from redis.asyncio import Redis
 
 from app.chats.commands.messages.delete import DeleteMessageCommand
 from app.chats.commands.messages.forward import ForwardMessageCommand
@@ -12,7 +11,7 @@ from app.chats.commands.messages.modify import EditMessageCommand
 from app.chats.commands.messages.send import SendMessageCommand
 from app.chats.config import chat_config
 from app.chats.dtos.messages import MessageDTO, MessagesDTO
-from app.chats.exceptions import IdempotencyConflictError
+from app.chats.keys import ChatIdempotencyScope
 from app.chats.models.message import MessageType
 from app.chats.queries.messages.get_context import GetMessageContextQuery
 from app.chats.queries.messages.get_detail import GetMessageDetailQuery
@@ -21,6 +20,7 @@ from app.chats.schemas.rest import EditMessageRequest, ForwardMessageRequest, Ma
 from app.core.api.rate_limiter import ConfigurableRateLimiter
 from app.core.mediators.base import BaseMediator
 from app.core.services.auth.depends import CurrentUserJWTData
+from app.core.services.idempotency import IdempotencyStore
 
 router = APIRouter(route_class=DishkaRoute)
 
@@ -82,23 +82,15 @@ async def send_message(
     payload: SendMessageRequest,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
-    redis: FromDishka[Redis],
+    idempotency: FromDishka[IdempotencyStore],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> MessageDTO:
-    cache_key = None
-    lock_key = None
-    if idempotency_key:
-        cache_key = f"chat:idempotency:send:{user_jwt_data.id}:{chat_id}:{idempotency_key}"
-        lock_key = f"{cache_key}:lock"
-        cached = await redis.get(cache_key)
-        if cached:
-            return MessageDTO.model_validate_json(cached)
-        locked = await redis.set(lock_key, "1", ex=30, nx=True)
-        if not locked:
-            raise IdempotencyConflictError(key=idempotency_key)
-
-    try:
-        result = await mediator.handle_command(
+    return await idempotency.run(
+        scope=ChatIdempotencyScope.SEND_MESSAGE,
+        key=idempotency_key,
+        owner=(user_jwt_data.id, chat_id),
+        model=MessageDTO,
+        operation=lambda: mediator.handle_command(
             SendMessageCommand(
                 chat_id=chat_id,
                 content=payload.content,
@@ -107,13 +99,8 @@ async def send_message(
                 upload_tokens=payload.upload_tokens,
                 user_jwt_data=user_jwt_data,
             )
-        )
-        if cache_key:
-            await redis.set(cache_key, result.model_dump_json(), 86_400)
-        return result
-    finally:
-        if lock_key:
-            await redis.delete(lock_key)
+        ),
+    )
 
 
 @router.get(
@@ -186,17 +173,24 @@ async def forward_message(
     payload: ForwardMessageRequest,
     user_jwt_data: CurrentUserJWTData,
     mediator: FromDishka[BaseMediator],
+    idempotency: FromDishka[IdempotencyStore],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> MessageDTO:
-    msg = await mediator.handle_command(
-        ForwardMessageCommand(
-            user_jwt_data=user_jwt_data,
-            source_chat_id=payload.source_chat_id,
-            source_message_id=payload.source_message_id,
-            target_chat_id=chat_id,
-            comment=payload.comment,
-        )
+    return await idempotency.run(
+        scope=ChatIdempotencyScope.FORWARD_MESSAGE,
+        key=idempotency_key,
+        owner=(user_jwt_data.id, chat_id),
+        model=MessageDTO,
+        operation=lambda: mediator.handle_command(
+            ForwardMessageCommand(
+                user_jwt_data=user_jwt_data,
+                source_chat_id=payload.source_chat_id,
+                source_message_id=payload.source_message_id,
+                target_chat_id=chat_id,
+                comment=payload.comment,
+            )
+        ),
     )
-    return msg
 
 
 @router.post(
