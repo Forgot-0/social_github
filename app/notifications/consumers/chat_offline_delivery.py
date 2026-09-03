@@ -21,9 +21,9 @@ class OfflineEventDTO(BaseModel):
     event_name: str
     chat_id: UUID
     message_id: UUID
-    sender_id: int
     offline_user_ids: list[int]
     occurred_at: datetime
+    sender_id: int | None = None
 
 
 @router.subscriber(

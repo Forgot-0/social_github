@@ -1,10 +1,11 @@
-from collections.abc import Iterable
+from collections.abc import AsyncIterator, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from app.core.events.event import BaseEvent
 from app.core.events.service import BaseEventBus
+from app.core.message_brokers.base import BaseMessageBroker, BrokerRecord
 from app.core.services.mail.service import BaseMailService, EmailData
 from app.core.services.mail.template import BaseTemplate
 from app.core.services.queues.service import QueueResult, QueueResultStatus, QueueService
@@ -117,3 +118,27 @@ class MockEventBus(BaseEventBus):
     async def publish(self, events: Iterable[BaseEvent]) -> None:
         self.published_events.extend(events)
 
+
+
+@dataclass
+class FakeMessageBroker(BaseMessageBroker):
+    sent_data: list[tuple[str, str, dict[str, Any]]] = field(default_factory=list)
+
+    async def start(self) -> None: ...
+
+    async def close(self) -> None: ...
+
+    async def send_message(self, key: bytes, topic: str, value: bytes) -> None: ...
+
+    async def send_data(self, key: str, topic: str, data: dict[str, Any]) -> None:
+        self.sent_data.append((key, topic, data))
+
+    async def send_event(self, key: str, topic: str, event: BaseEvent) -> None: ...
+
+    async def send_many(self, records: Sequence[BrokerRecord]) -> list[BaseException | None]:
+        return [None] * len(records)
+
+    async def start_consuming(self, topic: list[str]) -> AsyncIterator[dict]:
+        raise NotImplementedError
+
+    async def stop_consuming(self) -> None: ...

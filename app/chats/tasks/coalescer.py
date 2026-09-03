@@ -5,8 +5,6 @@ from app.chats.config import chat_config
 from app.chats.metrics import CHAT_REACTION_COALESCE_COLLAPSED
 from app.chats.services.delivery_router import ChatDeliveryRouter
 from app.chats.services.reaction_coalescer import ReactionCoalesceQueue
-from app.core.consumers.event import DictEventDTO
-
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,7 @@ async def run_reaction_coalescer(container, queue: ReactionCoalesceQueue) -> Non
                 async with container() as request_container:
                     router: ChatDeliveryRouter = await request_container.get(ChatDeliveryRouter)
                     for snapshot in snapshots:
-                        await router.route_reaction_snapshot(DictEventDTO.model_validate(snapshot))
+                        await router.route_reaction_snapshot(snapshot)
 
         except asyncio.CancelledError:
             logger.info("Reaction coalescer stopping")

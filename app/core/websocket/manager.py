@@ -36,12 +36,17 @@ _LOCAL_SEND_BATCH_SIZE = 1_024
 _CLAIM_START_ID = "0-0"
 
 
+def default_gateway_id() -> str:
+    host = os.getenv("GATEWAY_ID") or os.getenv("HOSTNAME") or "local-gateway"
+    return f"{host}-{os.getpid()}"
+
+
 
 @dataclass(slots=True)
 class ConnectionManager:
     redis: Redis
     presence_service: PresenceService
-    gateway_id: str = field(default_factory=lambda: os.getenv("GATEWAY_ID", "") or os.getenv("HOSTNAME", "local-gateway"))
+    gateway_id: str = field(default_factory=default_gateway_id)
     connections_by_id: dict[str, WSConnection] = field(default_factory=dict)
     connections_by_user: dict[int, set[str]] = field(default_factory=lambda: defaultdict(set))
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -57,7 +62,7 @@ class ConnectionManager:
 
     @property
     def stream_consumer(self) -> str:
-        return f"{self.gateway_id}:{os.getpid()}"
+        return self.gateway_id
 
     async def startup(self) -> None:
         self._shutdown_event.clear()
@@ -312,6 +317,8 @@ class ConnectionManager:
 
             tick += 1
             try:
+                await self.redis.expire(self.stream_key, app_config.WS_REDIS_CONNECTION_TTL)
+
                 async with self._lock:
                     conns = list(self.connections_by_id.values())
                     subs_snapshot = {conn.connection_id: set(conn.subscriptions) for conn in conns}

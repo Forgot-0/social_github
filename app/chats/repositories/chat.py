@@ -25,11 +25,12 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         chat_id: UUID,
         with_members: bool = False,
         with_for_update: bool = False,
+        include_deleted: bool = False,
     ) -> Chat | None:
-        stmt = select(Chat).where(
-            Chat.id == chat_id,
-            Chat.deleted_at.is_(None),
-        )
+        stmt = select(Chat).where(Chat.id == chat_id)
+        if not include_deleted:
+            stmt = stmt.where(Chat.deleted_at.is_(None))
+
         if with_for_update:
             stmt = stmt.with_for_update()
 
@@ -158,7 +159,8 @@ class ChatRepository(IRepository[Chat], CacheRepository):
         while True:
             conditions = [
                 ChatMember.chat_id == chat_id,
-                ChatMember.banned_to.is_(False),
+                ChatMember.banned_to.is_not(None),
+                ChatMember.banned_to < now_utc(),
                 ChatMember.user_id > last_user_id,
             ]
             if role_ids is not None:

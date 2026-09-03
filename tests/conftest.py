@@ -128,7 +128,7 @@ async def db_session(request_container):
 
 @pytest.fixture
 async def redis_client(redis_container: AsyncRedisContainer) -> AsyncGenerator[Redis]:
-    client = await redis_container.get_async_client()
+    client = await redis_container.get_async_client(decode_responses=True)
 
     try:
         yield client
