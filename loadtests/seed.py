@@ -177,11 +177,11 @@ async def _insert_chats_batch(
         """
         INSERT INTO chats (
             id, seq_counter, type, name, description, is_public, created_by,
-            member_count, admin_only, slow_mode_seconds, permissions
+            member_count, admin_only, slow_mode_seconds, permissions, reactions_mode
         )
         SELECT * FROM unnest(
             $1::uuid[], $2::bigint[], $3::chattype[], $4::text[], $5::text[],
-            $6::bool[], $7::bigint[], $8::int[], $9::bool[], $10::int[], $11::jsonb[]
+            $6::bool[], $7::bigint[], $8::int[], $9::bool[], $10::int[], $11::jsonb[], $12::chatreactionsmode[]
         )
         """,
         [c.id for c in chats],
@@ -195,6 +195,7 @@ async def _insert_chats_batch(
         [False] * len(chats),
         [0] * len(chats),
         ["{}"] * len(chats),
+        ["ALL"] * len(chats)
     )
 
 
