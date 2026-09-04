@@ -35,6 +35,7 @@ _PRECONDITION_CODES = frozenset({"PreconditionFailed"})
 @dataclass
 class MinioStorageService(StorageService):
     client: Minio
+    public_mionio: Minio
     bucket_policy: dict[str, Policy]
 
     max_thread: int = field(default=20)
