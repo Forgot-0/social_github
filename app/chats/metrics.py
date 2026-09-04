@@ -17,8 +17,3 @@ DELIVERY_ROUTER_OFFLINE_SIGNALS = Counter(
     "Offline-recipients signals published to the notifications topic, by result",
     labelnames=("result",),
 )
-
-DELIVERY_ROUTER_OFFLINE_RECIPIENTS = Counter(
-    "chat_delivery_router_offline_recipients_total",
-    "Number of offline recipients reported to the notifications topic",
-)

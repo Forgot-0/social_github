@@ -21,7 +21,6 @@ from app.chats.dtos.delivery import (
 from app.chats.dtos.messages import MessageDTO
 from app.chats.dtos.reactions import ReactionUpdateWSDTO
 from app.chats.metrics import (
-    DELIVERY_ROUTER_OFFLINE_RECIPIENTS,
     DELIVERY_ROUTER_OFFLINE_SIGNALS,
     DELIVERY_ROUTER_STREAM_ENTRIES,
 )
@@ -119,13 +118,14 @@ class ChatDeliveryRouter:
             message=message,
             reaction=reaction,
         ).model_dump(mode="json")
+        await self._route_to_removed_member(ws_event=ws_event, payload=payload)
+
 
         if ws_event.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
-            await self._route_fanout_on_write(ws_event=ws_event, payload=payload)
-        else:
-            await self._route_to_active_subscribers(ws_event=ws_event, payload=payload)
+            return await self._route_fanout_on_write(ws_event=ws_event, payload=payload)
 
-        await self._route_to_removed_member(ws_event=ws_event, payload=payload)
+        await self._route_to_active_subscribers(ws_event=ws_event, payload=payload)
+
 
     async def _route_fanout_on_write(
         self,
@@ -227,7 +227,6 @@ class ChatDeliveryRouter:
         )
 
         DELIVERY_ROUTER_OFFLINE_SIGNALS.labels(result="ok").inc()
-        DELIVERY_ROUTER_OFFLINE_RECIPIENTS.inc(len(offline_user_ids))
 
     async def _lookup_online_routes(self, user_ids: Iterable[int]) -> RouteMap:
         ids = [int(user_id) for user_id in user_ids]

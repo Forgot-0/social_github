@@ -62,6 +62,7 @@ from app.chats.services.reaction_coalescer import ReactionCoalesceQueue
 from app.chats.services.reaction_policy import ReactionPolicy
 from app.core.events.event import EventRegistry
 from app.core.mediators.base import CommandRegistry, QueryRegistry
+from app.core.services.storage.aminio.policy import Policy
 
 
 class ChatModuleProvider(Provider):
@@ -187,3 +188,9 @@ class ChatModuleProvider(Provider):
     @decorate
     def register_auth_event_handlers(self, event_registry: EventRegistry) -> EventRegistry:
         return event_registry
+
+    @decorate
+    def bucket_policy(self, policy: dict[str, Policy]) -> dict[str, Policy]:
+        policy[chat_config.ATTACHMENT_BUCKET] = Policy.NONE
+        policy[chat_config.ATTACHMENT_BUCKET_PENDING] = Policy.NONE
+        return policy
