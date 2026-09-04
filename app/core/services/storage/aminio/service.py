@@ -35,7 +35,7 @@ _PRECONDITION_CODES = frozenset({"PreconditionFailed"})
 @dataclass
 class MinioStorageService(StorageService):
     client: Minio
-    public_mionio: Minio
+    public_minio: Minio
     bucket_policy: dict[str, Policy]
 
     max_thread: int = field(default=20)
@@ -63,7 +63,7 @@ class MinioStorageService(StorageService):
         loop = asyncio.get_running_loop()
         url = await loop.run_in_executor(
             self.thread_executor,
-            func=lambda: self.client.presigned_put_object(
+            func=lambda: self.public_minio.presigned_put_object(
                 bucket_name=bucket_name,
                 object_name=file_key,
                 expires=timedelta(seconds=expires)
@@ -95,7 +95,7 @@ class MinioStorageService(StorageService):
         loop = asyncio.get_running_loop()
         data = await loop.run_in_executor(
             self.thread_executor,
-            func=lambda: self.client.presigned_post_policy(
+            func=lambda: self.public_minio.presigned_post_policy(
                 policy=post_policy
             )
         )

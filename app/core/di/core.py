@@ -40,7 +40,7 @@ class CoreProvider(Provider):
     async def storage_service(self, client: Minio, bucket_policy: dict[str, Policy]) -> StorageService:
         return MinioStorageService(
             client=client,
-            public_mionio=Minio(
+            public_minio=Minio(
                 endpoint=app_config.STORAGE_PUBLIC_URL,
                 access_key=app_config.STORAGE_ACCESS_KEY,
                 secret_key=app_config.STORAGE_SECRET_KEY,
