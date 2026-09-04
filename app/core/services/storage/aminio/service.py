@@ -190,23 +190,31 @@ class MinioStorageService(StorageService):
         )
 
     async def copy_object(
-            self, bucket_from: str, file_key_from: str,
-            bucket_to: str, file_key_to: str,
-            source_stat: ObjectStat | None=None
-        ) -> None:
+        self,
+        bucket_from: str,
+        file_key_from: str,
+        bucket_to: str,
+        file_key_to: str,
+        source_stat: ObjectStat | None = None,
+    ) -> None:
         loop = asyncio.get_running_loop()
+
         await loop.run_in_executor(
             self.thread_executor,
             lambda: self.client.copy_object(
-                bucket_name=bucket_from,
-                object_name=file_key_from,
+                bucket_name=bucket_to,
+                object_name=file_key_to,
                 source=CopySource(
-                    bucket_name=bucket_to,
-                    object_name=file_key_to,
+                    bucket_name=bucket_from,
+                    object_name=file_key_from,
                     version_id=source_stat.version_id if source_stat else None,
-                    match_etag=source_stat.etag if source_stat and source_stat.version_id is None else None
-                )
-            )
+                    match_etag=(
+                        source_stat.etag
+                        if source_stat and source_stat.version_id is None
+                        else None
+                    ),
+                ),
+            ),
         )
 
     def _download_file_sync(self, bucket_name: str, file_key: str) -> bytes:
