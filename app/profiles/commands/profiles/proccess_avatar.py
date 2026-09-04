@@ -49,7 +49,7 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
         data = await self.storage_service.download(profile_config.PENDING_AVATAR_BUCKET, command.file_key)
         mime = magic.from_buffer(data, mime=True)
 
-        if not mime.startswith("image/") and mime not in profile_config.AVATAR_ALLOWED_MIMES:
+        if mime not in profile_config.AVATAR_ALLOWED_MIMES:
             raise AvatarNotImageTypeError(type_avatar=mime)
 
         img: pyvips.Image = pyvips.Image.new_from_buffer(data, "", access="sequential") # type: ignore
@@ -59,7 +59,7 @@ class ProccessAvatarCommandHandler(BaseCommandHandler[ProccessAvatarCommand, Non
         versions = {}
 
         for s in SizeAvatar:
-            thumb = img.thumbnail_image(s, height=s) # type: ignore
+            thumb = img.thumbnail_image(s, height=s, crop="centre") # type: ignore
 
             webp = thumb.write_to_buffer(".webp") # type: ignore
             avif = thumb.write_to_buffer(".avif") # type: ignore
