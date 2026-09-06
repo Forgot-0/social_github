@@ -1,11 +1,14 @@
 import pytest
 from dishka import AsyncContainer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.commands.users.register import RegisterCommand, RegisterCommandHandler
 from app.auth.exceptions import DuplicateUserError, PasswordMismatchError
 from app.auth.models.user import User
 from app.auth.repositories.user import UserRepository
 from app.auth.services.hash import HashService
+from app.core.outbox.model import OutboxMessage
 from tests.auth.integration.factories import AuthCommandFactory
 
 
@@ -108,6 +111,31 @@ class TestRegisterCommand:
         assert created_user is not None
         assert len(created_user.roles) == 1
         assert list(created_user.roles)[0].name == "user"
+
+    async def test_register_writes_created_event_to_outbox(
+        self,
+        db_session: AsyncSession,
+        handler: RegisterCommandHandler,
+    ) -> None:
+        cmd_data = AuthCommandFactory.create_register_command(
+            username="outboxuser",
+            email="outbox@example.com",
+        )
+
+        user_dto = await handler.handle(RegisterCommand(**cmd_data))
+
+        result = await db_session.execute(
+            select(OutboxMessage).where(OutboxMessage.aggregate_id == user_dto.username)
+        )
+        outbox = result.scalars().all()
+
+        assert len(outbox) == 1
+        message = outbox[0]
+        assert message.event_name == "auth.user.created"
+        assert message.topic == "auth"
+        assert message.aggregate_type == "user"
+        assert message.payload["email"] == user_dto.email
+        assert message.payload["username"] == user_dto.username
 
     async def test_register_password_is_hashed(
         self,

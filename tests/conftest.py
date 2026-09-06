@@ -8,9 +8,11 @@ from uuid import uuid4
 import pytest
 from dishka import AsyncContainer, Provider, Scope, provide
 from dishka.integrations.fastapi import setup_dishka
+from dishka.integrations.faststream import setup_dishka as setup_faststream_dishka
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi_limiter import FastAPILimiter
+from faststream.kafka import KafkaBroker, TestKafkaBroker
 from httpx import ASGITransport, AsyncClient
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import (
@@ -24,12 +26,14 @@ from sqlalchemy.pool import NullPool
 from testcontainers.community.postgres import PostgresContainer
 from testcontainers.community.redis import AsyncRedisContainer
 
+from app.consumers import setup_router as setup_consumer_router
 from app.core.configs.app import app_config
 from app.core.db.base_model import BaseModel
 from app.core.di.container import create_container
 from app.core.events.service import BaseEventBus
 from app.core.exceptions import ApplicationError
 from app.core.log.init import configure_logging
+from app.core.message_brokers.base import BaseMessageBroker
 from app.core.services.auth.dto import JwtTokenType, UserJWTData
 from app.core.services.auth.jwt_manager import JWTManager
 from app.core.services.auth.rbac import RBACManagerInterface
@@ -47,7 +51,7 @@ from app.main import (
     setup_router,
 )
 from tests.chats.providers import ChatsIntegrationProvider
-from tests.mocks import FakeQueueService, FakeStorageService, MockMailService
+from tests.mocks import FakeMessageBroker, FakeQueueService, FakeStorageService, MockMailService
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -233,6 +237,10 @@ async def di_container(
         def get_storage_service(self) -> StorageService:
             return FakeStorageService()
 
+        @provide(scope=Scope.APP)
+        def get_message_broker(self) -> BaseMessageBroker:
+            return FakeMessageBroker()
+
     container = create_container(TestProvider(), ChatsIntegrationProvider())
     try:
         yield container
@@ -262,6 +270,11 @@ async def mock_queue_service(di_container: AsyncContainer) -> QueueService:
 @pytest.fixture
 async def mock_storage_service(di_container: AsyncContainer) -> StorageService:
     return await di_container.get(StorageService)
+
+
+@pytest.fixture
+async def mock_message_broker(di_container: AsyncContainer) -> BaseMessageBroker:
+    return await di_container.get(BaseMessageBroker)
 
 
 @pytest.fixture
@@ -314,6 +327,21 @@ async def client(app: FastAPI, redis_client: Redis) -> AsyncGenerator[AsyncClien
         yield ac
 
 
+def test_broker() -> KafkaBroker:
+    broker = KafkaBroker()
+    setup_consumer_router(broker)
+    return broker
+
+
+@pytest.fixture
+async def consumer_broker(di_container: AsyncContainer) -> AsyncGenerator[KafkaBroker]:
+    broker = test_broker()
+    setup_faststream_dishka(container=di_container, broker=broker, auto_inject=True)
+
+    async with TestKafkaBroker(broker) as test_kafka_broker:
+        yield test_kafka_broker
+
+
 @pytest.fixture
 def mock_now() -> float:
     return 1704067200.0  # 2024-01-01 00:00:00 UTC
@@ -338,3 +366,4 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "profiles: Тесты модуля профиля")
     config.addinivalue_line("markers", "projects: Тесты модуля projects")
     config.addinivalue_line("markers", "chats: Тесты модуля chats")
+    config.addinivalue_line("markers", "notifications: Тесты модуля notifications")

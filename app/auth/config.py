@@ -33,6 +33,7 @@ class AuthConfig(BaseConfig):
     OAUTH_GITHUB_USERINFO_URL: str = "https://api.github.com/user"
 
     USER_TOPIC: str = "auth"
+    SEND_VERIFY_GROUP_ID: str = "send-verify-email"
 
 
 auth_config = AuthConfig()

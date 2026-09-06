@@ -37,7 +37,6 @@ from app.auth.commands.users.send_verify import SendVerifyCommand, SendVerifyCom
 from app.auth.commands.users.verify import VerifyCommand, VerifyCommandHandler
 from app.auth.config import auth_config
 from app.auth.events.users.created import SendVerifyEventHandler
-from app.auth.models.user import CreatedUserEvent
 from app.auth.queries.auth.get_by_token import GetByAccessTokenQuery, GetByAccessTokenQueryHandler
 from app.auth.queries.auth.oauth import GetUserOAuthAccountsQuery, GetUserOAuthAccountsQueryHandler
 from app.auth.queries.auth.verify import VerifyTokenQuery, VerifyTokenQueryHandler
@@ -59,7 +58,6 @@ from app.auth.services.oauth_providers import OAuthGithub, OAuthGoogle, OAuthYan
 from app.auth.services.rbac import AuthRBACManager
 from app.auth.services.session import SessionManager
 from app.core.configs.app import app_config
-from app.core.events.event import EventRegistry
 from app.core.mediators.base import CommandRegistry, QueryRegistry
 from app.core.services.auth.rbac import RBACManagerInterface
 
@@ -233,12 +231,8 @@ class AuthModuleProvider(Provider):
         command_registry.register_command(UserDeactivateSessionCommand, UserDeactivateSessionCommandHandler)
         return command_registry
 
+    # Вызывается из app/auth/consumers/user.py по событию auth.user.created
     send_verify_email = provide(SendVerifyEventHandler)
-
-    @decorate
-    def register_auth_event_handlers(self, event_registry: EventRegistry) -> EventRegistry:
-        event_registry.subscribe(CreatedUserEvent, [SendVerifyEventHandler])
-        return event_registry
 
     # query
     get_jwt_data = provide(VerifyTokenQueryHandler)

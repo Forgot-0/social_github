@@ -18,15 +18,13 @@ from app.core.consumers.event import DictEventDTO
 from app.core.services.auth.dto import UserJWTData
 from app.core.utils import now_utc
 from app.core.websocket.dtos import DeliveryDTO
-from app.core.websocket.keys import WebsocketKeys
 from app.core.websocket.manager import ConnectionManager
 from app.core.websocket.presence import PresenceService
 from app.core.websocket.websocket import WSConnection
 from app.notifications.consumers.chat_offline_delivery import OfflineEventDTO
+from tests.chats.integration.conftest import GATEWAY_ID
 from tests.core.unit.test_ws_connection import make_connection
 from tests.mocks import FakeMessageBroker
-
-GATEWAY_ID = "gw-test"
 
 
 @pytest.fixture
@@ -56,25 +54,6 @@ def delivery_router(
         coalesce_queue=coalesce_queue,
         broker=broker,
     )
-
-
-@pytest.fixture
-def go_online(redis_client: Redis):
-    async def _go_online(user_id: int) -> None:
-        await redis_client.sadd(
-            WebsocketKeys.user_route_key(user_id), f"{GATEWAY_ID}:conn-{user_id}"
-        )
-
-    return _go_online
-
-
-@pytest.fixture
-def delivered_frames(redis_client: Redis):
-    async def _delivered_frames() -> list[dict]:
-        entries = await redis_client.xrange(WebsocketKeys.gateway_stream_key(GATEWAY_ID))
-        return [json.loads(fields["event"]) for _entry_id, fields in entries]
-
-    return _delivered_frames
 
 
 def chat_event(event_name: str, payload: dict) -> DictEventDTO:

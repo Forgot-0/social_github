@@ -203,6 +203,7 @@ social_github/
 │   │   └── exceptions.py     # ApplicationError и базовые ошибки
 │   └── auth/            # Reference-модуль
 │       ├── commands/    # Command + Handler (auth, permissions, roles, sessions, users)
+│       ├── consumers/   # FastStream-подписчики на топик auth
 │       ├── queries/     # Query + Handler
 │       ├── dtos/        # Внутренние DTO (UserDTO, AuthUserJWTData, …)
 │       ├── schemas/     # Pydantic request / response схемы
@@ -759,11 +760,24 @@ async def handle(
         raise
 ```
 
-Роутер подключается в `setup_router()` в `app/consumers.py`. Если в топик приходят события разных типов, лишние отсекаются фильтром по заголовку:
+Роутер подключается в `setup_router()` в `app/consumers.py`.
+
+В топик приходят **все** события модуля-издателя, поэтому подписчик обязан отсеять чужие. Два рабочих способа:
 
 ```python
+# 1. Ветвление внутри обработчика (DictEventDTO) — как в app/auth/consumers/user.py.
+#    Подходит, когда в топике заведомо есть события других типов:
+#    сообщение просто игнорируется, без ошибок в логах.
+if event.event_name != CreatedUserEvent.get_name():
+    return
+
+# 2. Фильтр подписчика — как в app/chats/consumers/profiles.py.
 @subscriber(filter=lambda msg: msg.headers.get("event_name") in SOME_EVENT_NAMES)
 ```
+
+У фильтра есть цена: сообщение, не подошедшее ни под один фильтр, FastStream логирует как `SubscriberNotFound` (уровень ERROR) и пропускает. Если в топике постоянно есть события мимо фильтра — берите первый вариант.
+
+**Живой пример.** `app/auth/consumers/user.py` слушает топик `auth` в группе `send-verify-email`, отбирает `auth.user.created`, проверяет идемпотентность и вызывает `SendVerifyEventHandler` — так после регистрации пользователю уходит письмо с кодом подтверждения.
 
 ### 7. Идемпотентность
 
@@ -826,6 +840,16 @@ curl -s localhost:8083/connectors/outbox-connector/status
 5. Добавить имя топика и `group_id` в `config.py` модуля-потребителя.
 6. Написать FastStream-подписчик с `EventIdempotencyGuard`, подключить его роутер в `app/consumers.py` → `setup_router()`.
 7. Покрыть тестом: команда пишет строку в `outbox_messages`; подписчик идемпотентен при повторной доставке.
+
+Подписчики тестируются так же, как HTTP-роуты. В `tests/conftest.py` `test_app()` собирает приложение продовым `setup_router()` из `app/main.py`, а `test_broker()` — брокер продовым `setup_router()` из `app/consumers.py`; фикстура `consumer_broker` поднимает над ним `TestKafkaBroker` с тестовым DI-контейнером:
+
+```python
+class TestMyConsumer:
+    async def test_event_is_handled(self, consumer_broker: KafkaBroker) -> None:
+        await consumer_broker.publish(message, topic=my_config.SOME_TOPIC)
+```
+
+Список роутеров в тестах не дублируется — значит, консьюмер, забытый в `setup_router()`, свои тесты не пройдёт.
 
 ---
 

@@ -1,4 +1,7 @@
+import json
+
 import pytest
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chats.models.chat import Chat, ChatType
@@ -13,7 +16,29 @@ from app.chats.services.livekit_service import LiveKitService
 from app.chats.services.messages import MessageService
 from app.core.services.auth.dto import UserJWTData
 from app.core.services.storage.service import StorageService
+from app.core.websocket.keys import WebsocketKeys
 from tests.chats.integration.mock import StubLiveKitService
+
+GATEWAY_ID = "gw-test"
+
+
+@pytest.fixture
+def go_online(redis_client: Redis):
+    async def _go_online(user_id: int) -> None:
+        await redis_client.sadd(
+            WebsocketKeys.user_route_key(user_id), f"{GATEWAY_ID}:conn-{user_id}"
+        )
+
+    return _go_online
+
+
+@pytest.fixture
+def delivered_frames(redis_client: Redis):
+    async def _delivered_frames() -> list[dict]:
+        entries = await redis_client.xrange(WebsocketKeys.gateway_stream_key(GATEWAY_ID))
+        return [json.loads(fields["event"]) for _entry_id, fields in entries]
+
+    return _delivered_frames
 
 
 @pytest.fixture
