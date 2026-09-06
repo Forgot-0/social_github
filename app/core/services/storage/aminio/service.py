@@ -396,5 +396,5 @@ class MinioStorageService(StorageService):
         return f"https://{app_config.STORAGE_PUBLIC_URL}/{bucket}/{file_key}"
 
     def get_puclic_url(self, bucket: str) -> str:
-        return f"{app_config.STORAGE_PUBLIC_URL}/{bucket}"
+        return f"https://{app_config.STORAGE_PUBLIC_URL}/{bucket}"
 
