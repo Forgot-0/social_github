@@ -9,6 +9,7 @@ from app.core.db.repository import CacheRepository, IRepository
 
 @dataclass
 class AttachmentRepository(IRepository[MessageAttachment], CacheRepository):
+    _LIST_VERSION_KEY = "chats:attachments:list"
 
     async def get_by_id(self, attachment_id: UUID) -> MessageAttachment | None:
         result = await self.session.execute(

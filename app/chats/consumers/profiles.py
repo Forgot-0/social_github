@@ -2,7 +2,7 @@ import logging
 
 from dishka.integrations.faststream import FromDishka, inject
 from faststream.kafka import KafkaRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.chats.commands.profiles.upsert import UpsertProfileProjectionCommand
 from app.chats.config import chat_config
@@ -29,11 +29,11 @@ class ProfileDataEvent(BaseModel):
     username: str
     avatars: dict
 
-    display_name: str | None
-    bio: str | None
-    specialization: str | None
-    date_birthday: str | None
-    skills: list[str]
+    display_name: str | None = None
+    bio: str | None = None
+    specialization: str | None = None
+    date_birthday: str | None = None
+    skills: list[str] = Field(default_factory=list)
 
 
 @subscriber(filter=lambda msg: msg.headers.get("event_name") in PROFILE_EVENT_NAMES)
