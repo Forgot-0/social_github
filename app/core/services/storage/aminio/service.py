@@ -393,7 +393,7 @@ class MinioStorageService(StorageService):
         return StorageError()
 
     def get_public_url_object(self, bucket: str, file_key: str) -> str:
-        return f"{app_config.STORAGE_PUBLIC_URL}/{bucket}/{file_key}"
+        return f"https://{app_config.STORAGE_PUBLIC_URL}/{bucket}/{file_key}"
 
     def get_puclic_url(self, bucket: str) -> str:
         return f"{app_config.STORAGE_PUBLIC_URL}/{bucket}"
