@@ -1,22 +1,33 @@
 # FastAPI Template
 
-Production-ready модульный монолит на FastAPI: асинхронный SQLAlchemy 2.0, CQRS-style команды/запросы через собственный медиатор, Dependency Injection на [Dishka](https://github.com/reagento/dishka), событийная модель, готовые сервисы (кэш, очереди, почта, S3-хранилище, WebSocket, Kafka/Redis message-брокеры) и полный набор наблюдаемости (Prometheus, Grafana, Loki).
+Production-ready модульный монолит на FastAPI: асинхронный SQLAlchemy 2.0, CQRS-style команды/запросы через собственный медиатор, Dependency Injection на [Dishka](https://github.com/reagento/dishka), событийная модель на **transactional outbox + CDC (Postgres WAL → Debezium → Kafka)**, готовые сервисы (кэш, очереди, почта, S3-хранилище, WebSocket-gateway) и полный набор наблюдаемости (Prometheus, Grafana, Loki).
 
 Вдохновлён [Starter Kit](https://github.com/arctikant/fastapi-modular-monolith-starter-kit).
 
-Модуль `app/auth` — это не просто аутентификация, а **эталонный (reference) модуль**: он показывает, как должен быть устроен любой новый модуль в проекте (модели, фильтры, репозитории, команды/запросы, DI-провайдер, роуты). При добавлении нового функционала — копируйте паттерны оттуда.
+**Что описано в этом README.** Только два каркасных пакета: `app/core` — инфраструктура (БД, DI, медиатор, фильтры, события/outbox, брокеры, очереди, WebSocket, наблюдаемость) и `app/auth` — **эталонный (reference) модуль**, показывающий, как должен быть устроен любой новый модуль (модели, фильтры, репозитории, команды/запросы, DI-провайдер, роуты). Прикладные модули (`app/profiles`, `app/chats`, `app/notifications`) сознательно не документируются: они строятся по тем же правилам. При добавлении функционала копируйте паттерны из `app/auth`.
+
+**Один код — четыре процесса** (см. `docker-compose.yaml`):
+
+| Процесс | Entrypoint | Назначение |
+|---|---|---|
+| `app` | `app.main:init_app()` (gunicorn + uvicorn worker) | HTTP API и WebSocket-gateway |
+| `consumers` | `app.consumers:app` (FastStream) | Потребление доменных событий из Kafka |
+| `queue_worker` | `app.tasks:broker` (Taskiq) | Фоновые задачи |
+| `scheduler` | `app.tasks:scheduler` (Taskiq) | Периодические задачи (в т.ч. очистка outbox) |
 
 ## Технологический стек
 
 | Категория | Технологии |
 |---|---|
 | Web-фреймворк | [FastAPI](https://fastapi.tiangolo.com) 0.135+, Python 3.14, [uvicorn](https://www.uvicorn.org)/[gunicorn](https://gunicorn.org) |
-| БД / ORM | [PostgreSQL](https://www.postgresql.org), [SQLAlchemy](https://www.sqlalchemy.org) 2.0 (async, asyncpg), [Alembic](https://github.com/sqlalchemy/alembic) |
+| БД / ORM | [PostgreSQL](https://www.postgresql.org) 18 (`wal_level=logical`), [SQLAlchemy](https://www.sqlalchemy.org) 2.0 (async, asyncpg), [Alembic](https://github.com/sqlalchemy/alembic) |
 | DI | [Dishka](https://github.com/reagento/dishka) |
-| Кэш / Rate-limit | Redis, [aiocache](https://github.com/aio-libs/aiocache), [fastapi-limiter](https://github.com/long2ice/fastapi-limiter) |
+| Кэш / Rate-limit | Redis (Valkey), `CacheRepository`, [fastapi-limiter](https://github.com/long2ice/fastapi-limiter) |
 | Очереди задач | [Taskiq](https://taskiq-python.github.io) + taskiq-redis (worker + scheduler) |
-| Message broker | Kafka ([aiokafka](https://github.com/aio-libs/aiokafka)) / Redis Pub-Sub |
-| Хранилище файлов | [MinIO](https://min.io) (S3-совместимое) |
+| Message broker | Kafka: продюсер — [aiokafka](https://github.com/aio-libs/aiokafka), консьюмеры — [FastStream](https://faststream.ag2.ai) |
+| Доставка событий | Transactional outbox + CDC: [Debezium](https://debezium.io) 2.7 (Kafka Connect) читает WAL Postgres и роутит `outbox_messages` в топики Kafka |
+| Realtime | WebSocket-gateway поверх Redis Streams (`app/core/websocket`) |
+| Хранилище файлов | [MinIO](https://min.io) (S3-совместимое), обработка медиа — pyvips / ffprobe |
 | Почта | [aiosmtplib](https://aiosmtplib.readthedocs.io/en/stable) + Jinja2-шаблоны |
 | Аутентификация | JWT ([pyjwt](https://pyjwt.readthedocs.io)), Argon2 ([argon2-cffi](https://argon2-cffi.readthedocs.io)), OAuth2 (Google, Yandex, GitHub), RBAC |
 | Логирование | [structlog](https://www.structlog.org/en/stable) |
@@ -33,7 +44,7 @@ cd fastapi_template
 
 # 1. Переменные окружения
 cp .env.example .env
-# отредактируйте .env: минимум SECRET_KEY, JWT_SECRET_KEY, POSTGRES_*
+# отредактируйте .env: минимум SECRET_KEY, JWT_SECRET_KEY, POSTGRES_*, BROKER_URL
 
 # 2. Docker-сеть (используется всеми docker-compose файлами проекта)
 docker network create app-network
@@ -41,9 +52,11 @@ docker network create app-network
 # 3. Поднять инфраструктуру и приложение
 docker compose up --build
 
-#Для прода
+# Для прода
 docker compose -f docker-compose.yaml -f docker-compose.prod.yaml -f docker-compose.monitoring.yml up -d --build
 ```
+
+`docker compose up` поднимает: `db` (Postgres с `infra/postgres/postgresql.conf`), `redis`, `kafka`, `minio`, `debezium` (Kafka Connect), одноразовый `debezium_connector` (регистрирует CDC-коннектор), одноразовый `migrations` (`alembic upgrade head` + `python -m app.init_data`), а затем `app`, `consumers`, `queue_worker` и `scheduler`.
 
 После запуска:
 
@@ -51,8 +64,17 @@ docker compose -f docker-compose.yaml -f docker-compose.prod.yaml -f docker-comp
 - Swagger UI: <http://localhost:8000/docs>
 - OpenAPI JSON: <http://localhost:8000/api/v1/openapi.json> (доступен только в `local`/`testing` окружениях)
 - Health-check: `GET /health`
-- Метрики Prometheus: `GET /metrics`
+- Метрики Prometheus: `GET /metrics` (у процесса `consumers` — на порту `9002`)
+- Kafka Connect REST API: <http://localhost:8083>
 - MinIO Console: <http://localhost:9001>
+
+Проверить, что CDC-конвейер живой:
+
+```bash
+curl -s localhost:8083/connectors/outbox-connector/status
+```
+
+> Postgres обязан стартовать с `wal_level = logical` — иначе Debezium не создаст слот репликации и события останутся лежать в таблице `outbox_messages`. В compose это обеспечивает смонтированный `infra/postgres/postgresql.conf`.
 
 ### Линтинг и типы
 
@@ -73,14 +95,16 @@ pre-commit run --all-files
 2. **Модуль `app/auth` — эталон.** Перед созданием нового модуля откройте соответствующие файлы `app/auth/*` и повторяйте структуру 1:1 (см. раздел [«Создание нового модуля»](#создание-нового-модуля)).
 3. **DI только через Dishka.** Никаких глобальных синглтонов или `Depends()` с ручным созданием сервисов внутри роутера — сервисы и репозитории объявляются в `providers.py` и получаются через `FromDishka[...]`.
 4. **Команды меняют состояние, запросы — только читают.** Используйте `BaseCommand`/`BaseCommandHandler` для записи и `BaseQuery`/`BaseQueryHandler` для чтения; не смешивайте побочные эффекты в query-хендлерах.
-5. **Фильтрация и пагинация — через `app.core.filters`.** Не пишите вручную `WHERE`/`LIMIT/OFFSET` в репозиториях — создавайте `XxxFilter(BaseFilter)` и используйте `find_by_filter`.
-6. **Доступ — через политики (`policies/`), а не проверки внутри бизнес-логики.** RBAC-проверки оформляются как FastAPI-зависимости (`Depends(can_update)`), а не `if user.role == ...` внутри хендлера.
-7. **Модели наследуют `BaseModel` (+ миксины).** Новая модель обязательно регистрируется в `app/core/models.py`, иначе Alembic её не увидит.
-8. **Придерживайтесь соглашений по именованию** из раздела [«Соглашения по именованию»](#3-соглашения-по-именованию) (`CreateArticle`, `GetListArticles`, `ArticleFilter`, `ArticleRepository` и т.д.).
-9. **Каждое изменение бизнес-логики сопровождается тестом** в `tests/` (unit — без БД/Docker, integration — с `testcontainers`, по аналогии с `tests/auth`).
-10. **Код обязан проходить `ruff`, `mypy` и `pylint`** — используйте существующие конфиги (`.ruff.toml`, `mypy.ini`, `.pylintrc`), не отключайте правила без крайней необходимости.
-11. **Не добавляйте новые зависимости/сервисы «по умолчанию».** Если задачу можно решить существующими сервисами (`CacheServiceInterface`, `QueueServiceInterface`, `StorageService`, `BaseMailService`, `BaseMessageBroker`) — используйте их, а не новую библиотеку.
-12. **Секреты и конфигурация — только через `.env` / `BaseConfig`.** Не хардкодьте ключи, хосты или пароли в коде.
+5. **Доменные события — только через outbox.** `event_bus.publish(model.pull_events())` вызывается **до** `session.commit()`, в той же транзакции. Прямой `broker.send_event(...)`/`send_data(...)` из команды для доменных событий запрещён — см. [Событийная архитектура](#событийная-архитектура-outbox--wal--debezium).
+6. **Реакция на событие — это FastStream-подписчик**, а не in-process обработчик. Подписчик обязан быть идемпотентным через `EventIdempotencyGuard`, а его топик и `group_id` — лежать в `config.py` модуля.
+7. **Фильтрация и пагинация — через `app.core.filters`.** Не пишите вручную `WHERE`/`LIMIT/OFFSET` в репозиториях — создавайте `XxxFilter(BaseFilter)` и используйте `find_by_filter`.
+8. **Доступ — через зависимости и RBAC-менеджер.** Аутентификация — аннотациями из `app/auth/deps.py`; проверка прав — `rbac_manager.check_permission(...)` первой строкой хендлера или отдельной FastAPI-зависимостью. Никаких `if user.role == ...` внутри бизнес-логики.
+9. **Модели наследуют `BaseModel` (+ миксины).** Новая модель обязательно регистрируется в `app/core/models.py`, иначе Alembic её не увидит.
+10. **Придерживайтесь соглашений по именованию** из раздела [«Соглашения по именованию»](#3-соглашения-по-именованию) (`CreateArticle`, `GetListArticles`, `ArticleFilter`, `ArticleRepository`, событие `module.entity.action`).
+11. **Каждое изменение бизнес-логики сопровождается тестом** в `tests/` (unit — без БД/Docker, integration — с `testcontainers`, по аналогии с `tests/auth`).
+12. **Код обязан проходить `ruff`, `mypy` и `pylint`** — используйте существующие конфиги (`.ruff.toml`, `mypy.ini`, `.pylintrc`), не отключайте правила без крайней необходимости.
+13. **Не добавляйте новые зависимости/сервисы «по умолчанию».** Если задачу можно решить существующими (`CacheRepository`, `QueueService`, `StorageService`, `BaseMailService`, `BaseMessageBroker`, `IdempotencyStore`) — используйте их, а не новую библиотеку.
+14. **Секреты и конфигурация — только через `.env` / `BaseConfig`.** Не хардкодьте ключи, хосты, пароли, имена топиков и `group_id` в коде.
 
 ---
 
@@ -99,13 +123,21 @@ pre-commit run --all-files
     - [Config](#config)
     - [Dependency Injection](#dependency-injection)
   - [Security](#security)
-    - [Policies](#policies)
+    - [Аутентификация в роутере](#аутентификация-в-роутере)
     - [RBAC внутри Query/Command-хендлеров](#rbac-внутри-querycommand-хендлеров)
     - [OAuth Authentication](#oauth-authentication)
   - [Filter System](#filter-system)
+  - [Событийная архитектура: Outbox + WAL + Debezium](#событийная-архитектура-outbox--wal--debezium)
+    - [Поток события](#поток-события)
+    - [Что попадает в outbox\_messages](#4-что-попадает-в-outbox_messages)
+    - [Postgres WAL → Debezium](#5-postgres-wal--debezium)
+    - [Kafka → FastStream consumer](#6-kafka--faststream-consumer)
+    - [Идемпотентность](#7-идемпотентность)
+    - [Очистка outbox](#8-очистка-outbox)
+    - [Гарантии и следствия](#гарантии-и-следствия)
+    - [Чек-лист нового события](#чек-лист-нового-события)
   - [Core Services](#core-services)
-    - [Events](#events)
-    - [Cache Service](#cache-service)
+    - [Кэширование (CacheRepository)](#кэширование-cacherepository)
     - [Queue Service](#queue-service)
     - [Mail Service](#mail-service)
     - [Storage Service](#storage-service)
@@ -115,8 +147,10 @@ pre-commit run --all-files
     - [Monitoring](#monitoring)
     - [Middleware](#middleware)
   - [Application Lifecycle](#application-lifecycle)
-    - [Startup Sequence](#startup-sequence)
-    - [Shutdown](#shutdown)
+    - [Процесс app (HTTP + WebSocket)](#процесс-app-http--websocket)
+    - [Процесс consumers (FastStream)](#процесс-consumers-faststream)
+    - [Процессы queue\_worker и scheduler (Taskiq)](#процессы-queue_worker-и-scheduler-taskiq)
+    - [Миграции и первичные данные](#миграции-и-первичные-данные)
   - [Создание нового модуля](#создание-нового-модуля)
     - [1. Структура модуля](#1-структура-модуля)
     - [2. Пошаговое создание](#2-пошаговое-создание)
@@ -129,50 +163,68 @@ pre-commit run --all-files
 ### Project Structure
 
 ```
-fastapi_template/
+social_github/
 ├── migrations/          # Alembic migrations
-├── app/                 # Application package
-│   ├── main.py          # Application entry point
-│   ├── pre_start.py     # Pre-start DB checks
-│   ├── init_data.py     # Initial data setup (roles, permissions)
-│   ├── tasks.py         # Taskiq worker entry point & scheduler
-│   ├── core/            # Core functionality
-│   │   ├── api/         # API utilities (builder, rate_limiter, schemas, filter_mapper)
-│   │   ├── configs/     # Configuration management
-│   │   ├── db/          # Database utilities (base_model, repository, session, convertor)
-│   │   ├── di/          # Dependency injection container & providers
-│   │   ├── events/      # Event system (event, service, mediator)
-│   │   ├── filters/     # Generic filter system (base, condition, sort, pagination, loading_strategy)
-│   │   ├── log/         # Logging configuration (structlog)
-│   │   ├── mediators/   # Mediator pattern (command & query registries)
-│   │   ├── message_brokers/  # Kafka / Redis pub-sub
+├── infra/
+│   ├── debezium/outbox-connector.json   # Конфиг CDC-коннектора (регистрируется автоматически)
+│   ├── postgres/postgresql.conf         # wal_level=logical, слоты репликации
+│   └── livekit/
+├── monitoring/          # Grafana / Loki / Vector / Prometheus
+├── nginx/               # Reverse-proxy конфиги
+├── loadtests/           # Нагрузочные сценарии
+├── tests/               # unit + integration (testcontainers)
+├── app/
+│   ├── main.py          # Entrypoint FastAPI (HTTP + WebSocket)
+│   ├── consumers.py     # Entrypoint FastStream (потребление Kafka)
+│   ├── tasks.py         # Entrypoint Taskiq (worker + scheduler)
+│   ├── pre_start.py     # Retry-проверка доступности БД
+│   ├── init_data.py     # Первичные данные (роли)
+│   ├── core/            # Инфраструктура
+│   │   ├── api/         # builder, rate_limiter, schemas, filter_mapper, utils
+│   │   ├── commands.py  # BaseCommand / BaseCommandHandler
+│   │   ├── queries.py   # BaseQuery / BaseQueryHandler
+│   │   ├── configs/     # AppConfig, BaseConfig, SMTP-конфиг
+│   │   ├── consumers/   # DTO входящих событий + EventIdempotencyGuard
+│   │   ├── db/          # base_model, repository (+CacheRepository), session, convertor
+│   │   ├── di/          # Dishka-контейнер и инфраструктурные провайдеры
+│   │   ├── events/      # BaseEvent, EventRegistry, BaseEventBus, MediatorEventBus
+│   │   ├── outbox/      # model, repository, serializer, task (очистка), metrics
+│   │   ├── filters/     # base, condition, sort, pagination, loading_strategy
+│   │   ├── log/         # structlog
+│   │   ├── mediators/   # Реестры команд и запросов
+│   │   ├── message_brokers/  # BaseMessageBroker + KafkaMessageBroker
 │   │   ├── middlewares/      # ContextMiddleware, LoggingMiddleware
-│   │   ├── models.py    # Central import of all ORM models (for Alembic)
-│   │   ├── routers.py   # Health-check endpoint
-│   │   ├── services/    # Core services (auth, cache, mail, queues, storage)
-│   │   └── websockets/  # WebSocket connection manager
-│   └── auth/            # Auth module (example module structure)
-│       ├── commands/    # Command handlers (auth, permissions, roles, sessions, users)
-│       ├── dtos/        # Internal data-transfer objects
-│       ├── emails/      # Email templates & HTML views
-│       ├── events/      # Module-specific event handlers
-│       ├── filters/     # Auth-specific filter classes (UserFilter, RoleFilter, …)
-│       ├── models/      # ORM models (User, Role, Permission, Session, OAuthAccount)
-│       ├── queries/     # Query handlers (auth, permissions, roles, sessions, users)
-│       ├── repositories/  # Data access layer (SQLAlchemy + Redis)
-│       ├── routes/      # API routes (v1: auth, users, roles, permissions, sessions)
-│       ├── schemas/     # Pydantic request / response schemas
-│       ├── services/    # Business-logic services (JWT, OAuth, RBAC, hash, session, cookie)
-│       ├── config.py    # Auth module config
-│       ├── deps.py      # FastAPI dependencies (CurrentUser, ActiveUser, …)
+│   │   ├── services/    # auth (JWT, RBAC-порт), mail, media, queues, storage, idempotency
+│   │   ├── websocket/   # WS-gateway: manager, presence, keys, dtos
+│   │   ├── metrics.py   # Prometheus-метрики WS и доставки
+│   │   ├── models.py    # Центральный импорт всех ORM-моделей (для Alembic)
+│   │   ├── routers.py   # /health
+│   │   ├── tasks.py     # register_tasks(broker) — сборка всех Taskiq-задач
+│   │   └── exceptions.py     # ApplicationError и базовые ошибки
+│   └── auth/            # Reference-модуль
+│       ├── commands/    # Command + Handler (auth, permissions, roles, sessions, users)
+│       ├── queries/     # Query + Handler
+│       ├── dtos/        # Внутренние DTO (UserDTO, AuthUserJWTData, …)
+│       ├── schemas/     # Pydantic request / response схемы
+│       ├── filters/     # UserFilter, RoleFilter, …
+│       ├── models/      # User, Role, Permission, Session, OAuthAccount (+ доменные события)
+│       ├── repositories/  # Data access (SQLAlchemy + Redis)
+│       ├── routes/v1/   # auth, user, roles, permissions, sessions
+│       ├── services/    # jwt, hash, session, cookie_manager, device, rbac, oauth_*
+│       ├── events/      # Обработчики доменных событий модуля
+│       ├── emails/      # Шаблоны писем и HTML-вьюхи
+│       ├── config.py    # AuthConfig (JWT TTL, OAuth, USER_TOPIC)
+│       ├── deps.py      # CurrentUserModel, ActiveUserModel, AuthCurrentUserJWTData
 │       ├── exceptions.py
-│       ├── gateway.py   # BaseAuthGateway interface
-│       ├── providers.py # Dishka DI provider
-│       ├── routers.py   # Top-level router
-│       └── tasks.py     # Taskiq task registration
-├── monitoring/          # Grafana / Loki / Vector config
+│       ├── providers.py # Dishka DI-провайдер модуля
+│       ├── routers.py   # Агрегирующий роутер v1
+│       └── tasks.py     # register_auth_tasks(broker)
+├── docker-compose.yaml  # app, consumers, queue_worker, scheduler, migrations,
+│                        # db, redis, kafka, debezium, debezium_connector, minio
 └── pyproject.toml
 ```
+
+> Прикладные модули (`app/profiles`, `app/chats`, `app/notifications`) в дереве опущены сознательно — они повторяют структуру `app/auth` и в этом README не описываются.
 
 ---
 
@@ -187,10 +239,11 @@ fastapi_template/
 
 **Key Notes:**
 
-- `app.core.db.BaseModel` — базовый класс для всех моделей, наследует `sqlalchemy.orm.DeclarativeBase`. Реализует `from_dict()`, `update()`, а также систему событий (`register_event()` / `pull_events()`).
-- `app.core.db.DateMixin` — добавляет поля `created_at` и `updated_at`.
-- `app.core.db.SoftDeleteMixin` — «мягкое» удаление через поле `deleted_at`. Предоставляет `select_not_deleted()` classmethod и `soft_delete()` / `is_deleted()`.
+- `app.core.db.base_model.BaseModel` — базовый класс для всех моделей, наследует `sqlalchemy.orm.DeclarativeBase`. Держит буфер доменных событий: `register_event()` / `pull_events()` (см. [Событийная архитектура](#событийная-архитектура-outbox--wal--debezium)).
+- `app.core.db.base_model.DateMixin` — добавляет поля `created_at` и `updated_at`.
+- `app.core.db.base_model.SoftDeleteMixin` — «мягкое» удаление через поле `deleted_at`. Предоставляет `select_not_deleted()` classmethod и `soft_delete()` / `is_deleted()`.
 - Все модели должны быть импортированы в `app/core/models.py`, чтобы Alembic их видел.
+- Репозитории наследуют `IRepository[Model]` (`app/core/db/repository.py`); чтение списков идёт через `find_by_filter(model, filters)` → `PageResult[Model]`.
 
 ```python
 from app.core.db.base_model import BaseModel, DateMixin, SoftDeleteMixin
@@ -244,7 +297,7 @@ class GetUsersRequest(BaseModel):
 async def get_list(
     mediator: FromDishka[BaseMediator],
     user_jwt_data: AuthCurrentUserJWTData,
-    params: GetUsersRequest = Query(),
+    params: Annotated[GetUsersRequest, Query()],
 ) -> PageResult[UserDTO]:
     return await mediator.handle_query(
         GetListUserQuery(user_jwt_data=user_jwt_data, user_filter=params.to_user_filter())
@@ -272,7 +325,7 @@ async def index(): ...
 ```python
 @router.post(
     "/login",
-    responses={400: create_response(WrongLoginDataException(username="user"))}
+    responses={400: create_response(WrongLoginDataError(username="user"))}
 )
 async def login(...): ...
 ```
@@ -283,8 +336,8 @@ async def login(...): ...
 
 **Key Notes:**
 
-- Глобальный конфиг: `app.core.configs.app_config` (класс `AppConfig`).
-- Каждый модуль может иметь собственный `config.py`, унаследованный от `app.core.configs.BaseConfig`.
+- Глобальный конфиг: `app.core.configs.app.app_config` (класс `AppConfig`).
+- Каждый модуль может иметь собственный `config.py`, унаследованный от `app.core.configs.base.BaseConfig` (в нём же — имена Kafka-топиков и `group_id` подписчиков модуля).
 - Все настройки читаются из файла `.env`.
 - `.env.example` — шаблон всех переменных; скопируйте его в `.env` при первом развёртывании.
 
@@ -294,20 +347,32 @@ async def login(...): ...
 
 Используется фреймворк [Dishka](https://github.com/reagento/dishka).
 
-**Container Setup:**
+**Container Setup** (`app/core/di/container.py`) — единый контейнер для всех процессов:
 
 ```python
-# app/core/di/container.py
-from dishka import AsyncContainer, make_async_container
+from dishka import AsyncContainer, Provider, make_async_container
+
 from app.auth.providers import AuthModuleProvider
 from app.core.di import get_core_providers
 
-def create_container(*app_providers) -> AsyncContainer:
-    return make_async_container(
-        *get_core_providers(),
-        AuthModuleProvider(),
-        *app_providers
-    )
+
+def create_container(*app_providers: Provider) -> AsyncContainer:
+    providers = [
+        *get_core_providers(),   # инфраструктура app/core
+        AuthModuleProvider(),    # провайдеры модулей
+        # ...
+    ]
+    return make_async_container(*providers, *app_providers)
+```
+
+`get_core_providers()` (`app/core/di/__init__.py`) собирает инфраструктурные провайдеры: `BrokerProvider`, `DBProvider` (engine/sessionmaker/`AsyncSession`/`OutboxRepository`/`Redis`), `CoreProvider` (MinIO, media-probe, `IdempotencyStore`), `MediatorProvider`, `EventProvider` (`EventRegistry`, `BaseEventBus`, `EventIdempotencyGuard`), `QueueProvider`, `MailProvider`, `AuthServicesProvider`, `CoreWSProvider`.
+
+Аргумент `*app_providers` — это интеграция конкретного процесса, поэтому один и тот же контейнер работает везде:
+
+```python
+create_container()                        # FastAPI (app/main.py)
+create_container(FastStreamProvider())    # consumers (app/consumers.py)
+create_container(TaskiqProvider())        # worker / scheduler (app/tasks.py)
 ```
 
 **Инициализация с FastAPI:**
@@ -321,7 +386,7 @@ container = create_container()
 setup_dishka(container=container, app=app)
 ```
 
-**Использование в эндпоинтах:**
+**Использование в эндпоинтах** (роутер должен быть создан с `route_class=DishkaRoute`):
 
 ```python
 from dishka import FromDishka
@@ -329,41 +394,55 @@ from app.core.mediators.base import BaseMediator
 
 @router.get("/")
 async def example(mediator: FromDishka[BaseMediator]):
-    result = await mediator.handle_query(SomeQuery(...))
-    return result
+    return await mediator.handle_query(SomeQuery(...))
 ```
 
-**Lifetime scopes:** `APP`, `REQUEST` and more.
+В подписчиках FastStream и задачах Taskiq — тот же `FromDishka`, но с `@inject` из соответствующей интеграции (`dishka.integrations.faststream` / `dishka.integrations.taskiq`).
+
+**Lifetime scopes:** `APP` — инфраструктура на весь процесс (брокер, Redis, MinIO, менеджеры); `REQUEST` — всё, что живёт в рамках запроса/сообщения (`AsyncSession`, репозитории, хендлеры, `BaseEventBus`).
 
 ---
 
 ## Security
 
-### Policies
+### Аутентификация в роутере
 
-Логика доступа выносится в отдельные функции-политики в директории `policies/` модуля:
+Текущий пользователь приезжает в эндпоинт FastAPI-зависимостью, а не достаётся вручную из заголовков. Готовые аннотации — в `app/auth/deps.py`:
+
+| Аннотация | Что даёт | Стоимость |
+|---|---|---|
+| `AuthCurrentUserJWTData` | `AuthUserJWTData` — данные из подписанного JWT (id, roles, permissions) | Без похода в БД |
+| `CurrentUserModel` | `UserDTO` — пользователь, загруженный по access-токену | Запрос в БД |
+| `ActiveUserModel` | То же + проверка `is_active` | Запрос в БД |
 
 ```python
-# app/our_module/policies/posts.py
-from app.auth.dtos.user import AuthUserJWTData
-from app.auth.exceptions import AccessDeniedException
-
-async def can_update(user: AuthUserJWTData) -> bool:
-    if "post:update" not in user.permissions:
-        raise AccessDeniedException(need_permissions={"post:update"})
-    return True
+@router.get("/")
+async def get_list(
+    mediator: FromDishka[BaseMediator],
+    user_jwt_data: AuthCurrentUserJWTData,
+) -> PageResult[UserDTO]: ...
 ```
 
-Использование в роутере:
+Базовый вариант без зависимости от модуля `auth` — `CurrentUserJWTData` из `app/core/services/auth/depends.py` (`UserJWTDataGetter` + `HTTPBearer`): он знает только про `UserJWTData` и используется кодом, который не должен импортировать `app/auth`.
+
+**Проверку прав** оформляйте либо отдельной функцией-зависимостью, либо через RBAC-менеджер внутри хендлера (см. следующий раздел). Функция-зависимость подходит, когда решение не зависит от тела запроса:
 
 ```python
+# app/<module>/deps.py
+async def can_update(user: AuthCurrentUserJWTData, rbac: FromDishka[RBACManagerInterface]) -> None:
+    if not rbac.check_permission(user, {"post:update"}):
+        raise AccessDeniedError(need_permissions={"post:update"})
+
+
 @router.patch("/{post_id}", dependencies=[Depends(can_update)])
 async def update(post_id: int) -> None: ...
 ```
 
+Чего делать не нужно — писать `if user.role == "admin"` внутри бизнес-логики: решение о доступе принимает RBAC-менеджер, а исключение `AccessDeniedError` глобальный exception-хендлер сам превращает в HTTP 403.
+
 ### RBAC внутри Query/Command-хендлеров
 
-`Policies` выше проверяют права ещё до входа в хендлер (на уровне FastAPI-зависимости). Но там, где решение о доступе зависит от данных самого запроса (например, `AuthUserJWTData` уже приехал внутрь `Query`/`Command`, а не отдельным параметром роута), проверку делают прямо в `handle()` через RBAC-менеджер — как в [`GetListUserQueryHandler`](#2-пошаговое-создание).
+Зависимости из раздела выше проверяют права ещё до входа в хендлер (на уровне FastAPI-зависимости). Но там, где решение о доступе зависит от данных самого запроса (например, `AuthUserJWTData` уже приехал внутрь `Query`/`Command`, а не отдельным параметром роута), проверку делают прямо в `handle()` через RBAC-менеджер — как в [`GetListUserQueryHandler`](#2-пошаговое-создание).
 
 **Порт и адаптер, а не два независимых менеджера.** Это модульный монолит: модуль `app/auth` может быть в будущем полностью удалён и заменён, например, клиентом к внешнему auth-микросервису. Чтобы core и другие модули не зависели от того, как именно `app/auth` считает роли/права, RBAC оформлен как классический port/adapter (инверсия зависимостей):
 
@@ -388,30 +467,33 @@ async def update(post_id: int) -> None: ...
 
 ### OAuth Authentication
 
-**Поддерживаемые провайдеры:** Google, Yandex, GitHub.
+**Поддерживаемые провайдеры:** Google, Yandex, GitHub (`app/auth/services/oauth_providers.py`).
 
 **Структура:**
 
-- `OAuthProvider` — абстрактный базовый класс
+- `OAuthProvider` — абстрактный базовый класс (`OAuthGoogle`, `OAuthYandex`, `OAuthGithub`)
 - `OAuthProviderFactory` — реестр провайдеров, создаётся в `AuthModuleProvider`
 - `OAuthManager` — фасад для получения URL авторизации и обработки callback
+- `OAuthAccount` — ORM-модель привязки внешнего аккаунта к `User`
 
-**API Endpoints:**
+**API Endpoints** (приложение поднято с `redirect_slashes=False`, поэтому завершающий слэш обязателен):
 
 | Method | Path | Описание |
 |--------|------|----------|
-| `GET` | `/api/v1/auth/oauth/{provider}/authorize` | Получить URL авторизации |
-| `GET` | `/api/v1/auth/oauth/{provider}/authorize/connect` | Привязать OAuth к существующему аккаунту |
-| `GET` | `/api/v1/auth/oauth/{provider}/callback` | Callback от провайдера |
+| `GET` | `/api/v1/auth/oauth/{provider}/authorize/` | Получить URL авторизации |
+| `GET` | `/api/v1/auth/oauth/{provider}/authorize/connect/` | Привязать OAuth к существующему аккаунту (требует авторизации) |
+| `GET` | `/api/v1/auth/oauth/{provider}/callback/` | Callback от провайдера, возвращает `AccessTokenResponse` и ставит refresh-cookie |
 
-**Конфигурация** (`.env`):
+**Конфигурация** (`.env`, класс `AuthConfig` в `app/auth/config.py`):
 
 ```env
 OAUTH_GOOGLE_CLIENT_ID=...
 OAUTH_GOOGLE_CLIENT_SECRET=...
-OAUTH_GOOGLE_REDIRECT_URI=...
+OAUTH_GOOGLE_REDIRECT_URI=https://api.example.com/api/v1/auth/oauth/google/callback
 # Аналогично для YANDEX и GITHUB
 ```
+
+URL авторизации / обмена токена / userinfo для каждого провайдера тоже вынесены в конфиг (`OAUTH_<PROVIDER>_BASE_AUTH_URL`, `..._TOKEN_URL`, `..._USERINFO_URL`) — переопределяются через `.env` без правки кода.
 
 ---
 
@@ -425,7 +507,7 @@ OAUTH_GOOGLE_REDIRECT_URI=...
 - `FilterCondition` / `FilterOperator` — одно условие фильтра и доступные операторы.
 - `Pagination` — параметры страницы (page, page_size, offset, limit).
 - `SortField` / `SortDirection` — параметры сортировки.
-- `RelationshipLoading` / `LoadingStrategyType` — eager-loading стратегии (SELECTIN, JOINED, SUBQUERY, LAZY).
+- `RelationshipLoading` / `LoadingStrategyType` — стратегии загрузки связей (`LAZY`, `JOINED`, `SELECTIN`, `SUBQUERY`, `IMMEDIATE`).
 
 **Создание фильтра:**
 
@@ -458,7 +540,7 @@ result: PageResult[Post] = await self.post_repository.find_by_filter(
 
 **Доступные операторы** (`FilterOperator`):
 
-`EQ`, `NE`, `GT`, `GTE`, `LT`, `LTE`, `IN`, `NOT_IN`, `CONTAINS`, `STARTS_WITH`, `ENDS_WITH`, `IS_NULL`, `IS_NOT_NULL`, `IS_NULL_FROM`, `IS_NOT_NULL_FROM`
+`EQ`, `NE`, `GT`, `GTE`, `LT`, `LTE`, `IN`, `NOT_IN`, `LIKE`, `ILIKE`, `CONTAINS`, `ALL`, `ANY`, `STARTS_WITH`, `ENDS_WITH`, `IS_NULL`, `IS_NOT_NULL`, `IS_NULL_FROM`, `IS_NOT_NULL_FROM`
 
 **Пагинация и сортировка:**
 
@@ -480,7 +562,7 @@ for sf in FilterMapper.parse_sort_string("created_at:desc,title:asc"):
 
 ```python
 @dataclass(frozen=True)
-class PageResult(Generic[T]):
+class PageResult[T]:
     items: list[T]
     total: int
     page: int
@@ -490,115 +572,290 @@ class PageResult(Generic[T]):
 
 ---
 
-## Core Services
+## Событийная архитектура: Outbox + WAL + Debezium
 
-### Events
+Доменные события **никогда не отправляются в Kafka напрямую из кода приложения**. Используется связка *transactional outbox* + *change data capture (CDC)*: команда записывает событие в таблицу `outbox_messages` в **той же транзакции**, что и бизнес-данные, а доставку в Kafka берёт на себя Debezium, читающий WAL PostgreSQL.
 
-**Компоненты:**
+Это даёт то, чего нельзя добиться прямым `producer.send()` внутри хендлера: либо коммитятся и данные, и событие, либо ни то, ни другое. Событие не теряется, если процесс упал сразу после коммита, и не появляется, если транзакция откатилась.
 
-- `BaseEvent` — базовый класс события (frozen dataclass, обязателен `__event_name__`)
-- `BaseEventHandler` — абстрактный обработчик события
-- `EventRegistry` — реестр подписок
-- `BaseEventBus` / `MediatorEventBus` — шина событий, работающая через Dishka-контейнер
+### Поток события
 
-**Создание события:**
-
-```python
-from dataclasses import dataclass
-from app.core.events.event import BaseEvent
-
-@dataclass(frozen=True)
-class PostPublishedEvent(BaseEvent):
-    post_id: int
-    author_email: str
-    __event_name__: str = "posts.post.published"
+```
+┌────────────────────────── app (FastAPI) ───────────────────────────┐
+│  CommandHandler                                                    │
+│    model.register_event(SomeEvent(...))   ← событие в модели       │
+│    repository.create(model)                                        │
+│    event_bus.publish(model.pull_events()) ← INSERT в outbox        │
+│    session.commit()                       ← одна транзакция        │
+└──────────────────────────────────┬─────────────────────────────────┘
+                                   │ outbox_messages
+                                   ▼
+                 ┌───────────────────────────────┐
+                 │         PostgreSQL WAL        │
+                 │  wal_level = logical          │
+                 │  slot:        outbox_slot     │
+                 │  publication: social_outbox   │
+                 └───────────────┬───────────────┘
+                                 │ logical replication (pgoutput)
+                                 ▼
+                 ┌───────────────────────────────┐
+                 │    Debezium (Kafka Connect)   │
+                 │  PostgresConnector            │
+                 │  + EventRouter SMT (outbox)   │
+                 └───────────────┬───────────────┘
+                                 │ topic = колонка `topic`
+                                 │ key   = колонка `aggregate_id`
+                                 ▼
+                 ┌───────────────────────────────┐
+                 │             Kafka             │
+                 │  топики: auth, profiles, …    │
+                 └───────────────┬───────────────┘
+                                 │
+                                 ▼
+                 ┌───────────────────────────────┐
+                 │     consumers (FastStream)    │
+                 │  @router.subscriber(topic, …) │
+                 │  EventIdempotencyGuard        │
+                 │  mediator.handle_command(...) │
+                 └───────────────────────────────┘
 ```
 
-**Создание обработчика:**
+### 1. Событие объявляется рядом с моделью
 
 ```python
+# app/auth/models/user.py
 @dataclass(frozen=True)
-class NotifyAuthorHandler(BaseEventHandler[PostPublishedEvent, None]):
-    mail_service: BaseMailService
+class CreatedUserEvent(BaseEvent):
+    email: str
+    username: str
 
-    async def __call__(self, event: PostPublishedEvent) -> None:
-        await self.mail_service.send_plain(
-            subject="Ваш пост опубликован",
-            recipient=event.author_email,
-            body="..."
-        )
+    __event_name__: str = "auth.user.created"
+
+    def get_partition_key(self) -> str:
+        return str(self.username)
 ```
 
-**Публикация из модели:**
+- `__event_name__` обязателен и состоит **минимум из трёх сегментов**: `<модуль>.<агрегат>.<действие>` в прошедшем времени. Из него выводятся и топик, и `aggregate_type` — см. шаг 3.
+- `get_partition_key()` обязателен (абстрактный метод `BaseEvent`) — его значение становится ключом Kafka-сообщения, то есть определяет партицию и, следовательно, **порядок событий в пределах одного агрегата**.
+- `event_id` (uuid4) и `created_at` проставляются автоматически, событие неизменяемо (`frozen=True`).
+
+### 2. Модель регистрирует событие
+
+`BaseModel` (`app/core/db/base_model.py`) хранит буфер событий: `register_event()` кладёт событие, `pull_events()` забирает и очищает буфер.
 
 ```python
-class Post(BaseModel):
+class User(BaseModel, DateMixin, SoftDeleteMixin):
     @classmethod
-    def publish(cls, ...) -> "Post":
-        post = Post(...)
-        post.register_event(PostPublishedEvent(post_id=post.id, author_email=...))
-        return post
+    def create(cls, ...) -> "User":
+        user = cls(...)
+        user.register_event(CreatedUserEvent(email=user.email, username=user.username))
+        return user
 ```
 
-**В команде:**
+### 3. Команда публикует события в той же транзакции
 
 ```python
-await self.event_bus.publish(post.pull_events())
-await self.session.commit()
+# app/auth/commands/users/register.py
+user = User.create(...)
+await self.user_repository.create(user)
+
+await self.event_bus.publish(user.pull_events())   # INSERT в outbox_messages
+await self.session.commit()                        # один коммит на данные + события
+await self.user_repository.invalidate_cache()
 ```
 
-**Регистрация в провайдере:**
+`MediatorEventBus` (`app/core/events/mediator/service.py`) не ходит в Kafka — он только пишет строки в outbox через `OutboxRepository` (тот же `AsyncSession`, `Scope.REQUEST`) и инкрементирует счётчик `outbox_events_written_total{topic,event_name}`.
+
+**`publish()` обязан вызываться до `commit()`.** После коммита `session.add()` не попадёт в ту же транзакцию, и вся гарантия теряется.
+
+### 4. Что попадает в `outbox_messages`
+
+`OutboxMessage.create()` раскладывает событие по колонкам:
+
+| Колонка | Значение | Пример для `auth.user.created` |
+|---|---|---|
+| `id` | `uuid7` (монотонный — сохраняет порядок вставки) | `0192...` |
+| `topic` | `event_name.split(".", 1)[0]` | `auth` |
+| `aggregate_type` | `event_name.split(".")[1]` | `user` |
+| `aggregate_id` | `event.get_partition_key()` | `john` |
+| `event_name` | `__event_name__` | `auth.user.created` |
+| `payload` | `JSONB` — поля события без `event_id`/`created_at` | `{"email": ..., "username": ...}` |
+| `headers` | `JSONB` — по умолчанию `{}` | `{}` |
+| `created_at` / `updated_at` | `DateMixin` | |
+
+Сериализация — `app/core/outbox/serializer.py`: `asdict(event)` + `json.dumps(..., default=additionally_serialize)`, поэтому в payload попадают только JSON-совместимые значения (UUID/datetime/Enum приводятся к строкам).
+
+> Топик выводится из имени события, а не задаётся вручную. Все события модуля `auth` уезжают в топик `auth`, `profiles.*` — в `profiles` и т.д. Из-за этого имя события **обязано** содержать хотя бы три сегмента: `event_name.split(".")[1]` иначе упадёт.
+
+### 5. Postgres WAL → Debezium
+
+`infra/postgres/postgresql.conf`:
+
+```conf
+wal_level = logical
+max_replication_slots = 10
+max_wal_senders = 10
+```
+
+`infra/debezium/outbox-connector.json` — коннектор регистрируется автоматически контейнером `debezium_connector` (POST в Kafka Connect REST API на `:8083`, идемпотентно — если коннектор уже есть, повтор пропускается). Ключевые параметры:
+
+| Параметр | Значение | Зачем |
+|---|---|---|
+| `plugin.name` | `pgoutput` | Встроенный в Postgres logical decoding, без внешних расширений |
+| `slot.name` / `publication.name` | `outbox_slot` / `social_outbox` | Слот репликации и публикация; `publication.autocreate.mode=filtered` создаёт публикацию только на нужную таблицу |
+| `table.include.list` | `public.outbox_messages` | CDC читает **только** outbox, а не все таблицы |
+| `snapshot.mode` | `no_data` | При первом старте не переигрывать историю — берём только новые записи |
+| `tombstones.on.delete` | `false` | Удаление строк задачей очистки не порождает tombstone-сообщений в топиках |
+| `heartbeat.interval.ms` | `10000` | Heartbeat двигает слот, даже когда в outbox тихо, а в БД идёт другая запись |
+
+`EventRouter`-SMT (`io.debezium.transforms.outbox.EventRouter`) превращает CDC-строку в доменное сообщение:
+
+```
+transforms.outbox.table.field.event.id       = id
+transforms.outbox.table.field.event.key      = aggregate_id   → key Kafka-сообщения
+transforms.outbox.table.field.event.type     = event_name
+transforms.outbox.table.field.event.payload  = payload        (expand.json.payload = true)
+transforms.outbox.route.by.field             = topic          → имя топика берётся из колонки
+transforms.outbox.table.fields.additional.placement =
+    id:envelope:event_id, event_name:envelope:event_name,
+    created_at:envelope:created_at, event_name:header:event_name
+```
+
+На выходе в Kafka:
+
+```json
+// key: "john"      headers: { "event_name": "auth.user.created" }
+{
+  "event_id": "0192f0c4-...",
+  "event_name": "auth.user.created",
+  "created_at": "2026-09-06T10:15:00Z",
+  "payload": { "email": "john@example.com", "username": "john" }
+}
+```
+
+Этот формат один в один описан DTO в `app/core/consumers/event.py` — `DictEventDTO` (нетипизированный payload) и `TypedEventDTO[PayloadT]` (payload валидируется Pydantic-моделью).
+
+### 6. Kafka → FastStream consumer
+
+Реакция на событие — это **подписчик в процессе `consumers`**, а не обработчик внутри процесса `app`:
 
 ```python
-@decorate
-def register_events(self, registry: EventRegistry) -> EventRegistry:
-    registry.subscribe(PostPublishedEvent, [NotifyAuthorHandler])
-    return registry
+# app/<module>/consumers/<name>.py
+router = KafkaRouter()
+
+@router.subscriber(module_config.SOME_TOPIC, group_id=module_config.SOME_GROUP_ID)
+@inject
+async def handle(
+    event: TypedEventDTO[SomePayload],
+    mediator: FromDishka[BaseMediator],
+    idempotency_guard: FromDishka[EventIdempotencyGuard],
+) -> None:
+    if not await idempotency_guard.try_acquire(group=module_config.SOME_GROUP_ID, event_id=event.event_id):
+        return
+    try:
+        await mediator.handle_command(SomeCommand(...))
+    except Exception:
+        await idempotency_guard.release(group=module_config.SOME_GROUP_ID, event_id=event.event_id)
+        raise
 ```
 
-**Best Practices:**
+Роутер подключается в `setup_router()` в `app/consumers.py`. Если в топик приходят события разных типов, лишние отсекаются фильтром по заголовку:
 
-- Имена событий — прошедшее время (`posts.post.published`, `auth.user.created`, `module.model.action`)
-- События неизменяемы (`frozen=True`)
-- Один обработчик — один файл: `events/<entity>/<event_name>.py`
+```python
+@subscriber(filter=lambda msg: msg.headers.get("event_name") in SOME_EVENT_NAMES)
+```
+
+### 7. Идемпотентность
+
+CDC даёт **at-least-once**: после рестарта Debezium или ребаланса consumer-группы сообщение может прийти повторно. Поэтому каждый подписчик проходит через `EventIdempotencyGuard` (`app/core/consumers/idempotency.py`) — `SET consumers:processed:{group}:{event_id} 1 EX 7d NX` в Redis:
+
+- ключ уже есть → событие уже обработано этой группой, выходим;
+- обработка упала → `release()`, чтобы повторная доставка не была проглочена.
+
+Ключ включает `group`, поэтому одно и то же событие может независимо обработаться разными consumer-группами.
+
+Для идемпотентности **входящих HTTP-запросов** есть отдельный `IdempotencyStore` (`app/core/services/idempotency.py`) — он кэширует результат операции по клиентскому ключу и берёт лок на время выполнения.
+
+### 8. Очистка outbox
+
+Таблица растёт бесконечно, поэтому `OutboxCleanupTask` (`app/core/outbox/task.py`) — периодическая Taskiq-задача в процессе `scheduler`/`queue_worker` — удаляет строки старше `OUTBOX_RETENTION_DAYS` батчами по `OUTBOX_CLEANUP_BATCH_SIZE` (не более `MAX_CLEANUP_BATCHES_PER_RUN = 50` батчей за запуск), считая `outbox_cleanup_deleted_total`.
+
+Удаление безопасно: EventRouter публикует только `INSERT`-события, а `tombstones.on.delete=false` не даёт появиться tombstone-записям. Ретенция должна быть заметно больше максимально ожидаемого лага Debezium.
+
+### Гарантии и следствия
+
+| | Что даёт | Что нужно помнить |
+|---|---|---|
+| Атомарность | Событие и данные коммитятся вместе | `publish()` — строго до `commit()` |
+| Доставка | At-least-once | Каждый подписчик обязан быть идемпотентным |
+| Порядок | В пределах партиции, то есть в пределах `get_partition_key()` | Между разными агрегатами порядок не гарантирован |
+| Связность модулей | Модули не импортируют друг друга, общаются через топики | Payload — это публичный контракт: поля можно добавлять, но не переименовывать/удалять |
+| Слот репликации | Debezium не теряет позицию при рестарте | Если `consumers`/Debezium долго лежат, **WAL накапливается на диске БД** — мониторьте лаг слота |
+
+### Настройки
+
+| Переменная | По умолчанию | Смысл |
+|---|---|---|
+| `OUTBOX_RETENTION_DAYS` | `7` | Сколько дней хранить отправленные строки |
+| `OUTBOX_CLEANUP_INTERVAL_SECONDS` | `3600` | Период запуска задачи очистки (переводится в cron-выражение) |
+| `OUTBOX_CLEANUP_BATCH_SIZE` | `5000` | Размер батча `DELETE ... RETURNING` |
+| `BROKER_URL` | — | `bootstrap.servers` Kafka |
+| `GROUP_ID` | — | `client_id` продюсера/консьюмера по умолчанию |
+
+Имена топиков и `group_id` подписчиков объявляются в `config.py` модуля (`BaseConfig`), а не хардкодятся в коде подписчика.
+
+### Метрики
+
+| Метрика | Где | Смысл |
+|---|---|---|
+| `outbox_events_written_total{topic,event_name}` | `app` | Сколько событий записано в outbox |
+| `outbox_cleanup_deleted_total` | `scheduler` | Сколько строк удалено ретенцией |
+
+Лаг и состояние коннектора смотрятся через Kafka Connect REST API:
+
+```bash
+curl -s localhost:8083/connectors/outbox-connector/status
+```
+
+### Чек-лист нового события
+
+1. Объявить `@dataclass(frozen=True)`-событие рядом с моделью, задать `__event_name__` (`<модуль>.<агрегат>.<действие>`, минимум 3 сегмента) и `get_partition_key()`.
+2. Вызвать `register_event()` в фабричном методе/методе модели.
+3. В команде: `await event_bus.publish(model.pull_events())` **до** `await session.commit()`.
+4. Проверить, что payload сериализуем (`asdict` + `additionally_serialize`).
+5. Добавить имя топика и `group_id` в `config.py` модуля-потребителя.
+6. Написать FastStream-подписчик с `EventIdempotencyGuard`, подключить его роутер в `app/consumers.py` → `setup_router()`.
+7. Покрыть тестом: команда пишет строку в `outbox_messages`; подписчик идемпотентен при повторной доставке.
 
 ---
 
-### Cache Service
+## Core Services
 
-**Используется:** [aiocache](https://github.com/aio-libs/aiocache) + Redis
-
-`CacheServiceInterface` доступен через DI:
+### Кэширование (CacheRepository)
 
 ```python
-from dishka import FromDishka
-from app.core.services.cache.base import CacheServiceInterface
+from app.core.db.repository import CacheRepository, IRepository
 
-@router.get("/items/{item_id}")
-async def get_item(item_id: int, cache: FromDishka[CacheServiceInterface]):
-    cached = await cache.get(f"item:{item_id}")
-    if cached:
-        return cached
-    item = await get_from_db(item_id)
-    await cache.set(f"item:{item_id}", item, ttl=60)
-    return item
-
-@router.delete("/items/{item_id}")
-async def delete_item(item_id: int, cache: FromDishka[CacheServiceInterface]):
-    await cache.delete(f"item:{item_id}")
+class UserRepository(IRepository[User], CacheRepository):
     ...
 ```
 
-Для кеширования запросов к репозиторию также можно использовать `CacheRepository` (в `app/core/db/repository.py`, подмешивается в каждый `IRepository`, поэтому доступен как `self.<entity>_repository.cache(...)` / `self.<entity>_repository.cache_paginated(...)` прямо в query-хендлере — см. пример [`GetListUserQueryHandler`](#2-пошаговое-создание) выше).
+После этого методы доступны прямо в query-хендлере как `self.user_repository.cache_paginated(...)` (см. разбор [`GetListUserQueryHandler`](#2-пошаговое-создание)).
 
 | Метод | Когда использовать |
 |---|---|
-| `cache(type_model, func, ttl=60, *args, **kwargs)` | Кэширование одного объекта: сам строит ключ по модели/функции/аргументам через `_build_key`. |
-| `cache_paginated(type_model, func, ttl=60, *args, **kwargs)` | То же самое, но для `PageResult[...]` (списки с пагинацией) — именно этот метод используется в `GetListUserQueryHandler`. |
-| `cache_with_key(key, type_model, func, ttl=60, ...)` / `cache_with_key_paginated(...)` | Те же операции, но с явно заданным ключом — когда нужен предсказуемый/переиспользуемый ключ, а не автогенерируемый хэш. |
-| `invalidate_cache(*keys)` | Без аргументов — инкрементирует общую версию списков (мгновенно «протухают» все `cache_paginated`-ключи модели); с ключами — удаляет конкретные записи. Вызывайте после `create/update/delete` в соответствующих командах. |
+| `cache(type_model, func, ttl=60, *args, **kwargs)` | Кэширование одного Pydantic-объекта: ключ строится автоматически по модели/функции/аргументам (`_build_key`). |
+| `cache_paginated(type_model, func, ttl=60, *args, **kwargs)` | То же для `PageResult[...]` (списки с пагинацией). |
+| `cache_with_key(key, ...)` / `cache_with_key_paginated(key, ...)` | Те же операции с явно заданным ключом — когда нужен предсказуемый/переиспользуемый ключ. |
+| `invalidate_cache(*keys)` | Без аргументов — инкрементирует версию списков (`_LIST_VERSION_KEY`), из-за чего все ранее выданные ключи модели становятся недостижимыми; с ключами — удаляет конкретные записи. Вызывайте после `create/update/delete`. |
 
-Во всех случаях `func` — это awaitable-функция без побочных проверок доступа (см. паттерн `handle` / `_handle` в разборе `GetListUserQueryHandler`): она вызывается только при промахе кэша, а её результат (Pydantic-модель или `PageResult` из Pydantic-моделей) сериализуется в Redis через `model_dump_json()`/`orjson`.
+Ключ имеет вид `cache:<DTO>:ver=<version>:<module>.<qualname>:<sha256(args)>`, поэтому:
+
+- `func` должна быть awaitable-функцией **без побочных проверок доступа** (паттерн `handle` / `_handle`) — она вызывается только при промахе кэша;
+- в неё передаются только те аргументы, которые влияют на **содержимое** ответа (фильтр, id), но не авторизационный контекст;
+- результат сериализуется через `model_dump_json()` (`PageResult` — через `orjson` с полями `items/total/page/page_size`).
+
+Rate limiting (`fastapi-limiter`) использует тот же Redis, но инициализируется отдельно в `lifespan`.
 
 ---
 
@@ -622,12 +879,22 @@ class ResizeImage(BaseTask):
         ...
 ```
 
-**Регистрация** в `app/core/tasks.py` → `register_tasks(broker)`.
+**Регистрация** — в `app/core/tasks.py` → `register_tasks(broker)`, который делегирует в `register_<module>_tasks(broker)` каждого модуля.
+
+**Периодические задачи** задаются при регистрации через `schedule=[{"cron": ...}]` — так, например, зарегистрирована очистка outbox (`app/core/outbox/task.py`):
+
+```python
+broker.register_task(
+    OutboxCleanupTask.run,
+    OutboxCleanupTask.get_name(),
+    schedule=[{"cron": f"*/{app_config.OUTBOX_CLEANUP_INTERVAL_SECONDS // 60} * * * *"}],
+)
+```
 
 **Отправка в очередь:**
 
 ```python
-from app.core.services.queues.service import QueueServiceInterface
+from app.core.services.queues.service import QueueService
 
 await queue_service.push(
     task=ResizeImage,
@@ -635,7 +902,9 @@ await queue_service.push(
 )
 ```
 
-В тестовом окружении (`ENVIRONMENT=testing`) используется `InMemoryBroker`.
+`QueueService` также умеет `is_ready(task_id)`, `get_result(task_id)`, `wait_result(task_id, ...)`.
+
+В тестовом окружении (`ENVIRONMENT=testing`) вместо Redis-брокера используется `InMemoryBroker`.
 
 ---
 
@@ -694,7 +963,11 @@ await mail_service.queue(template=template, email_data=email_data)  # через
 | `upload_post_file(UploadFilePost)` | Presigned POST (browser upload) |
 | `generate_presigned_url(bucket, key, expires)` | Presigned GET URL |
 | `delete_file(bucket, key)` | Удалить файл |
-| `download(bucket, key)` | Скачать как bytes |
+| `download(bucket, key)` / `download_range(...)` | Скачать целиком или диапазон байт |
+| `download_to_path(...)` / `download_bytes(...)` | Скачать в файл / в память |
+| `copy_object(...)` | Копирование объекта внутри хранилища |
+| `get_stat(bucket, key)` | Метаданные объекта (`ObjectStat`) |
+| `get_public_url_object(bucket, key)` | Публичный URL (для bucket-ов с READ-политикой) |
 
 ```python
 from dishka import FromDishka
@@ -722,61 +995,63 @@ async def upload(file: FastAPIUploadFile, storage: FromDishka[StorageService]):
 ```python
 @provide(scope=Scope.APP)
 def bucket_policy(self) -> dict[str, Policy]:
-    return {"base": Policy.NONE, "public": Policy.READ}
+    return {"base": Policy.NONE}
 ```
+
+Медиа-файлы дополнительно проходят через `MediaProbeService` (`app/core/services/media`, реализация на `ffprobe`) — он определяет реальный тип/длительность/размеры до сохранения.
 
 ---
 
 ### WebSocket Service
 
-**Компоненты:** `BaseConnectionManager` / `ConnectionManager` (Redis pub-sub для горизонтального масштабирования).
+`app/core/websocket/` — горизонтально масштабируемый WS-gateway. Каждый процесс `app` — отдельный **gateway** со своим `gateway_id` (`$GATEWAY_ID`/`$HOSTNAME` + pid), маршрутизация между gateway'ями идёт через **Redis Streams**, а не pub/sub, чтобы сообщения переживали кратковременный обрыв читателя и переклеймливались при падении процесса.
 
-```python
-from dishka import FromDishka
-from app.core.websockets.base import BaseConnectionManager
-from fastapi import WebSocket
+**Компоненты:**
 
-@router.websocket("/ws/{room_id}")
-async def ws_endpoint(
-    websocket: WebSocket,
-    room_id: str,
-    manager: FromDishka[BaseConnectionManager],
-):
-    await manager.accept_connection(websocket, key=room_id)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            await manager.send_json_all(key=room_id, data={"message": data})
-    except Exception:
-        await manager.remove_connection(websocket, key=room_id)
-```
+| Компонент | Файл | Назначение |
+|---|---|---|
+| `WSConnection` | `websocket.py` | Одно соединение: очередь на отправку (`WS_SEND_QUEUE_SIZE`), writer-loop, heartbeat |
+| `ConnectionManager` | `manager.py` | Реестр соединений процесса, подписки на каналы, чтение своего Redis-стрима, claim «зависших» записей, метрики |
+| `PresenceService` | `presence.py` | Онлайн-присутствие пользователей в Redis (TTL `WS_PRESENCE_TTL`) |
+| `WebsocketKeys` | `keys.py` | Схема ключей Redis (стрим gateway, маршруты, соединения) |
+| `DeliveryDTO` | `dtos.py` | Формат доставляемого клиенту события |
 
-**Методы:** `accept_connection`, `remove_connection`, `send_all`, `send_json_all`, `disconnect_all`, `publish` (Redis).
+**Основные методы `ConnectionManager`:**
+
+`startup()` / `shutdown()` — фоновые циклы (обновление маршрутов, чтение стрима, claim pending, экспорт метрик); `register(conn)` / `unregister(conn)`; `subscribe_channel(conn, channel)` / `unsubscribe_channel(conn, channel)`; `send_to_users_local(...)` — доставка подключённым к этому процессу; `send_user_payload(event)` — доставка пользователю независимо от того, на каком gateway он висит.
+
+`ConnectionManager` и `PresenceService` регистрируются в `CoreWSProvider` со `Scope.APP`; `startup()` поднимается в `lifespan` через `aiojobs.Scheduler`.
+
+Поведение настраивается переменными `WS_*` в `AppConfig` (heartbeat, лимит соединений на пользователя, TTL записей в Redis, размеры и таймауты стрима). Метрики — `WS_ACTIVE_CONNECTIONS`, `WS_ACTIVE_SUBSCRIPTIONS`, `WS_CONNECTION_EVICTIONS`, `WS_DELIVERY_LATENCY`, `WS_GATEWAY_STREAM_*` (`app/core/metrics.py`).
 
 ---
 
 ### Message Brokers
 
-**Используется:** Kafka ([aiokafka](https://github.com/aio-libs/aiokafka))
+**Используется:** Kafka. Продюсер — [aiokafka](https://github.com/aio-libs/aiokafka) (`KafkaMessageBroker`), консьюмеры — [FastStream](https://faststream.ag2.ai) (`app/consumers.py`).
 
-Оба реализуют интерфейс `BaseMessageBroker`:
+`BaseMessageBroker` (`app/core/message_brokers/base.py`) — интерфейс продюсера:
+
+| Метод | Назначение |
+|---|---|
+| `send_message(key, topic, value)` | Отправить готовые байты |
+| `send_data(key, topic, data)` | Отправить произвольный dict (orjson) |
+| `send_event(key, topic, event)` | Отправить `BaseEvent` |
+| `send_many(records)` | Батч `BrokerRecord`; возвращает список ошибок по позициям |
+| `start_consuming(topics)` / `stop_consuming()` | Низкоуровневое чтение (для служебных сценариев) |
+| `start()` / `close()` | Управляются `lifespan`-ом процесса |
 
 ```python
 from dishka import FromDishka
 from app.core.message_brokers.base import BaseMessageBroker
 
-# Отправка события
-await broker.send_event(key="user_123", topic="user_events", event=UserCreatedEvent(...))
-
-# Отправка произвольных данных
-await broker.send_data(key="order_1", topic="orders", data={"action": "created"})
-
-# Потребление
-async for message in broker.start_consuming(["user_events"]):
-    print(message)
+async def notify(broker: FromDishka[BaseMessageBroker]) -> None:
+    await broker.send_data(key="chat_1", topic="chats.offline-delivery", data={"action": "created"})
 ```
 
-Брокер автоматически стартует и останавливается в `lifespan` приложения.
+> **Важно.** Прямой `send_*` — это транспорт для служебных/производных сообщений (например, fan-out уже обработанного события между процессами). **Доменные события так публиковать нельзя** — они всегда идут через outbox, см. [Событийная архитектура](#событийная-архитектура-outbox--wal--debezium). Отправка в Kafka из хендлера не участвует в транзакции БД, поэтому даёт рассинхрон при откате или падении.
+
+Чтение сообщений — только через FastStream-подписчики (`<module>/consumers/*.py`), которые дают DI, метрики, ретраи и управление offset-ами; `start_consuming()` в прикладном коде не используется.
 
 ---
 
@@ -799,12 +1074,28 @@ logger.error("Error occurred", exc_info=True)
 
 ### Monitoring
 
-**Prometheus** — метрики экспортируются через `prometheus-fastapi-instrumentator`:
+**Prometheus.** У процесса `app` метрики отдаёт `prometheus-fastapi-instrumentator` (сами `/health` и `/metrics` из наблюдения исключены):
 
 ```python
-PrometheusFastApiInstrumentator().instrument(app).expose(app, tags=["core"])
-# Эндпоинт: GET /metrics
+# app/main.py
+PrometheusFastApiInstrumentator(
+    excluded_handlers=[r"^/health$", r"^/metrics$"]
+).instrument(app, latency_lowr_buckets=(0.1, 0.5, 1, 1.5, 2, 2.5, 3)).expose(app, should_gzip=True, tags=["core"])
 ```
+
+Процесс `consumers` поднимает собственный `/metrics` (ASGI-роут FastStream, порт `9002`) с `KafkaPrometheusMiddleware`.
+
+**Доменные метрики:**
+
+| Метрика | Процесс | Смысл |
+|---|---|---|
+| `outbox_events_written_total{topic,event_name}` | `app` | События, записанные в outbox |
+| `outbox_cleanup_deleted_total` | `scheduler` | Строки, удалённые ретенцией |
+| `ws_active_connections`, `ws_active_subscriptions` | `app` | Состояние WebSocket-gateway |
+| `ws_connection_evictions`, `ws_delivery_latency` | `app` | Отключения и задержка доставки |
+| `ws_gateway_stream_*` | `app` | Длина, pending и claim Redis-стрима gateway'я |
+
+Состояние CDC-конвейера смотрится не в Prometheus, а через Kafka Connect REST API: `GET localhost:8083/connectors/outbox-connector/status`.
 
 **Health check:**
 
@@ -812,7 +1103,7 @@ PrometheusFastApiInstrumentator().instrument(app).expose(app, tags=["core"])
 GET /health → 200 "Ok"
 ```
 
-В директории `monitoring/` расположены конфиги Grafana, Loki и Vector.
+В директории `monitoring/` расположены конфиги Grafana, Loki, Vector и Prometheus.
 
 ---
 
@@ -843,16 +1134,38 @@ def setup_middleware(app: FastAPI) -> None:
 
 ## Application Lifecycle
 
-### Startup Sequence
+Приложение состоит из четырёх процессов; у каждого свой lifecycle.
 
-1. **Pre-start** (`pre_start.py`) — проверка подключения к БД с retry (tenacity).
-2. **Init data** (`init_data.py`) — создание базовых ролей (`super_admin`, `system_admin`, `user`).
-3. **FastAPILimiter** — инициализация Redis-клиента для rate limiting.
-4. **Message Broker** — запуск Kafka producer/consumer.
+### Процесс app (HTTP + WebSocket)
 
-### Shutdown
+`app/main.py`. `init_app()` до старта сервера: настраивает Prometheus-инструментатор, логирование, создаёт Dishka-контейнер (`create_container()`), регистрирует middleware, роутеры и exception-хендлеры.
 
-`lifespan` завершает Redis-клиент, message broker и Dishka-контейнер.
+`lifespan` на старте:
+
+1. **FastAPILimiter** — инициализация Redis-клиента для rate limiting.
+2. **Message broker** — `BaseMessageBroker.start()` (Kafka producer/consumer).
+3. **WebSocket-gateway** — `ConnectionManager.startup()` запускается фоновой задачей через `aiojobs.Scheduler`.
+
+На остановке: `scheduler.close()` → `redis_client.aclose()` → `message_broker.close()` → `dishka_container.close()`.
+
+### Процесс consumers (FastStream)
+
+`app/consumers.py`. `init_app()` создаёт `KafkaBroker` с `KafkaPrometheusMiddleware`, подключает роутеры-подписчики модулей и Dishka (`setup_dishka(..., auto_inject=True)`). В `lifespan` стартует `BaseMessageBroker`, метрики отдаются на `/metrics` ASGI-роуте.
+
+### Процессы queue_worker и scheduler (Taskiq)
+
+`app/tasks.py`. Общий модуль: создаёт контейнер с `TaskiqProvider`, поднимает/останавливает `BaseMessageBroker` на `WORKER_STARTUP`/`WORKER_SHUTDOWN`. Расписание берётся из `RedisScheduleSource` + `LabelScheduleSource` (в `ENVIRONMENT=testing` — только label-source).
+
+### Миграции и первичные данные
+
+Выполняются отдельным one-shot контейнером `migrations`, а не при старте приложения:
+
+```bash
+alembic upgrade head && python -m app.init_data
+```
+
+`app/pre_start.py` — retry-проверка доступности БД (tenacity), вызывается из `init_data()`.
+`app/init_data.py` — создаёт базовые роли из `RolesEnum` (`super_admin`, `system_admin`, `user`).
 
 ---
 
@@ -862,7 +1175,7 @@ def setup_middleware(app: FastAPI) -> None:
 
 ```
 new_module/
-├── models/              # ORM-модели
+├── models/              # ORM-модели (+ объявления доменных событий рядом с моделью)
 ├── dtos/                # Внутренние DTO (Pydantic)
 ├── schemas/             # Request / Response схемы
 │   └── <entity>/
@@ -874,34 +1187,56 @@ new_module/
 │   └── <entity>/
 ├── queries/             # Query + QueryHandler
 │   └── <entity>/
-├── events/              # EventHandler
-│   └── <entity>/
+├── consumers/           # FastStream-подписчики на Kafka-топики (реакция на события)
+├── tasks/               # (опционально) фоновые Taskiq-задачи
 ├── emails/              # (опционально) шаблоны писем
 │   ├── templates.py
 │   └── views/
+├── services/            # (опционально) доменные сервисы модуля
 ├── __init__.py
-├── config.py            # (опционально) ModuleConfig(BaseConfig)
-├── gateway.py           # (опционально) интерфейс для межмодульного доступа
+├── config.py            # (опционально) ModuleConfig(BaseConfig) — в т.ч. имена топиков и group_id
 ├── exceptions.py
 ├── deps.py              # FastAPI-зависимости
 ├── providers.py         # Dishka-провайдер
-└── routers.py           # Агрегирующий роутер
+├── routers.py           # Агрегирующий роутер
+└── tasks.py             # Регистрация Taskiq-задач (register_<module>_tasks)
 ```
+
+> Межмодульное взаимодействие идёт **через события в Kafka** (см. [Событийная архитектура](#событийная-архитектура-outbox--wal--debezium)), а не через прямые импорты чужих репозиториев. Синхронный доступ допустим только через порт в `app/core` (как `RBACManagerInterface`), реализация которого регистрируется через `alias(...)` в провайдере модуля.
 
 ### 2. Пошаговое создание
 
-**1. Модель:**
+**1. Модель и её доменные события:**
 
 ```python
 from app.core.db.base_model import BaseModel, DateMixin
+from app.core.events.event import BaseEvent
+
+
+@dataclass(frozen=True)
+class ArticleCreatedEvent(BaseEvent):
+    article_id: int
+    author_id: int
+
+    __event_name__: str = "articles.article.created"   # <модуль>.<агрегат>.<действие>
+
+    def get_partition_key(self) -> str:
+        return str(self.article_id)
+
 
 class Article(BaseModel, DateMixin):
     __tablename__ = "articles"
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
+
+    @classmethod
+    def create(cls, title: str, author_id: int) -> "Article":
+        article = cls(title=title, author_id=author_id)
+        article.register_event(ArticleCreatedEvent(article_id=article.id, author_id=author_id))
+        return article
 ```
 
-Зарегистрировать в `app/core/models.py`.
+Зарегистрировать модель в `app/core/models.py` — иначе Alembic её не увидит.
 
 **2. Фильтр:**
 
@@ -918,13 +1253,15 @@ class ArticleFilter(BaseFilter):
 
 ```python
 @dataclass
-class ArticleRepository(IRepository[Article]):
+class ArticleRepository(IRepository[Article], CacheRepository):
     async def create(self, article: Article) -> None:
         self.session.add(article)
 
     def apply_relationship_filters(self, stmt: Select, filters: ArticleFilter) -> Select:
         return stmt
 ```
+
+`CacheRepository` подмешивается, только если репозиторию действительно нужен кэш (см. [Кэширование](#кэширование-cacherepository)).
 
 **4. Command + Handler:**
 
@@ -937,18 +1274,25 @@ class CreateArticleCommand(BaseCommand):
 @dataclass(frozen=True)
 class CreateArticleCommandHandler(BaseCommandHandler[CreateArticleCommand, ArticleDTO]):
     session: AsyncSession
+    event_bus: BaseEventBus
     article_repository: ArticleRepository
 
     async def handle(self, command: CreateArticleCommand) -> ArticleDTO:
-        article = Article(title=command.title)
+        article = Article.create(title=command.title, author_id=command.user_id)
         await self.article_repository.create(article)
-        await self.session.commit()
+
+        await self.event_bus.publish(article.pull_events())   # INSERT в outbox
+        await self.session.commit()                           # один коммит на данные + события
+        await self.article_repository.invalidate_cache()
+
         return ArticleDTO.model_validate(article)
 ```
 
+Порядок важен: `publish()` кладёт строки в `outbox_messages` через тот же `AsyncSession`, поэтому вызывается **до** `commit()`. Инвалидация кэша — после успешного коммита.
+
 **4.1. Query + Handler (пагинация + кэш + RBAC):**
 
-Пока `Command` выше отвечает за запись, `Query` отвечает только за чтение — и часто требует пагинацию, кэширование и проверку прав. Ниже — реальный обработчик из `app/auth/queries/users.py`, разобранный построчно.
+Пока `Command` выше отвечает за запись, `Query` отвечает только за чтение — и часто требует пагинацию, кэширование и проверку прав. Ниже — реальный обработчик из `app/auth/queries/users/get_list.py`, разобранный построчно.
 
 ```python
 from dataclasses import dataclass
@@ -1047,25 +1391,58 @@ async def create_article(
     return ArticleResponse.model_validate(dto)
 ```
 
-**7. Регистрация модуля:**
+**7. Подписчик на события (если модуль на что-то реагирует):**
+
+```python
+# app/articles/consumers/profiles.py
+router = KafkaRouter()
+
+@router.subscriber(article_config.PROFILE_TOPIC, group_id=article_config.PROFILE_GROUP_ID)
+@inject
+async def on_profile_updated(
+    event: TypedEventDTO[ProfilePayload],
+    mediator: FromDishka[BaseMediator],
+    idempotency_guard: FromDishka[EventIdempotencyGuard],
+) -> None:
+    if not await idempotency_guard.try_acquire(
+        group=article_config.PROFILE_GROUP_ID, event_id=event.event_id
+    ):
+        return
+    await mediator.handle_command(UpsertAuthorProjectionCommand(...))
+```
+
+**8. Регистрация модуля** — в трёх точках:
 
 ```python
 # app/core/di/container.py
-from app.new_module.providers import ArticleModuleProvider
+from app.articles.providers import ArticleModuleProvider
 
-def create_container(...) -> AsyncContainer:
-    return make_async_container(
+def create_container(*app_providers: Provider) -> AsyncContainer:
+    providers = [
         *get_core_providers(),
         AuthModuleProvider(),
         ArticleModuleProvider(),   # ← добавить
-    )
+    ]
+    return make_async_container(*providers, *app_providers)
 
-# app/main.py
-from app.new_module.routers import router_v1 as article_router_v1
+# app/main.py — HTTP-роуты
+from app.articles.routers import router_v1 as article_router_v1
 
 def setup_router(app: FastAPI) -> None:
     app.include_router(auth_router_v1, prefix=app_config.API_V1_STR)
-    app.include_router(article_router_v1, prefix=app_config.API_V1_STR)  # ← добавить
+    app.include_router(article_router_v1, prefix=app_config.API_V1_STR)   # ← добавить
+
+# app/consumers.py — подписчики Kafka
+from app.articles.consumers import profiles
+
+def setup_router(broker: KafkaBroker) -> None:
+    broker.include_router(profiles.router)   # ← добавить
+
+# app/core/tasks.py — фоновые задачи
+from app.articles.tasks import register_article_tasks
+
+def register_tasks(broker: AsyncBroker) -> None:
+    register_article_tasks(broker)   # ← добавить
 ```
 
 ### 3. Соглашения по именованию
@@ -1073,8 +1450,15 @@ def setup_router(app: FastAPI) -> None:
 | Элемент | Стиль | Пример |
 |---------|-------|--------|
 | Модуль | существительное (мн. число) | `articles`, `orders` |
-| Команда | глагол + существительное | `CreateArticle`, `PublishPost` |
-| Событие | прошедшее время | `ArticleCreated`, `OrderShipped` |
-| Query | `Get` + существительное | `GetListArticles`, `GetArticleById` |
+| Команда | глагол + существительное | `CreateArticleCommand`, `PublishPostCommand` |
+| Query | `Get` + существительное | `GetListArticlesQuery`, `GetArticleByIdQuery` |
+| Класс события | действие в прош. времени + сущность + `Event` | `CreatedUserEvent`, `VerifiedUserEvent` |
+| `__event_name__` | `<модуль>.<агрегат>.<действие>` (3 сегмента, прош. время) | `auth.user.created`, `profiles.profile.updated` |
+| Kafka-топик | первый сегмент имени события (выводится автоматически) | `auth`, `profiles`, `chats` |
+| `group_id` подписчика | назначение подписчика, а не имя модуля | `delivery-router`, `offline-push` |
+| Класс задачи | действие + `Task` | `OutboxCleanupTask`, `PushOfflineRecipientsTask` |
+| `__task_name__` | `<домен>.<действие>` | `outbox.cleanup`, `image.resize` |
 | Фильтр | существительное + `Filter` | `ArticleFilter` |
 | Репозиторий | существительное + `Repository` | `ArticleRepository` |
+
+Имена топиков и `group_id` объявляются в `config.py` модуля (`BaseConfig`) и переопределяются через `.env`, а не хардкодятся в подписчике.

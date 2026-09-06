@@ -13,23 +13,6 @@ files = [
 ]
 
 [[package]]
-name = "aiocache"
-version = "0.12.3"
-description = "multi backend asyncio cache"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "aiocache-0.12.3-py2.py3-none-any.whl", hash = "sha256:889086fc24710f431937b87ad3720a289f7fc31c4fd8b68e9f918b9bacd8270d"},
-    {file = "aiocache-0.12.3.tar.gz", hash = "sha256:f528b27bf4d436b497a1d0d1a8f59a542c153ab1e37c3621713cb376d44c4713"},
-]
-
-[package.extras]
-memcached = ["aiomcache (>=0.5.2)"]
-msgpack = ["msgpack (>=0.5.5)"]
-redis = ["redis (>=4.2.0)"]
-
-[[package]]
 name = "aiohappyeyeballs"
 version = "2.7.1"
 description = "Happy Eyeballs for asyncio"
@@ -5556,4 +5539,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14,<3.15"
-content-hash = "f6775d730a247a416feb939df43c2441b2a9cbfc11a10145e84f347073e75b55"
+content-hash = "c1731fade5a0e927f05b73c110ca1180edca543c2fd03dc3e1b7a5f6322aba74"
