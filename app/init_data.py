@@ -9,8 +9,6 @@ from app.chats.models.chat_roles import ChatRole
 from app.chats.models.permission import ChatRolesEnum
 from app.core.di.container import create_container
 from app.pre_start import pre_start
-from app.projects.models.role import ProjectRole
-from app.projects.models.role_permissions import ProjectRolesEnum
 
 
 async def create_first_data(db: AsyncSession) -> None:
@@ -20,13 +18,6 @@ async def create_first_data(db: AsyncSession) -> None:
 
         if role.scalar() is None:
             db.add(base_role)
-
-    project_roles = ProjectRolesEnum.get_all_project_roles()
-    for base_project_role in project_roles:
-        role = await db.execute(select(ProjectRole).where(ProjectRole.name==base_project_role.name))
-
-        if role.scalar() is None:
-            db.add(base_project_role)
 
     chat_roles = ChatRolesEnum.get_all_chat_roles()
     for base_chat_role in chat_roles:

@@ -124,7 +124,7 @@ class ChatDeliveryRouter:
         if ws_event.fanout_strategy == ChatFanoutStrategy.FANOUT_ON_WRITE:
             return await self._route_fanout_on_write(ws_event=ws_event, payload=payload)
 
-        await self._route_to_active_subscribers(ws_event=ws_event, payload=payload)
+        return await self._route_to_active_subscribers(ws_event=ws_event, payload=payload)
 
 
     async def _route_fanout_on_write(

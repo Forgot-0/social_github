@@ -12,12 +12,6 @@ from app.auth.models.role import Role, UserRoles
 from app.profiles.models.contact import Contact
 from app.profiles.models.profile import Profile
 
-from app.projects.models.member import ProjectMembership
-from app.projects.models.project import Project
-from app.projects.models.role import ProjectRole
-from app.projects.models.position import Position
-from app.projects.models.application import Application
-
 from app.chats.models.attachment import MessageAttachment
 from app.chats.models.chat import Chat
 from app.chats.models.message import Message

@@ -31,7 +31,6 @@ from app.core.utils import now_utc
 from app.core.websocket.manager import ConnectionManager
 from app.notifications.routers import router_v1 as notification_router_v1
 from app.profiles.routers import router_v1 as profile_router_v1
-from app.projects.routers import router_v1 as project_router_v1
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +79,6 @@ def setup_router(app: FastAPI) -> None:
 
     app.include_router(auth_router_v1, prefix=app_config.API_V1_STR)
     app.include_router(profile_router_v1, prefix=app_config.API_V1_STR)
-    app.include_router(project_router_v1, prefix=app_config.API_V1_STR)
     app.include_router(chat_router_v1, prefix=app_config.API_V1_STR)
     app.include_router(notification_router_v1, prefix=app_config.API_V1_STR)
 

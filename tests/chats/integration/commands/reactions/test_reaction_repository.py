@@ -1,5 +1,4 @@
 import pytest
-
 from sqlalchemy import update
 
 from app.chats.models.chat import Chat

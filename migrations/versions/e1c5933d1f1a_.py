@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: b2bbb67eacf9
+Revision ID: e1c5933d1f1a
 Revises: 
-Create Date: 2026-09-03 12:27:46.178200
+Create Date: 2026-09-06 09:25:23.540210
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'b2bbb67eacf9'
+revision: str = 'e1c5933d1f1a'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -115,34 +115,6 @@ def upgrade() -> None:
     sa.UniqueConstraint('username')
     )
     op.create_index('idx_profiles_tags', 'profiles', ['skills'], unique=False, postgresql_using='gin')
-    op.create_table('project_roles',
-    sa.Column('id', sa.BigInteger(), nullable=False),
-    sa.Column('name', sa.String(length=80), nullable=False),
-    sa.Column('level', sa.Integer(), nullable=False),
-    sa.Column('permissions', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_project_roles_name'), 'project_roles', ['name'], unique=False)
-    op.create_table('projects',
-    sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
-    sa.Column('owner_id', sa.BigInteger(), nullable=False),
-    sa.Column('name', sa.String(length=200), nullable=False),
-    sa.Column('slug', sa.String(length=210), nullable=False),
-    sa.Column('small_description', sa.String(length=256), nullable=True),
-    sa.Column('full_description', sa.String(length=1024), nullable=False),
-    sa.Column('visibility', sa.Enum('private', 'internal', 'public', name='projectvisibility'), server_default='public', nullable=False),
-    sa.Column('status', sa.Enum('active', 'archived', name='projectstatus'), server_default='active', nullable=False),
-    sa.Column('meta_data', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
-    sa.Column('tags', postgresql.ARRAY(sa.String(length=50)), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_projects_tags', 'projects', ['tags'], unique=False, postgresql_using='gin')
-    op.create_index(op.f('ix_projects_owner_id'), 'projects', ['owner_id'], unique=False)
-    op.create_index(op.f('ix_projects_slug'), 'projects', ['slug'], unique=False)
     op.create_table('roles',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
@@ -187,8 +159,8 @@ def upgrade() -> None:
     sa.Column('user_id', sa.BigInteger(), nullable=False),
     sa.Column('role_id', sa.BigInteger(), nullable=False),
     sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('muted_to', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('banned_to', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('muted_until', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('banned_until', sa.DateTime(timezone=True), nullable=True),
     sa.Column('permissions_overrides', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -248,43 +220,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], onupdate='cascade', ondelete='cascade'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('positions',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('project_id', sa.BigInteger(), nullable=False),
-    sa.Column('title', sa.String(length=50), nullable=False),
-    sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('responsibilities', sa.Text(), nullable=True),
-    sa.Column('required_skills', postgresql.ARRAY(sa.String(length=50)), nullable=False),
-    sa.Column('is_open', sa.Boolean(), nullable=False),
-    sa.Column('location_type', sa.Enum('remote', 'onsite', 'hybrid', name='positionlocationtype'), server_default='remote', nullable=False),
-    sa.Column('expected_load', sa.Enum('low', 'medium', 'high', name='positionload'), server_default='medium', nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_positions_tags', 'positions', ['required_skills'], unique=False, postgresql_using='gin')
-    op.create_index(op.f('ix_positions_project_id'), 'positions', ['project_id'], unique=False)
-    op.create_table('project_memberships',
-    sa.Column('id', sa.BigInteger(), nullable=False),
-    sa.Column('project_id', sa.BigInteger(), nullable=False),
-    sa.Column('user_id', sa.BigInteger(), nullable=False),
-    sa.Column('role_id', sa.BigInteger(), nullable=False),
-    sa.Column('status', sa.Enum('invited', 'pending', 'active', 'suspended', 'removed', name='membershipstatus'), server_default='invited', nullable=False),
-    sa.Column('invited_by', sa.BigInteger(), nullable=False),
-    sa.Column('joined_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('permissions_overrides', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['role_id'], ['project_roles.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('project_id', 'user_id', name='uq_project_user')
-    )
-    op.create_index(op.f('ix_project_memberships_project_id'), 'project_memberships', ['project_id'], unique=False)
-    op.create_index(op.f('ix_project_memberships_role_id'), 'project_memberships', ['role_id'], unique=False)
-    op.create_index(op.f('ix_project_memberships_user_id'), 'project_memberships', ['user_id'], unique=False)
     op.create_table('read_receipts',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('chat_id', sa.UUID(), nullable=False),
@@ -335,32 +270,13 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], onupdate='cascade', ondelete='cascade'),
     sa.PrimaryKeyConstraint('user_id', 'role_id')
     )
-    op.create_table('applications',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('project_id', sa.BigInteger(), nullable=False),
-    sa.Column('position_id', sa.UUID(), nullable=False),
-    sa.Column('candidate_id', sa.BigInteger(), nullable=False),
-    sa.Column('status', sa.Enum('pending', 'accepted', 'rejected', name='applicationstatus'), server_default='pending', nullable=False),
-    sa.Column('message', sa.Text(), nullable=True),
-    sa.Column('decided_by', sa.BigInteger(), nullable=True),
-    sa.Column('decided_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['position_id'], ['positions.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('project_id', 'position_id', 'candidate_id', name='unique_id')
-    )
-    op.create_index(op.f('ix_applications_candidate_id'), 'applications', ['candidate_id'], unique=False)
-    op.create_index(op.f('ix_applications_position_id'), 'applications', ['position_id'], unique=False)
-    op.create_index(op.f('ix_applications_project_id'), 'applications', ['project_id'], unique=False)
     op.create_table('chat_member_bans',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('member_id', sa.BigInteger(), nullable=False),
     sa.Column('banned_by_user_id', sa.BigInteger(), nullable=False),
     sa.Column('reason', sa.String(length=256), nullable=True),
     sa.Column('banned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('banned_to', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('banned_until', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['member_id'], ['chat_members.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -432,10 +348,6 @@ def downgrade() -> None:
     op.drop_index('ix_chat_member_bans_member_banned_at', table_name='chat_member_bans')
     op.drop_index(op.f('ix_chat_member_bans_banned_by_user_id'), table_name='chat_member_bans')
     op.drop_table('chat_member_bans')
-    op.drop_index(op.f('ix_applications_project_id'), table_name='applications')
-    op.drop_index(op.f('ix_applications_position_id'), table_name='applications')
-    op.drop_index(op.f('ix_applications_candidate_id'), table_name='applications')
-    op.drop_table('applications')
     op.drop_table('user_roles')
     op.drop_table('user_permissions')
     op.drop_index(op.f('ix_sessions_user_id'), table_name='sessions')
@@ -446,13 +358,6 @@ def downgrade() -> None:
     op.drop_table('role_permissions')
     op.drop_index(op.f('ix_read_receipts_user_id'), table_name='read_receipts')
     op.drop_table('read_receipts')
-    op.drop_index(op.f('ix_project_memberships_user_id'), table_name='project_memberships')
-    op.drop_index(op.f('ix_project_memberships_role_id'), table_name='project_memberships')
-    op.drop_index(op.f('ix_project_memberships_project_id'), table_name='project_memberships')
-    op.drop_table('project_memberships')
-    op.drop_index(op.f('ix_positions_project_id'), table_name='positions')
-    op.drop_index('idx_positions_tags', table_name='positions', postgresql_using='gin')
-    op.drop_table('positions')
     op.drop_table('oauth_accounts')
     op.drop_index('ix_messages_chat_not_deleted', table_name='messages', postgresql_where='is_deleted = false')
     op.drop_table('messages')
@@ -472,12 +377,6 @@ def downgrade() -> None:
     op.drop_table('user_device_tokens')
     op.drop_index(op.f('ix_roles_name'), table_name='roles')
     op.drop_table('roles')
-    op.drop_index(op.f('ix_projects_slug'), table_name='projects')
-    op.drop_index(op.f('ix_projects_owner_id'), table_name='projects')
-    op.drop_index('idx_projects_tags', table_name='projects', postgresql_using='gin')
-    op.drop_table('projects')
-    op.drop_index(op.f('ix_project_roles_name'), table_name='project_roles')
-    op.drop_table('project_roles')
     op.drop_index('idx_profiles_tags', table_name='profiles', postgresql_using='gin')
     op.drop_table('profiles')
     op.drop_index(op.f('ix_permissions_name'), table_name='permissions')
