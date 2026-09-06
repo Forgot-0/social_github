@@ -161,7 +161,7 @@ class MinioStorageService(StorageService):
         loop = asyncio.get_running_loop()
         url = await loop.run_in_executor(
             self.thread_executor,
-            lambda: self.client.presigned_get_object(
+            lambda: self.public_minio.presigned_get_object(
                 bucket_name=bucket_name,
                 object_name=file_key,
                 expires=timedelta(seconds=expires)

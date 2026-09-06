@@ -13,12 +13,11 @@
 - [2. Ошибки: формат и полный каталог кодов](#2-ошибки-формат-и-полный-каталог-кодов)
 - [3. Аутентификация и пользователи (`/auth`, `/users`, `/roles`, `/permissions`, `/sessions`)](#3-аутентификация-и-пользователи)
 - [4. Профили (`/profiles`)](#4-профили-profiles)
-- [5. Проекты (`/projects`, `/positions`, `/applications`, `/project_roles`)](#5-проекты)
-- [6. Чаты — REST (`/chats`)](#6-чаты--rest)
-- [7. Чаты — WebSocket (`/chats/ws/`)](#7-чаты--websocket)
-- [8. Уведомления (`/devices`, `/notifications`)](#8-уведомления)
-- [9. Сводка ролей и прав (chat + project + system)](#9-сводка-ролей-и-прав)
-- [10. Гайд по реализации на Flutter](#10-гайд-по-реализации-на-flutter)
+- [5. Чаты — REST (`/chats`)](#5-чаты--rest)
+- [6. Чаты — WebSocket (`/chats/ws/`)](#6-чаты--websocket)
+- [7. Уведомления (`/devices`, `/notifications`)](#7-уведомления)
+- [8. Сводка ролей и прав (chat + system)](#8-сводка-ролей-и-прав)
+- [9. Гайд по реализации на Flutter](#9-гайд-по-реализации-на-flutter)
 
 ---
 
@@ -32,15 +31,14 @@
 | 2 | **Формат ошибки — вложенный конверт**: `{ "error": { "code", "message", "detail" }, "status": number, "request_id": "uuid", "timestamp": number }`. См. раздел 2. |
 | 3 | **Пагинация списков.** Обычный `PageResult<T>` (профили, проекты, позиции, заявки, роли, права, сессии, пользователи, уведомления) отдаёт только 4 поля: `items, total, page, page_size`. `has_next`/`total_pages` — Python `@property`, они не сериализуются и их нужно считать на клиенте: `total_pages = ceil(total / page_size)`, `has_next = page < total_pages`. Исключение — чат-эндпоинты со своей курсорной пагинацией (`ListChats`, `MessagesDTO`, `ListMembers`), у них `has_next` — реальное поле. |
 | 4 | **`POST /auth/login/`** использует `OAuth2PasswordRequestForm` → тело запроса **`application/x-www-form-urlencoded`**, поля называются `username` и `password` (не `email`!). JSON туда слать нельзя, FastAPI вернёт 422. |
-| 5 | **Refresh-токен** никогда не приходит и не уходит в JSON. Сервер кладёт его в **HttpOnly-cookie** `refresh_token` (`Secure=true`, `SameSite=strict`, `Path=/`). `POST /auth/refresh/` читает его из cookie автоматически. Подробности и последствия для мобильного/веб-клиента — в разделе 10. |
+| 5 | **Refresh-токен** никогда не приходит и не уходит в JSON. Сервер кладёт его в **HttpOnly-cookie** `refresh_token` (`Secure=true`, `SameSite=strict`, `Path=/`). `POST /auth/refresh/` читает его из cookie автоматически. Подробности и последствия для мобильного/веб-клиента — в разделе 9. |
 | 6 | **Время жизни access-токена** — `ACCESS_TOKEN_EXPIRE_MINUTES = 5`. Клиенту обязателен агрессивный proactive-refresh или retry-on-401 механизм. Refresh-токен живёт 60 дней. |
-| 7 | **`GET /projects/invites/my/`** физически зарегистрирован в `app/projects/routes/v1/profiles.py`, который подключён с префиксом `/profiles`. Реальный путь — **`GET /api/v1/profiles/invites/my/`**, а не `/projects/invites/my/`. |
 | 8 | **`POST /profiles/` не существует.** Профиль создаётся автоматически бэкендом через Kafka-consumer сразу после `POST /users/register/` (слушает топик `users`). Между регистрацией и появлением профиля возможна небольшая задержка (eventual consistency) — `GET /profiles/{id}/` может на короткое время вернуть 404 сразу после регистрации. |
 | 9 | **Аватар профиля**: `avatars: { "32"\|"64"\|"256"\|"512": { "jpg": url, "webp": url, "avif": url } }` — 4 размера × 3 формата на размер. См. раздел 4.5. |
 | 10 | **Загрузка аватара — presigned PUT**, тем же механизмом, что и вложения чата (раздел 6.5), но валидация типа/размера файла происходит **асинхронно**, уже после подтверждения загрузки — `POST /profiles/avatar/upload_complete/` всегда отвечает `200 OK`, даже если файл в итоге окажется невалидным и аватар не обновится. См. раздел 4.5. |
 | 11 | Раздела "realtime" (`/chats/realtime/presence/`, `/chats/realtime/ws/status/`) в коде нет. Presence отдаётся через `GET /chats/{chat_id}/members/?include_presence=true` и через WS. |
 | 12 | **WebSocket-протокол** — полноценный протокол с 4 командами клиента (`subscribe`, `unsubscribe`, `resume`, `ping`/`pong`) и ~13 типами server-push событий (`new_message`, `message_edited`, `message_deleted`, `messages_read`, `member_joined`, `member_left`, `member_kick`, `member_banned`, `chat_created`, `chat_updated`, `attachment_success`, `chat_deleted`, `reaction_update`, плюс служебные `ws.ready/subscribed/unsubscribed/history/pong/ping/error`). В `payload` каждого доменного события лежит дельта `event` (поля конкретного типа: `reader_id`, `target_user_id`, `deleted_by`, ...) и `event_id` для дедупликации — доставка at-least-once. Полный `MessageDTO` приходит только в `new_message`/`message_edited`. Полностью расписан в разделе 7. |
-| 13 | **Роли проекта** — реальные сид-роли: `owner(id=1)`, `maintainer(id=2)`, `developer(id=4, id=3 не существует)`, `user(id=5)`, с непустой картой прав. См. раздел 9. |
+| 13 | **Роли проекта** — реальные сид-роли: `owner(id=1)`, `maintainer(id=2)`, `developer(id=4, id=3 не существует)`, `user(id=5)`, с непустой картой прав. См. раздел 8. |
 | 14 | **429 Too Many Requests** не проходит через `ApplicationError` — это обычный FastAPI `HTTPException`, отдаётся как `{"detail": "Too Many Requests"}`, без `error/status/request_id/timestamp`. Обрабатывать нужно отдельной веткой по HTTP-статусу 429. |
 | 15 | **`GET /users/me/`** возвращает облегчённый `UserResponse`: только `{id, username, email}`. Роли/права/сессии — через `GET /users/` (админский, постранично) или `GET /users/sessions/`. |
 | 16 | **`GET /users/sessions/`** возвращает голый массив `SessionDTO[]`, не обёрнутый в `PageResult`. |
@@ -81,7 +79,7 @@ Authorization: Bearer <access_token>
 
 ### 1.5 Пагинация (offset/page-based) — `PageResult<T>`
 
-Используется в большинстве списковых эндпоинтов (профили, проекты, позиции, заявки, роли/права/сессии auth, project_roles, уведомления):
+Используется в большинстве списковых эндпоинтов (профили, роли/права/сессии auth, уведомления):
 
 ```ts
 interface PageResult<T> {
@@ -110,7 +108,7 @@ Query-параметры запроса, общие почти для всех �
 
 ### 1.8 UUID и числовые ID
 
-- `user_id`, `project_id`, `notification_id`, `role_id` (система/чат/проект), `permission.id`, `session.id` — целые числа (`int`, некоторые `bigint`).
+- `user_id`, `notification_id`, `role_id` (система/чат/проект), `permission.id`, `session.id` — целые числа (`int`, некоторые `bigint`).
 - `chat_id`, `message_id`, `attachment_id`, `position_id`, `application_id`, `upload_token` — UUID-строки.
 
 ### 1.9 Даты
@@ -210,26 +208,7 @@ interface ErrorResponse {
 
 ⚠️ Оба кода выше возникают **асинхронно**, внутри фоновой задачи обработки аватара — они не приходят как HTTP-ответ ни на `/avatar/presign/`, ни на `/avatar/upload_complete/` (оба всегда отвечают `200`, если запрос сам по себе корректен). См. раздел 4.5.
 
-### 2.6 Коды модуля `projects` (`/projects`, `/positions`, `/applications`, `/project_roles`)
-
-| code | HTTP | detail |
-|---|---|---|
-| `NOT_FOUND_PROJECT` | 404 | `{ "project_id": number }` |
-| `NOT_FOUND_POSITION` | 404 | `{ "position_id": string }` |
-| `NOT_FOUND_MEMBER` | 404 | `{ "member_id": number }` |
-| `ALREADY_MEMBER` | 409 | `{}` |
-| `NOT_PENDING_APPLICATION` | 409 | `{}` — заявка уже обработана |
-| `TOO_LONG_TAG_NAME` | 400 | `{ "tag_name": string }` |
-| `TOO_LONG_NAME` | 400 | `{ "name": string }` |
-| `NOT_VALID_MEMBER_STATUS` | 404 | `{ "status": string, "action": string }` |
-| `NOT_FOUND_PROJECT_ROLE` | 404 | `{ "role_id": number }` |
-| `ROLE_ALREADY_EXISTS` | 409 | `{ "name": string }` |
-| `MAX_PROJECTS_LIMIT_EXCEEDED` | 400 | `{ "owner_id": number, "limit": number }` — лимит 3 проекта на пользователя |
-| `MAX_POSITIONS_PER_PROJECT_LIMIT_EXCEEDED` | 400 | `{ "project_id": number, "limit": number }` — лимит 5 позиций на проект |
-| `ALREADY_EXISTS` | 409 | `{ "slug": string }` — слаг проекта занят |
-| `PROJECT_ACCESS_DENIED` | 403 | `{}` — не хватает прав в проекте |
-
-### 2.7 Коды модуля `chats`
+### 2.6 Коды модуля `chats`
 
 | code | HTTP | detail |
 |---|---|---|
@@ -264,7 +243,7 @@ interface ErrorResponse {
 
 ⚠️ `ATTACHMENT_MEDIA_VALIDATION` (класс `AttachmentMediaValidationError`) в этой таблице **намеренно не указан** — он никогда не долетает до HTTP-ответа: возникает только внутри фонового воркера `ProccessAttachmentsCommandHandler` (см. 6.5), там же перехватывается и сворачивается в `attachment_status: "error"`. Клиенту как код ошибки API не отдаётся.
 
-### 2.8 Коды модуля `notifications`
+### 2.7 Коды модуля `notifications`
 
 | code | HTTP | detail |
 |---|---|---|
@@ -279,7 +258,7 @@ interface ErrorResponse {
 ### 3.1 Модель токенов
 
 - **Access-токен** (JWT): передаётся в заголовке `Authorization: Bearer <token>`, живёт **5 минут** (`ACCESS_TOKEN_EXPIRE_MINUTES=5`). Возвращается в теле JSON-ответа как `access_token`.
-- **Refresh-токен**: живёт **60 дней** (`REFRESH_TOKEN_EXPIRE_DAYS=60`). Никогда не появляется в JSON. Сервер сам кладёт/удаляет его в HttpOnly-cookie `refresh_token` при `login/refresh/oauth-callback` (`set_refresh_token`) и `logout` (`delete_refresh_token`). Параметры cookie: `Path=/`, `HttpOnly=true`, `Secure=true`, `SameSite=strict`. Важные следствия — раздел 10.2.
+- **Refresh-токен**: живёт **60 дней** (`REFRESH_TOKEN_EXPIRE_DAYS=60`). Никогда не появляется в JSON. Сервер сам кладёт/удаляет его в HttpOnly-cookie `refresh_token` при `login/refresh/oauth-callback` (`set_refresh_token`) и `logout` (`delete_refresh_token`). Параметры cookie: `Path=/`, `HttpOnly=true`, `Secure=true`, `SameSite=strict`. Важные следствия — раздел 9.2.
 - Один и тот же access-токен не инвалидируется при логауте (JWT stateless) — инвалидируется именно refresh-сессия.
 
 ### 3.2 `POST /users/register/`
@@ -326,7 +305,7 @@ Rate limit: 4 запроса / 5 минут (по IP+маршруту).
 
 ### 3.4 `POST /auth/refresh/`
 
-Без тела запроса. Refresh-токен читается автоматически из cookie `refresh_token` (её нужно просто передавать вместе с запросом — во Flutter это означает cookie-aware HTTP-клиент, см. раздел 10.2).
+Без тела запроса. Refresh-токен читается автоматически из cookie `refresh_token` (её нужно просто передавать вместе с запросом — во Flutter это означает cookie-aware HTTP-клиент, см. раздел 9.2).
 
 Rate limit: 4 запроса / 5 минут.
 
@@ -560,167 +539,13 @@ interface ContactDTO { profile_id: number; provider: string; contact: string }
 
 Оба требуют владения профилем либо прав `profile:update` + `user:update`.
 
-
-## 5. Проекты
-
-Все эндпоинты проектов **требуют авторизации** (`CurrentUserJWTData`), кроме `GET /positions/`, `GET /positions/{id}/` и `GET /project_roles/`, которые публичны. Лимиты: **максимум 3 проекта** на пользователя (`MAX_PROJECTS_LIMIT_EXCEEDED`), **максимум 5 открытых позиций** на проект (`MAX_POSITIONS_PER_PROJECT_LIMIT_EXCEEDED`).
-
-### 5.1 Проекты (`/projects`)
-
-| Метод | Путь | Request | Response |
-|---|---|---|---|
-| POST | `/projects/` | `ProjectCreateRequest` | `201`, пусто |
-| GET | `/projects/` | Query `GetProjectsRequest {name?, slug?, tags?: string[], page=1, page_size=20, sort?}` | `PageResult<ProjectDTO>` |
-| GET | `/projects/my/` | Query `{page, page_size}` | `PageResult<ProjectDTO>` — проекты, где текущий юзер владелец/участник |
-| GET | `/projects/{project_id}/` | — | `ProjectDTO` |
-| PUT | `/projects/{project_id}/` | `ProjectUpdateRequest` | `200`, пусто |
-| DELETE | `/projects/{project_id}/` | — | `204` (только владелец/админ) |
-
-```ts
-// ProjectCreateRequest
-{
-  name: string;                 // ≤ 200 симв. (TOO_LONG_NAME)
-  slug: string;                 // ≤ 210 симв., должен быть уникален (ALREADY_EXISTS)
-  small_description?: string | null;
-  description?: string | null;   // ⚠️ на выходе это поле называется full_description!
-  visibility?: "private" | "internal" | "public" | null;  // по умолчанию "public"
-  meta_data?: Record<string, unknown> | null;
-  tags?: string[] | null;        // каждый ≤ 50 симв. (TOO_LONG_TAG_NAME)
-}
-// ProjectUpdateRequest — то же самое, но без slug (slug неизменяем после создания) и без small_description
-{ name?, description?, visibility?, meta_data?, tags? }
-```
-
-```ts
-interface ProjectDTO {
-  id: number;
-  owner_id: number;
-  name: string;
-  slug: string;
-  small_description: string | null;
-  full_description: string | null;   // ⚠️ приходит запрос как "description", а в ответе — "full_description"
-  visibility: "private" | "internal" | "public";
-  meta_data: Record<string, unknown>;
-  tags: string[];
-  created_at: string | null;
-  updated_at: string | null;
-  memberships: ProjectMemberDTO[];    // список участников прямо внутри проекта
-}
-interface ProjectMemberDTO {
-  id: number; project_id: number; user_id: number; role_id: number | null;
-  status: "invited" | "pending" | "active" | "suspended" | "removed";
-  invited_by: number | null; joined_at: string | null;
-  permissions_overrides: Record<string, boolean>;
-  role: ProjectRoleDTO | null;
-}
-```
-
-Ошибки: `400 TOO_LONG_NAME/TOO_LONG_TAG_NAME/MAX_PROJECTS_LIMIT_EXCEEDED`, `403 PROJECT_ACCESS_DENIED`, `404 NOT_FOUND_PROJECT`, `409 ALREADY_EXISTS`.
-
-### 5.2 Участники и приглашения
-
-| Метод | Путь | Права | Request | Response |
-|---|---|---|---|---|
-| POST | `/projects/{project_id}/invite/` | `member:invite` (проектная роль) | `InviteMemberRequest {user_id, role_id, permissions_overrides?}` | `200`, пусто |
-| POST | `/projects/{project_id}/members/accept/` | — (принять СВОЁ приглашение) | — | `200`, пусто |
-| POST | `/projects/{project_id}/members/{user_id}/role/` | проектная роль | `MemberChangeRoleRequest {role_id: number}` | `200`, пусто |
-| PUT | `/projects/{project_id}/members/{user_id}/permissions/` | проектная роль | `MemberUpdatePermissionsRequest {permissions_overrides: Record<string, boolean>}` | `200`, пусто |
-| **GET** | **`/profiles/invites/my/`** ⚠️ | — | Query `{page, page_size}` (стандартная пагинация) | `PageResult<MemberDTO>` — свои входящие приглашения |
-
-Приглашение создаётся со статусом `invited`. `accept/` переводит `invited`/`pending` → `active`. Повторное приглашение уже состоящего в проекте пользователя → `409 ALREADY_MEMBER`.
-
-⚠️ **Ещё раз обращаем внимание**: список "мои приглашения в проекты" физически лежит под префиксом `/profiles`, а не `/projects` — это баг/особенность роутинга в реальном коде (файл `app/projects/routes/v1/profiles.py`, подключённый с `prefix="/profiles"`), сохранён как есть, потому что так работает бэкенд.
-
-```ts
-interface MemberDTO {   // используется и в /profiles/invites/my/, и в состав входит в некоторые ответы
-  id: number; project_id: number; user_id: number; role_id: number | null;
-  status: "invited" | "pending" | "active" | "suspended" | "removed";
-  invited_by: number | null; joined_at: string | null;
-  permissions_overrides: Record<string, boolean>;
-  role: ProjectRoleDTO | null;
-  project?: ProjectDTO | null;
-}
-```
-
-Ошибки: `403 ACCESS_DENIED / PROJECT_ACCESS_DENIED`, `404 NOT_FOUND_PROJECT/NOT_FOUND_PROJECT_ROLE/NOT_FOUND_MEMBER`, `409 ALREADY_MEMBER`.
-
-### 5.3 Позиции (`/positions`, плюс вложенные под `/projects/{id}/positions/`)
-
-| Метод | Путь | Авторизация | Request | Response |
-|---|---|---|---|---|
-| POST | `/projects/{project_id}/positions/` | 🔒 | `PositionCreateRequest` | `201`, пусто |
-| GET | `/projects/{project_id}/positions/` | 🔒 (несмотря на то, что похоже на публичный список) | Query `GetProjectPositionRequest {title?, required_skills?: string[], is_open=true, location_type?, expected_load?, page=1, page_size=20, sort?}` | `PageResult<PositionDTO>` |
-| GET | `/positions/` | 🔓 | Query `GetPositionsRequest {project_id?, title?, required_skills?, is_open=true, location_type?, expected_load?, page, page_size, sort}` | `PageResult<PositionDTO>` |
-| GET | `/positions/{position_id}/` | 🔓 | — | `PositionDTO` |
-| PUT | `/positions/{position_id}/` | 🔒 | `PositionUpdateRequest` | `200`, пусто |
-| DELETE | `/positions/{position_id}/` | 🔒 | — | `204` |
-| GET | `/positions/{position_id}/applications/` | 🔒 | Query `GetPositionApplicationsRequest {project_id?, candidate_id?, status="pending", page=1, page_size=20, sort?}` | `PageResult<ApplicationDTO>` |
-| POST | `/positions/{position_id}/applications/` | 🔒 | `ApplicationCreateRequest {message?: string}` | `201`, пусто — подать заявку |
-
-```ts
-// PositionCreateRequest / PositionUpdateRequest
-{
-  title: string;
-  description: string;
-  responsibilities?: string | null;
-  required_skills?: string[] | null;
-  location_type?: "remote" | "onsite" | "hybrid" | null;
-  expected_load?: "low" | "medium" | "high" | null;
-}
-interface PositionDTO {
-  id: string;          // UUID
-  project_id: number;
-  title: string;
-  description: string;
-  responsibilities: string | null;
-  required_skills: string[];
-  is_open: boolean;
-  location_type: "remote" | "onsite" | "hybrid";
-  expected_load: "low" | "medium" | "high";
-}
-```
-
-Ошибки: `400 MAX_POSITIONS_PER_PROJECT_LIMIT_EXCEEDED`, `404 NOT_FOUND_POSITION / NOT_FOUND_PROJECT`.
-
-### 5.4 Заявки (`/applications`)
-
-| Метод | Путь | Request | Response |
-|---|---|---|---|
-| GET | `/applications/` | Query `GetApplicationsRequest {project_id?, position_id?, candidate_id?, status="pending", page, page_size, sort}` | `PageResult<ApplicationDTO>` |
-| GET | `/applications/me/` | Query `GetMeApplicationsRequest {position_id?, project_id?, status="pending", page, page_size, sort}` | `PageResult<ApplicationDTO>` — заявки текущего юзера-кандидата |
-| POST | `/applications/{application_id}/approve/` | — | `200`, пусто |
-| POST | `/applications/{application_id}/reject/` | — | `200`, пусто |
-
-```ts
-interface ApplicationDTO {
-  id: string; project_id: number; position_id: string; candidate_id: number;
-  status: "pending" | "accepted" | "rejected";
-  message: string | null;
-  decided_by: number | null;
-  decided_at: string | null;
-}
-```
-
-Ошибки: `409 NOT_PENDING_APPLICATION` (approve/reject уже решённой заявки).
-
-### 5.5 Роли проекта (`/project_roles`) 🔓 публичный, read-only
-
-**`GET /project_roles/`** — Query: `{name?, page, page_size, sort}`. Response: `PageResult<ProjectRoleDTO>`.
-
-```ts
-interface ProjectRoleDTO { id: number; name: string; permissions: Record<string, boolean> }
-```
-
-⚠️ Через REST API создать/изменить роль проекта **нельзя** — в коде нет POST/PUT для `/project_roles/`. Доступны только 4 сид-роли (см. раздел 9.2). `RoleCreateRequest`/`RoleUpdateRequest`-схемы существуют в коде, но ни на один роут не навешаны — это мёртвый код, игнорировать.
-
-
-## 6. Чаты — REST
+## 5. Чаты — REST
 
 Базовый путь для всех эндпоинтов ниже (если не указано иное) — `/chats` и вложенные `/chats/{chat_id}/...`. Все требуют авторизации.
 
-> ⚠️ **Раздел полностью пересобран в версии 2.1** по коду на коммите `7162e9b`. Главные добавления относительно версии 2.0: реакции (6.7), голосовые сообщения и видео-кружки (6.5), поле `profile` в DTO сообщений и участников, `last_message` в `ChatDTO`. (Ссылка на расширенную версию с построчными ссылками на код, ранее заявленную как `docs/chats-module.md`, убрана — такого файла в репозитории нет.)
+> ⚠️ **Раздел полностью пересобран в версии 2.1** по коду на коммите `7162e9b`. Главные добавления относительно версии 2.0: реакции (5.7), голосовые сообщения и видео-кружки (5.5), поле `profile` в DTO сообщений и участников, `last_message` в `ChatDTO`. (Ссылка на расширенную версию с построчными ссылками на код, ранее заявленную как `docs/chats-module.md`, убрана — такого файла в репозитории нет.)
 
-### 6.0 Карта путей модуля (из `app/chats/routers.py`)
+### 5.0 Карта путей модуля (из `app/chats/routers.py`)
 
 | Префикс | Файл роутера | Тег | Подключён? |
 |---|---|---|---|
@@ -732,13 +557,13 @@ interface ProjectRoleDTO { id: number; name: string; permissions: Record<string,
 | `/chats` (ws) | `routes/v1/ws.py` | `chats-ws` | ✅ |
 | `/chats/{chat_id}/messages/{message_id}/reactions` | `routes/v1/reactions.py` | `chat-reactions` | ✅ |
 
-### 6.1 Типы чатов и роли — коротко
+### 5.1 Типы чатов и роли — коротко
 
-`ChatType`: `"direct" | "group" | "supergroup" | "channel"`. У каждого чата есть роли участников с числовым `role_id` (owner=1, admin=2, editor=3, direct=4, member=5, viewer=6) и построчной картой прав (`chat:delete`, `member:kick`, `message:send`, ...). Полная таблица — раздел 9.1. Лимиты участников по типу: direct=2, group=500, supergroup=1 000 000, channel=10 000 000 (иначе — обычный `MAX_MEMBERS=1000`).
+`ChatType`: `"direct" | "group" | "supergroup" | "channel"`. У каждого чата есть роли участников с числовым `role_id` (owner=1, admin=2, editor=3, direct=4, member=5, viewer=6) и построчной картой прав (`chat:delete`, `member:kick`, `message:send`, ...). Полная таблица — раздел 8.1. Лимиты участников по типу: direct=2, group=500, supergroup=1 000 000, channel=10 000 000 (иначе — обычный `MAX_MEMBERS=1000`).
 
 `ChatFanoutStrategy` (внутреннее, клиенту не отдаётся): `fanout_on_write | active_subscribers | channel_subscribers`.
 
-### 6.2 Чаты — CRUD, join/leave
+### 5.2 Чаты — CRUD, join/leave
 
 ⚠️ `PATCH /chats/{chat_id}/` — настоящий partial update: поля, которых нет в теле запроса,
 остаются как были. Обнулить `name`/`description` через `null` нельзя.
@@ -807,7 +632,7 @@ interface ReadDetail { last_read_message_seq: number; last_read_at: string }
 
 ⚠️ **`409 DIRECT_CHAT_EXISTS` в реальности не возникает** (см. предупреждение в разделе 2.7) — повторный `POST /chats/` с `chat_type: "direct"` на того же собеседника создаст второй, дублирующийся direct-чат. Если клиенту нужна идемпотентность 1:1-чатов, дедуп нужно делать на своей стороне до вызова создания.
 
-### 6.3 Участники чата
+### 5.3 Участники чата
 
 | Метод | Путь | Rate limit | Request | Response |
 |---|---|---|---|---|
@@ -865,7 +690,7 @@ interface MemberPresenceDTO { user_id: number; is_online: boolean }
 
 Ошибки: `403 NOT_CHAT_MEMBER/CHAT_ACCESS_DENIED`, `404 NOT_FOUND_CHAT`, `409 ALREADY_CHAT_MEMBER`, `400 MEMBER_LIMIT_EXCEEDED`, `400 TOO_LONG_CHAT_ROLE_NAME`.
 
-### 6.4 Сообщения
+### 5.4 Сообщения
 
 | Метод | Путь | Rate limit | Request/Query | Response |
 |---|---|---|---|---|
@@ -884,7 +709,7 @@ interface MemberPresenceDTO { user_id: number; is_online: boolean }
   content?: string | null;          // ≤ 4096 симв.
   reply_to_id?: string | null;      // UUID сообщения, на которое отвечаем
   message_type?: "text" | "image" | "file" | "reply" | "voice" | "video_note";  // по умолчанию "text"
-  upload_tokens?: string[];         // UUID'ы слотов вложений (см. 6.5), по умолчанию []
+  upload_tokens?: string[];         // UUID'ы слотов вложений (см. 5.5), по умолчанию []
 }
 // ForwardMessageRequest
 { source_chat_id: string; source_message_id: string; comment?: string | null }  // comment ≤ 4096
@@ -898,7 +723,7 @@ interface MemberPresenceDTO { user_id: number; is_online: boolean }
 ⚠️ **Контент сообщения хранится и отдаётся как есть**, без HTML-экранирования: в `content`
 придёт ровно то, что ввёл автор (`<`, `&`, `"`). Экранирование при выводе — забота клиента.
 
-⚠️ **`message_type` расширен**: добавлены `"voice"` и `"video_note"`. Для голосового нужно передать `message_type: "voice"` **и** `upload_tokens` со слотом, запрошенным с `attachment_type: "voice"` (см. 6.5).
+⚠️ **`message_type` расширен**: добавлены `"voice"` и `"video_note"`. Для голосового нужно передать `message_type: "voice"` **и** `upload_tokens` со слотом, запрошенным с `attachment_type: "voice"` (см. 5.5).
 
 **`Idempotency-Key`** (необязательный заголовок при отправке **и пересылке** сообщения — `POST /messages/` и `POST /messages/forward/`): результат кэшируется в Redis на **86 400 сек (24 часа)**; повторный запрос с тем же ключом вернёт закэшированный `MessageDTO` первой отправки. Ключ действует в пределах пары «пользователь + чат» и отдельно для отправки и пересылки. Если предыдущий запрос с тем же ключом ещё обрабатывается (lock на 30 сек) — `409 IDEMPOTENCY_CONFLICT`. Рекомендуется всегда генерировать UUID на клиенте перед отправкой (важно для сценария "нет сети → повтор при реконнекте", чтобы не задублировать сообщение).
 
@@ -925,17 +750,17 @@ interface MessagesDTO {   // курсорная пагинация, has_next —
 }
 ```
 
-**`MessageDTO.reactions`** (`ReactionGroupDTO[]`, см. 6.7.3) присутствует в каждом сообщении списка/деталей/контекста/WS-replay. Обновляется по WS-событию `reaction_update`. Отдельный `GET .../reactions/` нужен только для пагинации списка «кто поставил».
+**`MessageDTO.reactions`** (`ReactionGroupDTO[]`, см. 5.7.3) присутствует в каждом сообщении списка/деталей/контекста/WS-replay. Обновляется по WS-событию `reaction_update`. Отдельный `GET .../reactions/` нужен только для пагинации списка «кто поставил».
 
 **Порядок и курсор:** `GET /messages/` идёт `direction="backward"` — от новых к старым. `next_cursor` — `seq` последнего (самого старого) элемента страницы, заполняется **только когда `has_next == true`**, иначе `null`.
 
 ⚠️ **Никакого окна на редактирование и истории правок в коде нет** (ранее в этом разделе ошибочно указывались несуществующие константы `MAX_EDIT_WINDOW_HOURS`/`MAX_EDIT_HISTORY`). Реальные правила:
 - **`PATCH .../messages/{message_id}/` (правка)** — разрешена **только автору сообщения** (`message.author_id == user_id`), без ограничения по времени и без permission-based обхода; чужое сообщение поправить нельзя вообще, даже с `message:delete`/`chat:update`. При несовпадении автора — `403 CHAT_ACCESS_DENIED`. Хранится только текущая версия текста (`is_edited: true`), прошлые версии нигде не сохраняются.
-- **`DELETE .../messages/{message_id}/` (удаление)** — разрешено автору **или** любому участнику с правом `message:delete` (роли `owner`/`admin`/`editor`, см. 9.1), в отличие от правки. Мягкое удаление (`is_deleted = true`), контент из БД физически не стирается.
+- **`DELETE .../messages/{message_id}/` (удаление)** — разрешено автору **или** любому участнику с правом `message:delete` (роли `owner`/`admin`/`editor`, см. 8.1), в отличие от правки. Мягкое удаление (`is_deleted = true`), контент из БД физически не стирается.
 
 Ошибки: `400 MESSAGE_TOO_LONG/INVALID_MESSAGE/SLOW_MODE_OUT_OF_RANGE`, `403 NOT_CHAT_MEMBER/CHAT_ACCESS_DENIED`, `404 NOT_FOUND_CHAT/NOT_FOUND_MESSAGE`, `409 IDEMPOTENCY_CONFLICT`, `429 SLOW_MODE_LIMIT`.
 
-### 6.5 Вложения — двухшаговая загрузка через presigned PUT (детали отличаются от аватара, см. 10.4)
+### 5.5 Вложения — двухшаговая загрузка через presigned PUT (детали отличаются от аватара, см. 9.4)
 
 **Типы вложений.** `AttachmentType`: `"image" | "video" | "file" | "voice" | "video_note"`. `AttachmentStatus`: `"pending" | "success" | "error"`.
 
@@ -992,7 +817,7 @@ Array<{
 
 Внутри фонового воркера (`ProccessAttachmentsCommandHandler`) причина падения в `error` может быть любой из: несовпадение размера с заявленным, несовпадение реального MIME (magic bytes) с заявленным, инфраструктурная ошибка стораджа, а для `voice`/`video_note` — дополнительно любая из `AttachmentRejectionReason` (`size_limit_exceeded`, `duration_limit_exceeded`, `resolution_limit_exceeded` — только video_note, `frame_rate_limit_exceeded` — только video_note, `metadata_unreadable`, `probe_timeout`, `invalid_media` — напр. voice без аудиодорожки или с видеодорожкой, video_note не с одной видеодорожкой). Конкретная причина **никуда клиенту не передаётся** — только `attachment_status: "error"`, различить причины на фронте нельзя.
 
-**Шаг 4 — отправить сообщение**, передав `upload_tokens` из шагов 1/3 в `POST /chats/{chat_id}/messages/` (раздел 6.4) с корректным `message_type`.
+**Шаг 4 — отправить сообщение**, передав `upload_tokens` из шагов 1/3 в `POST /chats/{chat_id}/messages/` (раздел 5.4) с корректным `message_type`.
 
 **Скачивание:** `GET /chats/{chat_id}/messages/{message_id}/attachments/{attachment_id}/download-url/` → `AttachmentDownloadUrlDTO { attachment_id: string; url: string; expires_in: number }` (ссылка живёт 300 секунд, генерировать заново при истечении).
 
@@ -1012,7 +837,7 @@ interface AttachmentDTO {
 
 Ошибки: `400 ATTACHMENT_VALIDATION/INVALID_UPLOAD_TOKEN/ATTACHMENT_LIMIT_EXCEEDED/EMPTY_ATTACHMENT_UPLOAD_REQUEST`, `403 CHAT_ACCESS_DENIED/NOT_CHAT_MEMBER`, `404 NOT_FOUND_CHAT/ATTACHMENT_NOT_FOUND`.
 
-### 6.6 Звонки (LiveKit)
+### 5.6 Звонки (LiveKit)
 
 | Метод | Путь | Rate limit | Request | Response |
 |---|---|---|---|---|
@@ -1029,9 +854,9 @@ interface LiveKitParticipantsDTO { identity: string; name: string; state: number
 
 Ошибки: `502 LIVEKIT_ERROR {reason}`, `502 LIVEKIT_UNAUTHORIZED`, `404 NO_ACTIVE_CALL`, `409 ACTIVE_CALL_EXISTS`.
 
-### 6.7 Реакции на сообщения 🆕
+### 5.7 Реакции на сообщения 🆕
 
-#### 6.7.1 Эндпоинты
+#### 5.7.1 Эндпоинты
 
 Базовый префикс: `/chats/{chat_id}/messages/{message_id}/reactions`
 
@@ -1045,16 +870,16 @@ interface LiveKitParticipantsDTO { identity: string; name: string; state: number
 
 `{emoji}` — path-параметр, строка 1..32, **обязательно URL-encoded** (`👍` → `%F0%9F%91%8D`).
 
-#### 6.7.2 Семантика (Telegram-like)
+#### 5.7.2 Семантика (Telegram-like)
 
 - Пользователь может поставить **несколько** разных эмодзи на одно сообщение — до `MAX_REACTIONS_PER_USER_PER_MESSAGE = 3`.
 - `PUT .../reactions/{emoji}/` — добавляет эмодзи к набору пользователя. Повтор того же эмодзи — no-op, ответ `204`.
 - `DELETE .../reactions/{emoji}/` — снимает конкретный эмодзи. Снятие отсутствующего — no-op, `204`.
 - `PUT .../reactions/` с телом `{ "reactions": ["👍","🔥"] }` — **полная замена** набора пользователя (как `messages.sendReaction` в Telegram). Пустой список = снять всё.
 - Каждое результирующее изменение публикует **ровно одно** событие `chats.message.reaction_updated` на сообщение — со снимком всех групп (не дельтой).
-- Разрешён только курированный каталог эмодзи (`app/chats/reactions/catalog.py`, ~73 шт.). Плюс настройки чата (6.7.5).
+- Разрешён только курированный каталог эмодзи (`app/chats/reactions/catalog.py`, ~73 шт.). Плюс настройки чата (5.7.5).
 
-#### 6.7.3 Ответ GET
+#### 5.7.3 Ответ GET
 
 ```ts
 interface ReactionGroupDTO {
@@ -1079,7 +904,7 @@ interface MessageReactionsDTO {
 
 Реакции также приходят **прямо в `MessageDTO.reactions`** (`ReactionGroupDTO[]`) в списке сообщений, деталях, контексте и в WS-replay (`ws.history`) — отдельный GET нужен только для пагинации «кто поставил».
 
-#### 6.7.4 Лимиты и ошибки
+#### 5.7.4 Лимиты и ошибки
 
 - `MAX_DISTINCT_REACTIONS_PER_MESSAGE = 20` — максимум различных эмодзи на сообщение.
 - `MAX_REACTIONS_PER_USER_PER_MESSAGE = 3` — максимум эмодзи от одного пользователя.
@@ -1096,7 +921,7 @@ interface MessageReactionsDTO {
 | `NOT_CHAT_MEMBER` | 403 | `{ "chat_id": string, "user_id": number }` | участник забанен |
 | `NOT_FOUND_MESSAGE` | 404 | `{ "message_id": string }` | нет сообщения / другой чат / удалено |
 
-#### 6.7.5 Настройки реакций на уровне чата
+#### 5.7.5 Настройки реакций на уровне чата
 
 `ChatDTO` / `ChatDetailDTO` содержат:
 - `reactions_mode: "all" | "some" | "none"` (по умолчанию `"all"`);
@@ -1104,7 +929,7 @@ interface MessageReactionsDTO {
 
 Меняются через `PATCH /chats/{chat_id}/` (`chat:update`), поля `reactions_mode`, `allowed_reactions`. Изменение уходит в `chat_updated`.
 
-#### 6.7.6 WS-событие
+#### 5.7.6 WS-событие
 
 Доменное событие `chats.message.reaction_updated` → WS-тип `reaction_update`. Payload **не содержит `MessageDTO`** — только компактный снимок реакций. При включённом коалесинге (`REACTIONS_COALESCE_ENABLED`, по умолчанию) всплеск реакций на «вирусном» сообщении схлопывается в ≤ 1 рассылку за `REACTIONS_COALESCE_WINDOW_MS` (500 мс), снимок всегда финальный.
 
@@ -1133,11 +958,11 @@ interface MessageReactionsDTO {
 Обработка: заменить группы реакций у локального сообщения `message_id` на `reaction.groups`. `reacted_by_me` в этом событии не персонализируется — клиент трекает свой выбор оптимистично (или сверяется через GET). После переподключения актуальные реакции для видимых сообщений приходят в `ws.history` / перезапросом списка сообщений.
 
 
-## 7. Чаты — WebSocket
+## 6. Чаты — WebSocket
 
 ⚠️ Это самый важный раздел документа для реализации чата на Flutter — в предыдущей версии доков он был описан на 5% от реального объёма (были упомянуты только `ws.ready` и `ws.error`). Ниже — полный протокол, вычитанный построчно из `app/chats/routes/v1/ws.py`, `app/chats/commands/websockets/*.py`, `app/chats/dtos/delivery.py`, `app/chats/services/delivery_router.py`, `app/chats/models/{chat,message}.py`.
 
-### 7.1 Подключение
+### 6.1 Подключение
 
 ```
 WS  {BASE_URL}/api/v1/chats/ws/?token=<access_token>
@@ -1160,17 +985,17 @@ WS  {BASE_URL}/api/v1/chats/ws/?token=<access_token>
 
 **Subprotocol:** если клиент предлагает `Sec-WebSocket-Protocol: chat.v1`, сервер его подтвердит; необязательно, но можно указать для строгости.
 
-### 7.2 Жизненный цикл соединения и heartbeat
+### 6.2 Жизненный цикл соединения и heartbeat
 
-1. Сразу после установки соединения сервер шлёт `ws.ready` (см. 7.3).
+1. Сразу после установки соединения сервер шлёт `ws.ready` (см. 6.3).
 2. Каждые `heartbeat_interval` секунд (по умолчанию **30**) сервер сам присылает `{"type": "ws.ping", "connection_id": "...", "ts": "..."}`.
 3. Клиент должен отвечать **любым** валидным сообщением (в идеале `{"op": "pong"}`) не реже, чем раз в `heartbeat_timeout` секунд (по умолчанию **75**) — иначе сервер закроет соединение кодом **1001** ("heartbeat timeout"). Практически: любое сообщение от клиента (включая `subscribe`/`ping`/что угодно) продлевает таймаут, но для чистоты протокола лучше явно отвечать `pong` на каждый `ws.ping`.
 4. Максимум **2 одновременных соединения** на пользователя (`WS_MAX_CONNECTIONS_PER_USER=2`). Третье подключение вызовет закрытие **самого старого** соединения кодом **1012** ("connection limit exceeded"). Это значит: если пользователь открывает приложение на третьем устройстве/вкладке, где-то на другом устройстве WS отвалится — стоит реализовать авто-реконнект с обработкой этого кода.
 5. Максимальный размер входящего фрейма от клиента — 64 КБ (`WS_MAX_CLIENT_FRAME_BYTES=65536`).
 
-**Рекомендованная логика реконнекта:** при разрыве — переподключиться, затем отправить `resume` со словарём `{chat_id: last_known_seq}` по всем чатам, которые сейчас открыты/видны в UI (максимум 20 чатов за раз — см. 7.3).
+**Рекомендованная логика реконнекта:** при разрыве — переподключиться, затем отправить `resume` со словарём `{chat_id: last_known_seq}` по всем чатам, которые сейчас открыты/видны в UI (максимум 20 чатов за раз — см. 6.3).
 
-### 7.3 Команды клиент → сервер
+### 6.3 Команды клиент → сервер
 
 Отправляются как `{"op": "...", ...}` текстовым WS-фреймом (JSON).
 
@@ -1192,7 +1017,7 @@ interface WSClientCommand {
 }
 ```
 
-### 7.4 События сервер → клиент
+### 6.4 События сервер → клиент
 
 Общий конверт для событий, доставляемых через Redis stream на WS-gateway:
 ```ts
@@ -1206,7 +1031,7 @@ interface MessagePayloadWS {
   event_name: string;                   // "chats.message.readed", "chats.member.kicked", ...
   event: Record<string, any>;           // ДЕЛЬТА события: поля, специфичные для этого типа (см. таблицу)
   message: MessageDTO | null;           // полный DTO сообщения — только для new_message/message_edited
-  reaction?: ReactionUpdateWSDTO | null; // заполнен только для type = "reaction_update" (см. 6.7.6)
+  reaction?: ReactionUpdateWSDTO | null; // заполнен только для type = "reaction_update" (см. 5.7.6)
 }
 
 interface DeliveryDTO {
@@ -1244,7 +1069,7 @@ gateway), поэтому один и тот же кадр может прийт�
 | `chat_created` | Чат создан | `{ created_by, name, member_ids, chat_type, member_count }` | `null` |
 | `chat_updated` | Изменены настройки чата | `{ updated_by, name, description, is_public, admin_only, slow_mode_seconds, permissions, reactions_mode, allowed_reactions }` | `null` |
 | `chat_deleted` | Чат удалён | `{ deleted_by }` | `null` — убрать чат из списка |
-| `reaction_update` | Поставили/сняли/заменили реакцию на сообщении | `{ message_id, actor_id, action }` | `null`; снимок групп — в `payload.reaction.groups` (полный текущий набор). Под нагрузкой рассылки коалесятся (окно 500 мс). Подробно — 6.7.6 |
+| `reaction_update` | Поставили/сняли/заменили реакцию на сообщении | `{ message_id, actor_id, action }` | `null`; снимок групп — в `payload.reaction.groups` (полный текущий набор). Под нагрузкой рассылки коалесятся (окно 500 мс). Подробно — 5.7.6 |
 | `attachment_success` | Вложение(я) успешно обработаны после `confirm/` (шлётся лично пользователю-загрузчику, не всей подписке чата) | — | `payload` здесь другой: `AttachmentSuccessPayload { user_id, chat_id, tokens }`; `delivery.require_subscription=false`, `recipients=[user_id]` |
 
 `member_kick`, `member_left` и `member_banned` (`ban: true`) дополнительно доставляются
@@ -1260,27 +1085,27 @@ gateway), поэтому один и тот же кадр может прийт�
 | `ws.ready` | `{ type, payload: { connection_id: string; gateway_id: string; heartbeat_interval: number; heartbeat_timeout: number; reconnect: { mode: "last_seq_per_chat"; op: "resume" } } }` | Сразу после подключения |
 | `ws.subscribed` | `{ type, chat_id: string, payload: { last_seq: number \| null }, ts }` | Ответ на `subscribe`/`resume` |
 | `ws.unsubscribed` | `{ type, chat_id: string, payload: {}, ts }` | Ответ на `unsubscribe` |
-| `ws.history` | `{ type, chat_id: string, payload: { after_seq: number; messages: MessageDTO[]; has_more: boolean; next_last_seq: number }, ts }` | Досылается после `ws.subscribed`, только если был передан `last_seq`/курсор. `messages` — полные `MessageDTO` (раздел 6.4), с уже прикреплёнными download-ссылками для вложений. |
+| `ws.history` | `{ type, chat_id: string, payload: { after_seq: number; messages: MessageDTO[]; has_more: boolean; next_last_seq: number }, ts }` | Досылается после `ws.subscribed`, только если был передан `last_seq`/курсор. `messages` — полные `MessageDTO` (раздел 5.4), с уже прикреплёнными download-ссылками для вложений. |
 | `ws.pong` | `{ type: "ws.pong", payload: {} }` | Ответ на клиентский `{"op": "ping"}` |
 | `ws.ping` | `{ type: "ws.ping", connection_id: string, ts }` ⚠️ без обёртки `payload` | Проактивный heartbeat-пинг от сервера, раз в `heartbeat_interval` сек |
 | `ws.error` | { type: "ws.error", code: "BAD_COMMAND" \| "BAD_FRAME" \| "NOT_CHAT_MEMBER", detail: string, ts: string } ⚠️ без payload | `subscribe`/`resume` на чат, где отправитель не состоит (или забанен) или Нераспарсенная/невалидная команда от клиента |
 
-### 7.5 Практическая схема работы для Flutter-клиента
+### 6.5 Практическая схема работы для Flutter-клиента
 
 1. Установить соединение с `?token=...`. Слушать `ws.ready`, сохранить `heartbeat_interval`/`heartbeat_timeout`.
 2. На каждый экран чата — слать `{"op": "subscribe", "chat_id": "...", "last_seq": <последний известный seq из локального кэша>}`.
-3. При получении `new_message`/`message_edited` — брать готовое сообщение из `payload.message`. Для остальных доменных событий (`message_deleted`, `messages_read`, `member_*`, `chat_*`) `payload.message` = `null`, а всё нужное лежит в дельте `payload.event` (см. 7.4) — рефетч не нужен. Для `reaction_update` — брать `payload.reaction` (компактный снимок групп, см. 6.7.6). Любое доменное событие дедуплицировать по `payload.event_id`: доставка at-least-once.
+3. При получении `new_message`/`message_edited` — брать готовое сообщение из `payload.message`. Для остальных доменных событий (`message_deleted`, `messages_read`, `member_*`, `chat_*`) `payload.message` = `null`, а всё нужное лежит в дельте `payload.event` (см. 6.4) — рефетч не нужен. Для `reaction_update` — брать `payload.reaction` (компактный снимок групп, см. 5.6.6). Любое доменное событие дедуплицировать по `payload.event_id`: доставка at-least-once.
 4. На `ws.ping` отвечать `{"op": "pong"}`.
 5. При разрыве соединения — переподключиться с экспоненциальным backoff, затем отправить `resume` с курсорами по всем открытым в UI чатам (≤20).
 6. При закрытии с кодом `1012` — значит открыто больше 2 соединений на аккаунт; просто переподключиться нормально (не ошибка, а следствие лимита).
 7. Не полагаться на `typing_start/stop` и `call_*` события — сейчас не реализованы бэкендом.
 
 
-## 8. Уведомления
+## 7. Уведомления
 
 ⚠️ Модуль полностью отсутствовал в предыдущей версии документа. Пути — `/devices` и `/notifications` (не вложены друг в друга).
 
-### 8.1 Регистрация устройства для push
+### 7.1 Регистрация устройства для push
 
 **`POST /devices/`** 🔒
 ```ts
@@ -1289,7 +1114,7 @@ gateway), поэтому один и тот же кадр может прийт�
 ```
 `token` — это токен FCM/APNs устройства. **Response `201`**, тело пустое.
 
-### 8.2 Список уведомлений
+### 7.2 Список уведомлений
 
 **`GET /notifications/`** 🔒 — Query: `{ is_read?: boolean; page=1; page_size=20; sort="created_at:desc" }`.
 
@@ -1298,7 +1123,7 @@ gateway), поэтому один и тот же кадр может прийт�
 ```ts
 interface NotificationDTO {
   id: number; user_id: number;
-  type: "system" | "project" | "chat";
+  type: "system" | "chat";
   title: string;
   message: string | null;
   payload: Record<string, unknown>;   // произвольная структура, зависит от type (например для чата может содержать chat_id/message_id — конкретная схема на бэке не типизирована жёстко, обрабатывать defensively)
@@ -1307,22 +1132,22 @@ interface NotificationDTO {
 }
 ```
 
-### 8.3 Счётчик непрочитанных
+### 7.3 Счётчик непрочитанных
 
 **`GET /notifications/unread_count/`** 🔒 → `{ unread_count: number }`.
 
-### 8.4 Отметить прочитанным
+### 7.4 Отметить прочитанным
 
 **`PATCH /notifications/{notification_id}/read/`** 🔒 — Request: `{ is_read: boolean = true }` (можно и снять отметку, передав `false`). Response `200`, тело пустое. Ошибки: `403 NOTIFICATION_ACCESS_DENIED`, `404 NOT_FOUND_NOTIFICATION`.
 
 **`PATCH /notifications/read_all/`** 🔒 ⚠️ — Response `200`, тело — **голое число** (не объект!), например `7` — количество отмеченных уведомлений.
 
 
-## 9. Сводка ролей и прав
+## 8. Сводка ролей и прав
 
-Три независимые системы ролей в проекте — не путать между собой: системные роли auth (раздел 3.16), роли участников чата (9.1), роли участников проекта (9.2). Все три идентифицируются разными числовыми id в разных таблицах.
+Три независимые системы ролей в проекте — не путать между собой: системные роли auth (раздел 3.16), роли участников чата (8.1), роли участников проекта (8.2). Все три идентифицируются разными числовыми id в разных таблицах.
 
-### 9.1 Роли чата (`ChatRolesEnum`) — полная матрица прав
+### 8.1 Роли чата (`ChatRolesEnum`) — полная матрица прав
 
 | Право \ Роль | owner (id=1) | admin (id=2) | editor (id=3) | direct (id=4) | member (id=5) | viewer (id=6) |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -1354,28 +1179,7 @@ interface NotificationDTO {
 
 Значения из `chat.permissions` (поле `ChatDTO.permissions`) — это **override-словарь на уровне самого чата** (задаётся при создании/обновлении чата, см. `CreateChatRequest.permissions`/`UpdateChatRequest.permissions`), плюс у каждого участника есть свой `MemberChatDTO.permissions_overrides` — персональный override поверх роли. Итоговое право = роль → override чата → персональный override участника (более специфичный побеждает; конкретный порядок слияния решает `ChatAccessService` на бэкенде).
 
-### 9.2 Роли проекта (`ProjectRolesEnum`) — полная матрица прав
-
-⚠️ `id=3` не существует (пропущен намеренно/по ошибке в сид-данных бэкенда — оставлено как есть).
-
-| Право \ Роль | owner (id=1) | maintainer (id=2) | developer (id=4) | user (id=5) |
-|---|:-:|:-:|:-:|:-:|
-| `member:read` | ✅ | ✅ | ✅ | ✅ |
-| `member:invite` | ✅ | ✅ | ❌ | ❌ |
-| `member:kick` | ✅ | ✅ | ❌ | ❌ |
-| `member:update` | ✅ | ✅ | ❌ | ❌ |
-| `project:read` | ✅ | ✅ | ✅ | ✅ |
-| `project:update` | ✅ | ✅ | ✅ | ❌ |
-| `project:visibility` | ✅ | ✅ | ❌ | ❌ |
-| `project:delete` | ✅ | ❌ | ❌ | ❌ |
-| `position:create` | ✅ | ✅ | ✅ | ❌ |
-| `position:update` | ✅ | ✅ | ✅ | ❌ |
-| `position:delete` | ✅ | ✅ | ❌ | ❌ |
-| `permission:update` | ✅ | ✅ | ❌ | ❌ |
-
-`role_id` по умолчанию для новых участников, приглашённых без явного указания роли, нужно передавать вручную в `InviteMemberRequest.role_id` — автоподстановки по умолчанию на бэкенде не найдено (в отличие от чатов), указывать роль обязательно.
-
-### 9.3 Системные роли (auth) — см. также раздел 3.16
+### 8.2 Системные роли (auth) — см. также раздел 3.16
 
 | Роль | `security_level` | Ключевая особенность |
 |---|---|---|
@@ -1384,11 +1188,11 @@ interface NotificationDTO {
 | `user` | 1 | Роль по умолчанию, без специальных прав — обычный пользователь приложения |
 
 
-## 10. Гайд по реализации на Flutter
+## 9. Гайд по реализации на Flutter
 
 Этот раздел — не часть спецификации API, а рекомендации по архитектуре клиента с учётом всех особенностей, перечисленных выше.
 
-### 10.1 HTTP-слой
+### 9.1 HTTP-слой
 
 - Использовать `dio` (не голый `http`) — нужны интерцепторы для refresh-логики и единообразной обработки ошибок.
 - **Базовый интерцептор путей**: всегда добавлять `/` в конец пути перед отправкой (или просто дисциплинированно писать пути с `/` в конце во всех местах кода — `redirect_slashes=False` не прощает ошибок).
@@ -1396,19 +1200,19 @@ interface NotificationDTO {
 - **Refresh-интерцептор**: поскольку access-токен живёт всего 5 минут, реализовать `QueuedInterceptorsWrapper` в `dio`, который на `401`/`400 EXPIRED_TOKEN` сам вызывает `POST /auth/refresh/`, получает новый `access_token` и повторяет исходный запрос. Использовать очередь (mutex/lock), чтобы при параллельных запросах не улетело несколько одновременных `refresh` подряд.
 - **`POST /auth/login/`** — отправлять как `FormData`/`application/x-www-form-urlencoded` с полями `username`+`password`, НЕ как JSON.
 
-### 10.2 Refresh-токен и cookies — разница между платформами
+### 9.2 Refresh-токен и cookies — разница между платформами
 
 Сервер выставляет `refresh_token` как `HttpOnly + Secure + SameSite=Strict` cookie, без явного `max-age` (сессионная cookie по атрибутам, хотя токен внутри логически живёт 60 дней).
 
 - **Android/iOS (мобильное приложение через `dio`)**: подключить `dio_cookie_manager` + `cookie_jar` (`PersistCookieJar`, чтобы cookie переживала перезапуск приложения — иначе, будучи "сессионной", она может не сохраниться между запусками некоторыми реализациями jar). `Secure=true` требует, чтобы `BASE_URL` был `https://` — на локальной разработке через `http://` cookie может не долететь до сервера/не сохраниться в некоторых http-клиентах, которые уважают этот флаг. Уточнить у бэкенд-команды тестовый HTTPS-адрес или использовать `Secure`-совместимый локальный прокси (например через `ngrok`/самоподписанный сертификат), либо попросить временно отключить `Secure` на деве.
 - **Flutter Web**: браузер сам управляет cookie по правилам `SameSite=Strict` — если фронтенд крутится на другом домене/порте, чем API, куки **не будет отправляться** при кросс-доменных запросах, и `POST /auth/refresh/` перестанет работать в принципе. Для веб-сборки нужно либо разместить фронт и API на одном домене (например, API под `/api` того же origin через reverse-proxy), либо держать в уме, что на вебе `refresh` может не работать "из коробки" при разнесённых доменах — это архитектурное решение нужно согласовать с бэкенд-командой (например, включить `BACKEND_CORS_ORIGINS` + `allow_credentials=True`, что уже сделано на бэке, но `SameSite=Strict` всё равно блокирует большинство кросс-сайтовых сценариев в современных браузерах).
 
-### 10.3 Пагинация — два разных паттерна
+### 9.3 Пагинация — два разных паттерна
 
 1. **Обычные списки** (`PageResult<T>`) — считать `has_next`/`total_pages` вручную на клиенте по `total`/`page`/`page_size`. Использовать для: профилей, проектов, позиций, заявок, ролей/прав auth, ролей проекта, сессий, пользователей, уведомлений.
 2. **Курсорные списки чатов** (`ListChats`, `MessagesDTO`, `ListMembers`) — `has_next` уже готовое поле; для следующей "страницы" использовать `next_chat_id`/`next_date`, `next_cursor`, `next_user_id` соответственно, не `page`.
 
-### 10.4 Загрузка файлов — общий механизм, но детали разные
+### 9.4 Загрузка файлов — общий механизм, но детали разные
 
 Оба флоу — presigned **PUT** (сырые байты файла телом запроса, без multipart), но реализованы независимо и отличаются деталями:
 
@@ -1422,7 +1226,7 @@ interface NotificationDTO {
 | Как узнать результат | переопросить `GET /profiles/{id}/` — новый `avatars`, либо файл не появится | WS-событие `attachment_success` / `attachment_status: "error"` на вложении |
 | Результат | Появляется в `ProfileDTO.avatars` | Прикрепить `upload_token` к сообщению в `POST /chats/{id}/messages/` |
 
-### 10.5 WebSocket-клиент
+### 9.5 WebSocket-клиент
 
 - Пакет `web_socket_channel` (или `IOWebSocketChannel.connect` на io-платформах, если нужны кастомные заголовки).
 - Подключаться на `wss://{host}/api/v1/chats/ws/?token=<access>` — токен обновлять при реконнекте (использовать актуальный access-токен на момент подключения, не кэшировать старый).
@@ -1430,22 +1234,21 @@ interface NotificationDTO {
 - Хранить `Map<chatId, lastSeq>` локально (например в стейте Riverpod/Bloc или простой персистентный кэш) — использовать для `subscribe.last_seq` и для формирования `resume.cursors` (не больше 20 ключей за раз — если открытых чатов в кэше больше, слать только самые "горячие"/недавно посещённые).
 - Помнить, что `new_message`/`message_edited`/`message_deleted` — это **уведомления, не данные**. Дизайн стора сообщений должен уметь: (a) оптимистично добавлять своё отправленное сообщение сразу после успешного REST-ответа `POST /messages/`, (b) при чужом `new_message` — либо дозапросить сообщение по id, либо просто рефетчить хвост через `GET /messages/`.
 
-### 10.6 Разграничение прав в UI
+### 9.6 Разграничение прав в UI
 
 Строить видимость кнопок (пригласить/кикнуть/забанить/удалить чат и т.п.) на основе:
-- Для чата: `MemberChatDTO.permissions_overrides` текущего пользователя, объединённый с матрицей роли (раздел 9.1) и `chat.permissions`.
-- Для проекта: `role.permissions` из `ProjectMemberDTO.role` (раздел 9.2).
+- Для чата: `MemberChatDTO.permissions_overrides` текущего пользователя, объединённый с матрицей роли (раздел 8.1) и `chat.permissions`.
 - Для системных админ-функций (управление пользователями/ролями): требуемые права из таблиц разделов 3.10–3.14 — если у пользователя нет системной роли с этими правами, соответствующие экраны/пункты меню не показывать вовсе.
 
-### 10.7 Чек-лист перед тем, как считать интеграцию готовой
+### 9.7 Чек-лист перед тем, как считать интеграцию готовой
 
 - [ ] Все пути заканчиваются на `/`
 - [ ] `login` отправляется как form-urlencoded с полями `username`/`password`
 - [ ] Ошибки читаются из `body.error.code`, кроме 429 (`body.detail`)
 - [ ] Реализован refresh-интерцептор на 5-минутное истечение токена
 - [ ] `has_next`/`total_pages` считаются на клиенте для обычных списков
-- [ ] И аватар, и вложения чата грузятся через presigned PUT, но с разным TTL ссылки (90 сек / 3600 сек) и разным моментом валидации (см. 10.4)
-- [ ] WS обрабатывает все перечисленные в 7.4 типы событий
+- [ ] И аватар, и вложения чата грузятся через presigned PUT, но с разным TTL ссылки (90 сек / 3600 сек) и разным моментом валидации (см. 9.4)
+- [ ] WS обрабатывает все перечисленные в 6.4 типы событий
 - [ ] `new_message`/`message_edited`/`message_deleted` не рендерятся напрямую из WS-payload
 - [ ] `resume` никогда не отправляется больше чем с 20 курсорами
 - [ ] Учтена структура `avatars` (4 размера × 3 формата), а не плоский `{url}`
